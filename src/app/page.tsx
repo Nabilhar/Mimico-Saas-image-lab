@@ -2,11 +2,6 @@
 import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
 import { GenerateDashboard } from "@/components/GenerateDashboard";
-import { 
-  Show, 
-  SignInButton, 
-  UserButton 
-} from "@clerk/nextjs";
 import { useUser } from "@clerk/nextjs";
 import { useState, useEffect } from 'react';
 
