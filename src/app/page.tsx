@@ -7,8 +7,24 @@ import {
   SignInButton, 
   UserButton 
 } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
+import { useState, useEffect } from 'react';
+
+
 
 export default function Home() {
+  // This creates the 'history' list and the 'setHistory' tool to update it
+const [history, setHistory] = useState<any[]>([]);
+// Inside your main function:
+const { user } = useUser();
+
+useEffect(() => {
+  // Only load history if we have a user ID
+  if (user) {
+    const saved = localStorage.getItem(`history_${user.id}`);
+    if (saved) setHistory(JSON.parse(saved));
+  }
+}, [user]);
   return (
     <>
       <SiteHeader />
