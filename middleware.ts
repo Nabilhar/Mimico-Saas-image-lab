@@ -1,7 +1,7 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
 // 1. Define which routes are PROTECTED (anyone NOT logged in gets kicked out)
-const isProtectedRoute = createRouteMatcher(['/dashboard(.*)', '/api(.*)']);
+const isProtectedRoute = createRouteMatcher(['/', '/dashboard(.*)', '/api(.*)']);
 
 export default clerkMiddleware(async (auth, req) => {
   // 2. If the user is hitting a protected route, protect it!
