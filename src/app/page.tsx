@@ -8,8 +8,17 @@ import { useState, useEffect } from 'react';
 
 
 export default function Home() {
-  // This creates the 'history' list and the 'setHistory' tool to update it
-const [history, setHistory] = useState<any[]>([]);
+
+  // Define the shape of a post so TypeScript is happy
+interface Post {
+  id: string;
+  content: string;
+  date: string;
+}
+
+// Use <Post[]> instead of <any[]>
+const [history, setHistory] = useState<Post[]>([]);
+
 // Inside your main function:
 const { user } = useUser();
 
