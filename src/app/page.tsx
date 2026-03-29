@@ -1,6 +1,13 @@
+"use client";
 import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
 import { GenerateDashboard } from "@/components/GenerateDashboard";
+import { 
+  SignedIn, 
+  SignedOut, 
+  SignInButton, 
+  UserButton 
+} from "@clerk/nextjs";
 
 export default function Home() {
   return (
