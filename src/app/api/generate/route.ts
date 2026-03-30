@@ -1,87 +1,98 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 
-const NICHES = ["Dentist", "Realtor", "Cafe"] as const;
-const POST_TYPES = ["5 Tips", "Myth-Buster"] as const;
+// 1. DATA MAPS (Keep these outside the function so they don't re-run)
+const BUSINESS_ARCHETYPES: Record<string, string> = {
+  "Health & Wellness": "pain-driven",
+  "Home Services": "pain-driven",
+  "Automotive": "pain-driven",
+  "Trades & Industrial": "pain-driven",
+  "Food & Beverage": "lifestyle",
+  "Beauty & Personal Care": "lifestyle",
+  "Fitness & Recreation": "lifestyle",
+  "Retail": "lifestyle",
+  "Pets": "lifestyle",
+  "Events & Hospitality": "lifestyle",
+  "Professional Services": "considered-purchase",
+  "Real Estate & Property": "considered-purchase",
+  "Education & Childcare": "considered-purchase",
+  "Technology": "considered-purchase",
+};
 
-type Niche = (typeof NICHES)[number];
-type PostType = (typeof POST_TYPES)[number];
+// 2. THE LOGIC ENGINE
+function getFramework(category: string, postType: string, voice: string) {
+  if (postType === "Myth-busting") return "PAS";
+  if (postType === "Behind the scenes") return "BAB";
+  if (voice === "The Hustler") return "PAS";
 
-function isNiche(v: string): v is Niche {
-  return (NICHES as readonly string[]).includes(v);
+  const archetype = (BUSINESS_ARCHETYPES[category] || "lifestyle") as "pain-driven" | "lifestyle" | "considered-purchase";
+  
+  const matrix: Record<string, Record<string, string>> = {
+    "5 Tips": { "pain-driven": "PAS", "lifestyle": "BAB", "considered-purchase": "AIDA" },
+    "Promotion / offer": { "pain-driven": "PAS", "lifestyle": "BAB", "considered-purchase": "AIDA" },
+    "Local event / news": { "pain-driven": "PAS", "lifestyle": "BAB", "considered-purchase": "AIDA" },
+  };
+
+  return matrix[postType]?.[archetype] || "PAS";
 }
 
-function isPostType(v: string): v is PostType {
-  return (POST_TYPES as readonly string[]).includes(v);
-}
-
-export async function POST(request: Request) {
+// 3. THE SINGLE POST HANDLER
+export async function POST(req: Request) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) {
-    return NextResponse.json(
-      { error: "Missing GEMINI_API_KEY. Add it to .env.local." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Missing API Key" }, { status: 500 });
   }
-
-  let body: { niche?: string; postType?: string };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
-  }
-
-  const niche = body.niche ?? "";
-  const postType = body.postType ?? "";
-
-  if (!isNiche(niche) || !isPostType(postType)) {
-    return NextResponse.json(
-      { error: "Invalid niche or post type." },
-      { status: 400 }
-    );
-  }
-
-
-  const prompt = `
-You are a local marketing expert in Mimico and South Etobicoke.
-Write ONE Instagram-ready caption for a ${niche} in this area.
-The content style must match: "${postType}".
-
-Current Local Context (March 2026):
-- Mention the ongoing revitalization near the Mimico GO Station if relevant to growth/business.
-- If mentioning the outdoors, reference the "Humber Bay Park West" shoreline maintenance or the "Waterfront Trail" extension.
-- Mention local favorite spots like SanRemo Bakery (known for being busy/sold out of fritters) or the Royal York Meat Market as community touchpoints.
-- Tone: Professional, neighborly, and proud of the "Beach of the West End" vibe.
-
-Instagram formatting (critical — output must paste as-is):
-- Use clear line breaks: short paragraphs separated by blank lines (double newline). No wall of text.
-- Structure suggestion: (1) hook line with one emoji, (2) blank line, (3) main body with bullets or numbered lines if "5 Tips" or myth setup + debunk for "Myth-Buster", (4) blank line, (5) optional short CTA line, (6) blank line, (7) 3 hashtags on their own last line: #Mimico #SouthEtobicoke #ShopLocalTO (adjust wording only if a different niche needs a more specific third tag, but keep exactly 3 hashtags).
-- Include exactly 3 to 5 relevant emojis total, placed naturally (hook, section breaks, or bullet lines). No emoji spam; choose emojis that match the niche and message.
-- Do not wrap the caption in quotes. Do not add a title like "Caption:" or "Post:". Output only the caption text.
-
-Rules:
-1. Use 2026 trends: emphasize "Support Local" and "Locally Sourced" values where fitting.
-2. If it's a "5 Tips" post, use five numbered lines (1.–5.) with one tip per line, each line break after the tip for readability.
-3. If it's a "Myth-Buster", use a bold-feeling hook line, blank line, myth in one short line, blank line, truth/debunk in short paragraphs with line breaks.
-`;
-
 
   try {
+    // Extract everything from the dashboard/profile
+    const { prompt: userTopic, category, postType, voice, businessName } = await req.json();
+
+    // Determine the framework
+    const framework = getFramework(category, postType, voice);
+
+    const frameworkInstructions: Record<string, string> = {
+      PAS: "Structure: 1. Problem (Identify a local pain point). 2. Agitation (Explain why it hurts/matters). 3. Solution (Introduce the business as the hero).", 
+      BAB: "Structure: 1. Before (The current relatable struggle). 2. After (The aspirational result). 3. Bridge (How this business makes the change happen).", 
+      AIDA: "Structure: 1. Attention (Bold hook). 2. Interest (Local relevance). 3. Desire (The benefits). 4. Action (The clear next step).",
+    };
+
+    // COMBINED PROMPT: Framework Logic + Mimico Context
+    const finalPrompt = `
+      You are a local marketing expert for the Mimico/M8V area of Toronto. 
+      Business: ${businessName} (${category})
+      Tone: ${voice}
+      Topic: ${userTopic}
+
+      COPYWRITING FRAMEWORK: ${framework}
+      ${frameworkInstructions[framework]}
+
+      MIMICO CONTEXT (March 2026):
+      - Mention the Mimico GO Station revitalization if relevant.
+      - Reference the Waterfront Trail or Humber Bay Park West.
+      - Community touchpoints: SanRemo Bakery (busy/fritters) or Royal York Meat Market.
+      - Vibe: "Beach of the West End" / Neighborly pride.
+
+      INSTAGRAM FORMATTING:
+      - Double line breaks between paragraphs.
+      - 3 to 5 emojis total.
+      - Exactly 3 hashtags: #Mimico #SouthEtobicoke #ShopLocalTO.
+      - If "5 Tips", use numbered list 1-5.
+    `;
+
     const genAI = new GoogleGenerativeAI(key);
-    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
-    const result = await model.generateContent(prompt);
+    // Note: Using 'gemini-1.5-flash' for reliability, update if using 3-flash-preview
+    const model = genAI.getGenerativeModel({ 
+        model: "gemini-3-flash-preview",
+        
+    });
+
+    const result = await model.generateContent(finalPrompt);
     const text = result.response.text().trim();
 
-    if (!text) {
-      return NextResponse.json(
-        { error: "Empty response from the model." },
-        { status: 502 }
-      );
-    }
-
     return NextResponse.json({ content: text });
-  } catch (e) {
-    const message = e instanceof Error ? e.message : "Generation failed.";
-    return NextResponse.json({ error: message }, { status: 502 });
+
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ error: "Failed to generate content." }, { status: 500 });
   }
 }

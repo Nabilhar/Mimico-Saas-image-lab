@@ -8,31 +8,56 @@ import {
   type HistoryEntry,
 } from "@/lib/postHistory";
 
-const NICHES = ["Dentist", "Realtor", "Cafe"] as const;
-const POST_TYPES = ["5 Tips", "Myth-Buster"] as const;
+const CATEGORIES = [
+  "Health & Wellness", "Home Services", "Automotive", "Trades & Industrial",
+  "Food & Beverage", "Beauty & Personal Care", "Fitness & Recreation", 
+  "Retail", "Pets", "Events & Hospitality", "Professional Services", 
+  "Real Estate & Property", "Education & Childcare", "Technology"
+] as const;
+
+const VOICES = ["The Expert", "The Neighbor", "The Hustler", "The Minimalist"] as const;
+
+const POST_TYPES = [
+  "5 Tips", "Promotion / offer", "Local event / news", "Myth-busting", "Behind the scenes"
+] as const;
 
 export function GenerateDashboard() {
-  const [niche, setNiche] = useState<(typeof NICHES)[number]>("Dentist");
+  // 1. Updated State Variables
+  const [businessName, setBusinessName] = useState("");
+  const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("Food & Beverage");
+  const [voice, setVoice] = useState<(typeof VOICES)[number]>("The Neighbor");
   const [postType, setPostType] = useState<(typeof POST_TYPES)[number]>("5 Tips");
+  
   const [content, setContent] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [savedFeedback, setSavedFeedback] = useState(false);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  
   const copyResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    setHistory(loadHistory());
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (copyResetRef.current) clearTimeout(copyResetRef.current);
-      if (savedResetRef.current) clearTimeout(savedResetRef.current);
-    };
-  }, []);
+// 1. Add this useEffect to "Auto-Fill" from the profile
+useEffect(() => {
+  // We check LocalStorage (where your Profile page saves its data)
+  const savedProfile = localStorage.getItem("mimico_user_profile");
+  
+  if (savedProfile) {
+    try {
+      const profileData = JSON.parse(savedProfile);
+      
+      // If we find data, we update our state variables!
+      if (profileData.businessName) setBusinessName(profileData.businessName);
+      if (profileData.category) setCategory(profileData.category);
+      if (profileData.voice) setVoice(profileData.voice);
+      
+      console.log("✅ Profile auto-loaded into Dashboard");
+    } catch (e) {
+      console.error("Failed to parse saved profile", e);
+    }
+  }
+}, []); // The empty [] means this only runs ONCE when the page first loads
 
   function pushHistory(entry: HistoryEntry) {
     setHistory((prev) => {
@@ -42,94 +67,61 @@ export function GenerateDashboard() {
     });
   }
 
+  // 2. Updated Save Logic
   function handleSaveToHistory() {
     if (!content) return;
     const entry: HistoryEntry = {
       id: crypto.randomUUID(),
-      niche,
+      category,
+      voice,
       postType,
       content,
       savedAt: new Date().toISOString(),
     };
     pushHistory(entry);
-    if (savedResetRef.current) clearTimeout(savedResetRef.current);
     setSavedFeedback(true);
-    savedResetRef.current = setTimeout(() => {
-      setSavedFeedback(false);
-      savedResetRef.current = null;
-    }, 2000);
-  }
-
-  function handleDeleteHistory(id: string) {
-    setHistory((prev) => {
-      const next = prev.filter((h) => h.id !== id);
-      persistHistory(next);
-      return next;
-    });
+    setTimeout(() => setSavedFeedback(false), 2000);
   }
 
   function handleClearHistory() {
     if (history.length === 0) return;
-    if (!window.confirm("Remove all saved posts from this browser?")) return;
-    setHistory([]);
-    persistHistory([]);
-  }
-
-  async function handleCopy() {
-    if (!content) {
+    
+    // A friendly browser alert to prevent accidental clicks
+    if (!window.confirm("Are you sure? This will permanently delete all saved Mimico posts from this browser.")) {
       return;
     }
-    try {
-      await navigator.clipboard.writeText(content);
-      if (copyResetRef.current) {
-        clearTimeout(copyResetRef.current);
-      }
-      setCopied(true);
-      copyResetRef.current = setTimeout(() => {
-        setCopied(false);
-        copyResetRef.current = null;
-      }, 2000);
-    } catch {
-      // Clipboard may be denied (permissions / non-secure context)
-    }
+  
+    // 1. Clear the screen (State)
+    setHistory([]);
+    
+    // 2. Clear the "Locker" (LocalStorage)
+    persistHistory([]); 
+    
+    console.log("🗑️ History wiped clean");
   }
 
-  async function handleCopyEntry(text: string) {
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch {
-      // ignore
-    }
-  }
-
+  // 3. Updated Generate Logic (Sending the new variables)
   async function handleGenerate() {
     setLoading(true);
     setError(null);
     setContent(null);
-    setCopied(false);
-    setSavedFeedback(false);
-    if (copyResetRef.current) {
-      clearTimeout(copyResetRef.current);
-      copyResetRef.current = null;
-    }
-    if (savedResetRef.current) {
-      clearTimeout(savedResetRef.current);
-      savedResetRef.current = null;
-    }
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ niche, postType }),
+        body: JSON.stringify({ 
+          prompt: `Generate a ${postType} post for ${businessName}`,
+          category, 
+          postType, 
+          voice, 
+          businessName 
+        }),
       });
-      const data = (await res.json()) as { content?: string; error?: string };
-      if (!res.ok) {
-        setError(data.error ?? "Something went wrong.");
-        return;
-      }
-      setContent(data.content ?? null);
-    } catch {
-      setError("Network error. Check your connection and try again.");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Generation failed");
+      setContent(data.content);
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -137,192 +129,124 @@ export function GenerateDashboard() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <div className="bento-card">
-        <h2 className="text-lg font-semibold text-slate-900">Compose</h2>
-        <p className="mt-1 text-sm text-slate-600">
-          Choose a niche and format, then generate. Your request is sent to{" "}
-          <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs">/api/generate</code>.
-        </p>
-
-        <div className="mt-6 space-y-5">
+      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+        <h2 className="text-xl font-bold text-slate-900 mb-6">Mimico Content AI</h2>
+        
+        <div className="space-y-4">
+          {/* Business Name */}
           <div>
-            <label htmlFor="niche" className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Niche
-            </label>
-            <select
-              id="niche"
-              value={niche}
-              onChange={(e) => setNiche(e.target.value as (typeof NICHES)[number])}
-              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none ring-cyan-600/20 transition focus:border-cyan-600 focus:ring-4"
+            <label className="text-xs font-bold uppercase text-slate-500">Business Name</label>
+            <input 
+              className="mt-1 w-full p-3 border rounded-xl"
+              value={businessName}
+              onChange={(e) => setBusinessName(e.target.value)}
+              placeholder="e.g. SanRemo Bakery"
+            />
+          </div>
+
+          {/* Category */}
+          <div>
+            <label className="text-xs font-bold uppercase text-slate-500">Business Category</label>
+            <select 
+              className="mt-1 w-full p-3 border rounded-xl bg-white"
+              value={category}
+              onChange={(e) => setCategory(e.target.value as any)}
             >
-              {NICHES.map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
+              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
 
+          {/* Voice */}
           <div>
-            <label htmlFor="postType" className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Post type
-            </label>
-            <select
-              id="postType"
+            <label className="text-xs font-bold uppercase text-slate-500">Brand Voice</label>
+            <select 
+              className="mt-1 w-full p-3 border rounded-xl bg-white"
+              value={voice}
+              onChange={(e) => setVoice(e.target.value as any)}
+            >
+              {VOICES.map(v => <option key={v} value={v}>{v}</option>)}
+            </select>
+          </div>
+
+          {/* Post Type */}
+          <div>
+            <label className="text-xs font-bold uppercase text-slate-500">Post Style</label>
+            <select 
+              className="mt-1 w-full p-3 border rounded-xl bg-white"
               value={postType}
-              onChange={(e) => setPostType(e.target.value as (typeof POST_TYPES)[number])}
-              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none ring-cyan-600/20 transition focus:border-cyan-600 focus:ring-4"
+              onChange={(e) => setPostType(e.target.value as any)}
             >
-              {POST_TYPES.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
+              {POST_TYPES.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
           </div>
 
-          <button
-            type="button"
+          <button 
             onClick={handleGenerate}
-            disabled={loading}
-            aria-busy={loading}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-800 px-4 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-900 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={loading || !businessName}
+            className="w-full bg-cyan-800 text-white font-bold py-4 rounded-xl hover:bg-cyan-900 transition disabled:opacity-50"
           >
-            {loading && (
-              <span
-                className="size-4 shrink-0 animate-spin rounded-full border-2 border-white border-t-transparent"
-                aria-hidden
-              />
-            )}
-            {loading ? "Generating..." : "Generate"}
+            {loading ? "Crafting your post..." : "Generate Mimico Post"}
           </button>
         </div>
 
-        <div className="mt-8">
-          {error && (
-            <div
-              role="alert"
-              className="rounded-2xl border border-red-200/90 bg-red-50 px-5 py-4 text-sm text-red-900 shadow-sm"
-            >
-              {error}
+        {/* Output Display */}
+        {content && (
+          <div className="mt-8 p-6 bg-slate-50 rounded-2xl border border-slate-200">
+            <div className="flex justify-between items-center mb-4">
+               <span className="text-xs font-bold text-cyan-700">{category} · {voice}</span>
+               <button onClick={handleSaveToHistory} className="text-xs bg-white border px-3 py-1 rounded-lg">
+                 {savedFeedback ? "Saved!" : "Save to History"}
+               </button>
             </div>
-          )}
-
-          {loading && (
-            <div className="flex items-center justify-center gap-3 rounded-2xl border border-slate-200/90 bg-gradient-to-br from-slate-50 to-cyan-50/40 px-5 py-14 shadow-sm">
-              <span
-                className="inline-block size-5 shrink-0 animate-spin rounded-full border-2 border-cyan-800 border-t-transparent"
-                aria-hidden
-              />
-              <span className="text-sm font-medium text-slate-700">Calling the API…</span>
-            </div>
-          )}
-
-          {!loading && !error && !content && (
-            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 px-5 py-12 text-center text-sm text-slate-500">
-              Your generated caption will show up here after you click Generate.
-            </div>
-          )}
-
-          {content && !loading && (
-            <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-md ring-1 ring-slate-900/5">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-slate-50/80 px-5 py-3">
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Draft</span>
-                <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-                  <button
-                    type="button"
-                    onClick={handleSaveToHistory}
-                    className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-cyan-600 hover:text-cyan-900"
-                  >
-                    {savedFeedback ? "Saved!" : "Save to History"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleCopy}
-                    className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-cyan-600 hover:text-cyan-900"
-                  >
-                    {copied ? "Copied!" : "Copy"}
-                  </button>
-                  <span className="text-xs text-slate-400">
-                    {niche} · {postType}
-                  </span>
-                </div>
-              </div>
-              <div className="max-h-[min(28rem,60vh)] overflow-y-auto px-5 py-5">
-                <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-800">{content}</p>
-              </div>
-            </div>
-          )}
-        </div>
+            <p className="whitespace-pre-wrap text-slate-800 leading-relaxed">{content}</p>
+          </div>
+        )}
       </div>
 
-      <div className="bento-card-muted">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h3 className="text-base font-semibold text-slate-900">History</h3>
-            <p className="mt-1 text-sm text-slate-600">
-              Saved in this browser only ({history.length}/{MAX_HISTORY_ITEMS}).
-            </p>
-          </div>
-          {history.length > 0 && (
-            <button
-              type="button"
-              onClick={handleClearHistory}
-              className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-red-300 hover:text-red-800"
-            >
-              Clear all
-            </button>
-          )}
-        </div>
+      {/* History List */}
+      <div className="bg-slate-50 p-6 rounded-2xl border border-dashed border-slate-200">
+        
+      <div className="bg-slate-50 p-6 rounded-2xl border border-dashed border-slate-200">
+  {/* --- NEW HEADER SECTION --- */}
+  <div className="flex items-center justify-between mb-4">
+    <h3 className="font-bold text-slate-900">Saved Posts</h3>
+    
+    {/* Only show the button if there are actually posts to clear */}
+    {history.length > 0 && (
+      <button 
+        onClick={handleClearHistory}
+        className="text-xs font-bold text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 transition-colors"
+      >
+        Clear All
+      </button>
+    )}
+  </div>
+  {/* -------------------------- */}
 
-        {history.length === 0 ? (
-          <p className="mt-6 rounded-xl border border-dashed border-slate-200 bg-white/60 px-4 py-8 text-center text-sm text-slate-500">
-            No saved posts yet. Generate a caption and click &quot;Save to History&quot;.
+  <ul className="space-y-4">
+    {history.length === 0 ? (
+      <p className="text-sm text-slate-400 text-center py-4">No saved posts yet.</p>
+    ) : (
+      history.map((entry) => (
+        <li key={entry.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+          <p className="text-xs text-slate-400 mb-2">
+            {entry.category} ({entry.voice}) · {new Date(entry.savedAt).toLocaleDateString()}
           </p>
-        ) : (
-          <ul className="mt-4 space-y-3">
-            {history.map((entry) => (
-              <li
-                key={entry.id}
-                className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <p className="text-xs font-medium text-slate-500">
-                      {new Date(entry.savedAt).toLocaleString(undefined, {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                      })}
-                    </p>
-                    <p className="mt-1 text-xs text-cyan-900">
-                      {entry.niche} · {entry.postType}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleCopyEntry(entry.content)}
-                      className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:border-cyan-600 hover:text-cyan-900"
-                    >
-                      Copy
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteHistory(entry.id)}
-                      className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-600 transition hover:border-red-300 hover:text-red-800"
-                      aria-label="Remove from history"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </div>
-                <div className="mt-3 max-h-40 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed text-slate-800">
-                  {entry.content}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+          <p className="text-sm line-clamp-3 text-slate-700">{entry.content}</p>
+        </li>
+      ))
+    )}
+  </ul>
+</div>
+
+        <ul className="space-y-4">
+          {history.map((entry) => (
+            <li key={entry.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+              <p className="text-xs text-slate-400 mb-2">{entry.category} ({entry.voice}) · {new Date(entry.savedAt).toLocaleDateString()}</p>
+              <p className="text-sm line-clamp-3 text-slate-700">{entry.content}</p>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );

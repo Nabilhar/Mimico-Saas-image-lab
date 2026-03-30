@@ -3,7 +3,8 @@ export const MAX_HISTORY_ITEMS = 50;
 
 export type HistoryEntry = {
   id: string;
-  niche: string;
+  category: string; // Changed from niche
+  voice: string;    // Added so you can track the vibe
   postType: string;
   content: string;
   savedAt: string;
@@ -23,22 +24,11 @@ function isHistoryEntry(x: unknown): x is HistoryEntry {
 
 export function loadHistory(): HistoryEntry[] {
   if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
-    if (!raw) return [];
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isHistoryEntry);
-  } catch {
-    return [];
-  }
+  const saved = localStorage.getItem("mimico_post_history");
+  return saved ? JSON.parse(saved) : [];
 }
 
-export function persistHistory(entries: HistoryEntry[]): void {
+export function persistHistory(history: HistoryEntry[]) {
   if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(entries));
-  } catch {
-    // quota or private mode
-  }
+  localStorage.setItem("mimico_post_history", JSON.stringify(history));
 }
