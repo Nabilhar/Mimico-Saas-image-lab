@@ -1,12 +1,6 @@
 "use client";
 
-import { 
-  useUser,
-  SignedIn,
-  SignedOut,
-  SignInButton, 
-  SignUpButton 
-} from "@clerk/nextjs";
+import { Show, SignInButton, SignUpButton,useUser } from "@clerk/nextjs";
 
 import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -54,29 +48,30 @@ useEffect(() => {
                 local credibility around the lakefront and Queensway corridor.
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-3">
-                  {/* IF THE USER IS NOT LOGGED IN */}
-                  <SignedOut>
-                    <SignUpButton mode="modal">
-                      <button className="inline-flex items-center justify-center rounded-xl bg-cyan-800 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-900">
-                        Get Started Free
-                      </button>
-                    </SignUpButton>
-                    <SignInButton mode="modal">
-                      <button className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-cyan-700 hover:text-cyan-900">
-                        Log In
-                      </button>
-                    </SignInButton>
-                  </SignedOut>
+                  {/* LOGGED OUT STATE */}
+                    <Show when="signed-out">
+                      <SignUpButton mode="modal">
+                        <button className="inline-flex items-center justify-center rounded-xl bg-cyan-800 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-900">
+                          Get Started Free
+                        </button>
+                      </SignUpButton>
+                      
+                      <SignInButton mode="modal">
+                        <button className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-cyan-700 hover:text-cyan-900">
+                          Log In
+                        </button>
+                      </SignInButton>
+                    </Show>
 
                   {/* IF THE USER IS ALREADY LOGGED IN */}
-                  <SignedIn>
-                    <Link
-                      href="/dashboard"
-                      className="inline-flex items-center justify-center rounded-xl bg-cyan-800 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-900"
-                    >
-                      Go to My Dashboard
-                    </Link>
-                  </SignedIn>
+                    <Show when="signed-in">
+                      <Link
+                        href="/dashboard"
+                        className="inline-flex items-center justify-center rounded-xl bg-cyan-800 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-900"
+                      >
+                        Go to My Dashboard
+                      </Link>
+                    </Show>
                 </div>
             </div>
           </section>

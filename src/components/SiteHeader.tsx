@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { UserButton, SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
+import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 
 export function SiteHeader() {
   return (
@@ -21,19 +21,31 @@ export function SiteHeader() {
           </Link>
 
           {/* Logic for the User Avatar / Sign In button */}
-          <div className="flex items-center border-l border-slate-200 pl-6">
-            <SignedIn>
-              {/* This shows the user's avatar and the Sign Out menu */}
-              <UserButton />
-            </SignedIn>
-            
-            <SignedOut>
-              {/* Fallback if they somehow reach the header while logged out */}
-              <SignInButton mode="modal">
-                <button className="text-cyan-800 hover:text-cyan-900">Sign In</button>
-              </SignInButton>
-            </SignedOut>
-          </div>
+          {/* --- CASE 1: USER IS LOGGED OUT --- */}
+            <Show when="signed-out">
+              <div className="flex items-center gap-4">
+                <SignInButton mode="modal">
+                  <button className="text-sm font-medium text-slate-600 hover:text-cyan-800">
+                    Log In
+                  </button>
+                </SignInButton>
+                <SignUpButton mode="modal">
+                  <button className="rounded-lg bg-cyan-800 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-900">
+                    Get Started
+                  </button>
+                </SignUpButton>
+              </div>
+            </Show>
+
+            {/* --- CASE 2: USER IS LOGGED IN --- */}
+            <Show when="signed-in">
+              <div className="flex items-center gap-4">
+                <Link href="/dashboard" className="text-sm font-medium text-slate-600 hover:text-cyan-800">
+                  Dashboard
+                </Link>
+                <UserButton />
+              </div>
+            </Show>
         </nav>
       </div>
     </header>
