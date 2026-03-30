@@ -1,41 +1,7 @@
 'use client';
 import { useUser } from "@clerk/nextjs";
 import { useState, useEffect } from "react";
-
-// 1. THE BRAIN: Archetype Mapping from your research
-const BUSINESS_ARCHETYPES: Record<string, string> = {
-  "Health & Wellness": "pain-driven",
-  "Home Services": "pain-driven",
-  "Automotive": "pain-driven",
-  "Trades & Industrial": "pain-driven",
-  "Food & Beverage": "lifestyle",
-  "Beauty & Personal Care": "lifestyle",
-  "Fitness & Recreation": "lifestyle",
-  "Retail": "lifestyle",
-  "Pets": "lifestyle",
-  "Events & Hospitality": "lifestyle",
-  "Professional Services": "considered-purchase",
-  "Real Estate & Property": "considered-purchase",
-  "Education & Childcare": "considered-purchase",
-  "Technology": "considered-purchase",
-};
-
-// 2. THE DECISION MATRIX: Logic from your research
-function getFramework(category: string, postType: string, voice: string) {
-  if (postType === "Myth-busting") return "PAS";
-  if (postType === "Behind the scenes") return "BAB";
-  if (voice === "The Hustler") return "PAS";
-
-  const archetype = BUSINESS_ARCHETYPES[category] || "lifestyle";
-  
-  const matrix: any = {
-    "5 Tips": { "pain-driven": "PAS", "lifestyle": "BAB", "considered-purchase": "AIDA" },
-    "Promotion / offer": { "pain-driven": "PAS", "lifestyle": "BAB", "considered-purchase": "AIDA" },
-    "Local event / news": { "pain-driven": "PAS", "lifestyle": "BAB", "considered-purchase": "AIDA" },
-  };
-
-  return matrix[postType]?.[archetype] || "PAS"; 
-}
+import { getFramework, BUSINESS_ARCHETYPES, type Framework, type PurchaseType } from "@/lib/frameworks";
 
 export default function ProfilePage() {
   const { user, isLoaded } = useUser();

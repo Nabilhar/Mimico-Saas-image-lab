@@ -57,20 +57,17 @@ export async function POST(req: Request) {
     };
 
     // COMBINED PROMPT: Framework Logic + Mimico Context
-    const finalPrompt = `
-      You are a local marketing expert for the Mimico/M8V area of Toronto. 
-      Business: ${businessName} (${category})
-      Tone: ${voice}
-      Topic: ${userTopic}
+          const finalPrompt = `
+      You are an expert social media manager for small businesses in Mimico, Toronto.
+        Write a ${postType} Instagram post for a ${category} business named "${businessName}".
+        
+        CRITICAL INSTRUCTION: Use the ${framework} copywriting framework.
+        - If PAS: Focus on Problem, Agitation, and Solution.
+        - If BAB: Focus on Before, After, and Bridge.
+        - If AIDA: Focus on Attention, Interest, Desire, and Action.
 
-      COPYWRITING FRAMEWORK: ${framework}
-      ${frameworkInstructions[framework]}
-
-      MIMICO CONTEXT (March 2026):
-      - Mention the Mimico GO Station revitalization if relevant.
-      - Reference the Waterfront Trail or Humber Bay Park West.
-      - Community touchpoints: SanRemo Bakery (busy/fritters) or Royal York Meat Market.
-      - Vibe: "Beach of the West End" / Neighborly pride.
+        Tone of voice: ${voice}.
+        Include local Mimico references where appropriate.
 
       INSTAGRAM FORMATTING:
       - Double line breaks between paragraphs.

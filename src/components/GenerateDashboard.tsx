@@ -1,8 +1,8 @@
 "use client";
 
+import { getFramework } from "@/lib/frameworks";
 import { useState, useEffect, useRef } from "react";
 import {
-  loadHistory,
   persistHistory,
   MAX_HISTORY_ITEMS,
   type HistoryEntry,
@@ -29,14 +29,11 @@ export function GenerateDashboard() {
   const [postType, setPostType] = useState<(typeof POST_TYPES)[number]>("5 Tips");
   
   const [content, setContent] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [savedFeedback, setSavedFeedback] = useState(false);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [error, setError] = useState<string | null>(null);
   
-  const copyResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const savedResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 // 1. Add this useEffect to "Auto-Fill" from the profile
 useEffect(() => {
@@ -105,16 +102,20 @@ useEffect(() => {
     setLoading(true);
     setError(null);
     setContent(null);
+
+    const framework = getFramework(category, postType, voice);
+
     try {
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          prompt: `Generate a ${postType} post for ${businessName}`,
-          category, 
-          postType, 
-          voice, 
-          businessName 
+        const res = await fetch("/api/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            prompt: `Generate a ${postType} post for ${businessName}`,
+            category, 
+            postType, 
+            voice, 
+            businessName,
+            framework // 2. SEND THE FRAMEWORK TO THE API!
         }),
       });
       const data = await res.json();
@@ -150,7 +151,7 @@ useEffect(() => {
             <select 
               className="mt-1 w-full p-3 border rounded-xl bg-white"
               value={category}
-              onChange={(e) => setCategory(e.target.value as any)}
+              onChange={(e) => setCategory(e.target.value as typeof CATEGORIES[number])}
             >
               {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -162,7 +163,7 @@ useEffect(() => {
             <select 
               className="mt-1 w-full p-3 border rounded-xl bg-white"
               value={voice}
-              onChange={(e) => setVoice(e.target.value as any)}
+              onChange={(e) => setCategory(e.target.value as typeof CATEGORIES[number])}
             >
               {VOICES.map(v => <option key={v} value={v}>{v}</option>)}
             </select>
@@ -174,7 +175,7 @@ useEffect(() => {
             <select 
               className="mt-1 w-full p-3 border rounded-xl bg-white"
               value={postType}
-              onChange={(e) => setPostType(e.target.value as any)}
+              onChange={(e) => setCategory(e.target.value as typeof CATEGORIES[number])}
             >
               {POST_TYPES.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
@@ -260,15 +261,6 @@ useEffect(() => {
     )}
   </ul>
 </div>
-
-        <ul className="space-y-4">
-          {history.map((entry) => (
-            <li key={entry.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
-              <p className="text-xs text-slate-400 mb-2">{entry.category} ({entry.voice}) · {new Date(entry.savedAt).toLocaleDateString()}</p>
-              <p className="text-sm line-clamp-3 text-slate-700">{entry.content}</p>
-            </li>
-          ))}
-        </ul>
       </div>
     </div>
   );
