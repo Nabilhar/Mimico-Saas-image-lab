@@ -45,16 +45,10 @@ export async function POST(req: Request) {
 
   try {
     // Extract everything from the dashboard/profile
-    const { prompt: userTopic, category, postType, voice, businessName } = await req.json();
+    const { prompt: category, postType, voice, businessName } = await req.json();
 
     // Determine the framework
     const framework = getFramework(category, postType, voice);
-
-    const frameworkInstructions: Record<string, string> = {
-      PAS: "Structure: 1. Problem (Identify a local pain point). 2. Agitation (Explain why it hurts/matters). 3. Solution (Introduce the business as the hero).", 
-      BAB: "Structure: 1. Before (The current relatable struggle). 2. After (The aspirational result). 3. Bridge (How this business makes the change happen).", 
-      AIDA: "Structure: 1. Attention (Bold hook). 2. Interest (Local relevance). 3. Desire (The benefits). 4. Action (The clear next step).",
-    };
 
     // COMBINED PROMPT: Framework Logic + Mimico Context
           const finalPrompt = `

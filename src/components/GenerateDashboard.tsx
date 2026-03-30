@@ -121,7 +121,7 @@ useEffect(() => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Generation failed");
       setContent(data.content);
-    } catch (err: any) {
+    } catch (err: Error | any) {
       setError(err.message);
     } finally {
       setLoading(false);

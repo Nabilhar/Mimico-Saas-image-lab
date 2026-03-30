@@ -1,12 +1,13 @@
 "use client";
-// @ts-ignore
+
 import { 
   useUser,
-  SignedIn, 
-  SignedOut, 
+  SignedIn,
+  SignedOut,
   SignInButton, 
   SignUpButton 
 } from "@clerk/nextjs";
+
 import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
 import { GenerateDashboard } from "@/components/GenerateDashboard";
