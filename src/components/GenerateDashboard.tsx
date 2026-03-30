@@ -23,7 +23,7 @@ const POST_TYPES = [
 
 export function GenerateDashboard() {
   // 1. Updated State Variables
-  const [businessName, setBusinessName] = useState("");
+  const [businessName, setBusinessName] = useState("Our Local Business");
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("Food & Beverage");
   const [voice, setVoice] = useState<(typeof VOICES)[number]>("The Neighbor");
   const [postType, setPostType] = useState<(typeof POST_TYPES)[number]>("5 Tips");
@@ -198,16 +198,38 @@ useEffect(() => {
                  {savedFeedback ? "Saved!" : "Save to History"}
                </button>
             </div>
-            <p className="whitespace-pre-wrap text-slate-800 leading-relaxed">{content}</p>
+          {/* The Content */}
+       
+           <p className="whitespace-pre-wrap text-slate-800 leading-relaxed">{content}</p>
+          
+           {/* --- CHARACTER LIMIT TRACKER --- */}
+              <div className="mt-6 pt-4 border-t border-slate-200 flex items-center justify-between">
+                <div className="flex flex-col">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                    Instagram Limit
+                  </span>
+                  <span className={`text-sm font-mono ${content.length > 2200 ? 'text-red-600 font-bold' : 'text-slate-600'}`}>
+                    {content.length.toLocaleString()} / 2,200
+                  </span>
+                </div>
+                
+                {content.length > 2200 ? (
+                  <span className="text-[10px] bg-red-100 text-red-700 px-2 py-1 rounded font-bold uppercase animate-pulse">
+                    Too Long
+                  </span>
+                ) : (
+                  <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-1 rounded font-bold uppercase">
+                    Good to Post
+                  </span>
+                )}
+              </div>
           </div>
         )}
-      </div>
-
+    
       {/* History List */}
       <div className="bg-slate-50 p-6 rounded-2xl border border-dashed border-slate-200">
         
-      <div className="bg-slate-50 p-6 rounded-2xl border border-dashed border-slate-200">
-  {/* --- NEW HEADER SECTION --- */}
+      {/* --- NEW HEADER SECTION --- */}
   <div className="flex items-center justify-between mb-4">
     <h3 className="font-bold text-slate-900">Saved Posts</h3>
     
