@@ -1,6 +1,7 @@
 "use client";
 
 import { getFramework } from "@/lib/frameworks";
+import { FRAMEWORK_DEFINITIONS } from "@/lib/frameworks";
 import { useState, useEffect } from "react";
 import { CATEGORIES, VOICES, POST_TYPES, NICHE_DATA } from "@/lib/constants";
 
@@ -11,10 +12,11 @@ interface GenerateDashboardProps {
 
 export function GenerateDashboard({ onGenerateSuccess }: GenerateDashboardProps) {
   const [businessName, setBusinessName] = useState("Our Local Business");
+  const [location, setLocation] = useState("");
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("Food & Beverage");
   const [niche, setNiche] = useState("");
   const [voice, setVoice] = useState<(typeof VOICES)[number]>("The Neighbor");
-  const [postType, setPostType] = useState<(typeof POST_TYPES)[number]>("5 Tips");
+  const [postType, setPostType] = useState("PAS");
   
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -26,21 +28,24 @@ export function GenerateDashboard({ onGenerateSuccess }: GenerateDashboardProps)
       try {
         const profileData = JSON.parse(savedProfile);
         if (profileData.businessName) setBusinessName(profileData.businessName);
-        if (profileData.category) setCategory(profileData.category as any);
-        if (profileData.niche) setCategory(profileData.niche as any);
+        if (profileData.location) setLocation(profileData.location); // Load location
+        if (profileData.category) setCategory(profileData.category);
+        if (profileData.niche) setNiche(profileData.niche);
         if (profileData.voice) setVoice(profileData.voice as any);
       } catch (e) {
         console.error("Failed to parse saved profile", e);
       }
     }
   }, []);
+    const selectedFramework = getFramework(category, postType, voice);
 
   async function handleGenerate() {
     setLoading(true);
     setError(null);
     setContent(null);
 
-    const framework = getFramework(category, postType, voice);
+    
+    const instructions = FRAMEWORK_DEFINITIONS[selectedFramework];
 
     try {
       const res = await fetch("/api/generate", {
@@ -53,7 +58,8 @@ export function GenerateDashboard({ onGenerateSuccess }: GenerateDashboardProps)
           postType, 
           voice, 
           businessName,
-          framework 
+          location,
+          instructions
         }),
       });
       const data = await res.json();
@@ -111,11 +117,13 @@ export function GenerateDashboard({ onGenerateSuccess }: GenerateDashboardProps)
           <div>
             <label className="text-xs font-bold uppercase text-slate-500">Post Style</label>
             <select 
-              className="mt-1 w-full p-3 border rounded-xl bg-white"
               value={postType}
-              onChange={(e) => setPostType(e.target.value as any)}
+              onChange={(e) => setPostType(e.target.value)}
+              className="w-full p-3 border rounded-xl"
             >
-              {POST_TYPES.map(p => <option key={p} value={p}>{p}</option>)}
+            <option value="PAS">PAS (Problem-Agitation-Solution)</option>
+            <option value="BAB">BAB (Before-After-Bridge)</option>
+            <option value="AIDA">AIDA (Attention-Interest-Desire-Action)</option>
             </select>
           </div>
 
@@ -123,6 +131,16 @@ export function GenerateDashboard({ onGenerateSuccess }: GenerateDashboardProps)
           <p className="mt-2 text-[11px] text-slate-400 italic px-1">
             **Business Name and Category are managed in your business profile.
           </p>
+
+          {/* --- PASTE THE NEW DYNAMIC DEFINITION HINT HERE --- */}
+          <div className="mt-4 p-3 bg-cyan-50/50 border border-cyan-100 rounded-xl">
+            <p className="text-[11px] text-cyan-800 leading-relaxed italic">
+              {/* Note: We use 'selectedFramework' here because that's the result 
+                of your getFramework() logic 
+              */}
+              <strong className="uppercase">{selectedFramework} Strategy:</strong> {FRAMEWORK_DEFINITIONS[selectedFramework]}
+            </p>
+          </div>
 
           <button 
             onClick={handleGenerate}

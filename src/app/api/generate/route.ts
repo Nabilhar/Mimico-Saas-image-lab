@@ -45,34 +45,41 @@ export async function POST(req: Request) {
 
   try {
     // Extract everything from the dashboard/profile
-    const { prompt: category, niche, postType, voice, businessName } = await req.json();
-
-    // Determine the framework
-    const framework = getFramework(category, postType, voice);
+    const { 
+      businessName, 
+      category, 
+      niche, 
+      voice, 
+      postType, 
+      location, 
+      framework,             // "PAS", "BAB", or "AIDA"
+      frameworkInstructions  // The definition from FRAMEWORK_DEFINITIONS
+    } = await req.json();
 
     // COMBINED PROMPT: Framework Logic + Mimico Context
-          const finalPrompt = `
-      You are an marketing expert and social media manager for small businesses in Mimico, Toronto.
-        Write a ${postType} social mediad post, for Instagram facebook ... for a business named "${businessName}".
-        They are a ${niche} within the ${category} industry.
-        
-        CRITICAL INSTRUCTION: Use the ${framework} copywriting framework.
-        - If PAS: Focus on Problem, Agitation, and Solution.
-        - If BAB: Focus on Before, After, and Bridge.
-        - If AIDA: Focus on Attention, Interest, Desire, and Action.
-
-        Tone of voice: ${voice}.
-        Include local Mimico references where appropriate.
-
-        Niche Logic: If Niche is "Dentist", specifically mention "Patient Comfort" or "Booking a Checkup". If Niche is "Chiropractor", focus on "Alignment" and "Pain Relief".
-
-        INSTAGRAM FORMATTING:
-        - Double line breaks between paragraphs.
-        - Address the specific niche at least once
-        - 3 to 5 emojis total.
-        - Exactly 3 hashtags: #Mimico #SouthEtobicoke and include name of the company as #Comnpany.
-        - find a clever way to include a call for action and company name in the body of the text organicaly instead of at the end of the post.
-        - If "5 Tips", use numbered list 1-5.
+    const finalPrompt = `
+    You are a hyper-local marketing expert for small businesses.
+    
+    STEP 1: Research the neighborhood for the address: "${location}". 
+    Identify the specific neighborhood name and 3 significant local landmarks 
+    (e.g., specific parks, well-known local shops, transit stations, or community centers).
+    
+    STEP 2: Using the brand voice "${voice}", write a "${postType}" social media post 
+    for "${businessName}". 
+    
+    BUSINESS CONTEXT:
+    - Industry: ${category}
+    - Specific Trade: ${niche}
+    
+    WRITING STRUCTURE (Strictly follow this):
+    You must use the ${framework} framework. 
+    Detailed Instructions: ${frameworkInstructions}
+    
+    GUIDELINES:
+    - Naturally mention one of the discovered landmarks from ${location} to prove local presence and build trust.
+    - If the location is in Toronto (like Mimico, Etobicoke, or Liberty Village), ensure the tone reflects the specific vibe of that neighborhood.
+    - Do not use generic placeholders like [Insert Landmark]; use real data from your research.
+    - Focus on driving engagement and local relevance.
     `;
 
     const genAI = new GoogleGenerativeAI(key);

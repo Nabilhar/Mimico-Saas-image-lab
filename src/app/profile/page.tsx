@@ -16,6 +16,7 @@ export default function ProfilePage() {
   const [businessName, setBusinessName] = useState("");
   const [category, setCategory] = useState("");
   const [niche, setNiche] = useState("");
+  const [location, setLocation] = useState("");
   const [voice, setVoice] = useState("");
 
   useEffect(() => {
@@ -24,6 +25,8 @@ export default function ProfilePage() {
       const data = JSON.parse(saved);
       if (data.businessName) setBusinessName(data.businessName);
       if (data.category) setCategory(data.category);
+      if (data.niche) setNiche(data.niche);
+      if (data.location) setLocation(data.location);
       if (data.voice) setVoice(data.voice);
     }
   }, []);
@@ -42,6 +45,7 @@ export default function ProfilePage() {
       businessName, 
       category,
       niche,
+      location,
       voice,
       updatedAt: new Date().toISOString(),
     };
@@ -106,6 +110,19 @@ export default function ProfilePage() {
                 onChange={(e) => setBusinessName(e.target.value)}
                 required
               />
+            </div>
+            <div className="flex flex-col">
+              <label className="text-sm font-semibold text-slate-700 mb-1">Business Address (Location)</label>
+              <input 
+                className="border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none transition" 
+                placeholder="e.g. 2447 Lake Shore Blvd W, Toronto, ON" 
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                required
+              />
+              <p className="text-[10px] text-slate-400 mt-1 italic">
+                The AI uses this to research your neighborhood's landmarks and local trends.
+              </p>
             </div>
 
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
