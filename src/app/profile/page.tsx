@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation"; // Added for redirecting
 import { SiteHeader } from "@/components/SiteHeader"; // Keep consistent branding
 import { getFramework, BUSINESS_ARCHETYPES } from "@/lib/frameworks";
+import { NICHE_DATA, CATEGORIES, VOICES } from "@/lib/constants";
 
 export default function ProfilePage() {
   const { user, isLoaded } = useUser();
@@ -14,6 +15,7 @@ export default function ProfilePage() {
   // Form States
   const [businessName, setBusinessName] = useState("");
   const [category, setCategory] = useState("");
+  const [niche, setNiche] = useState("");
   const [voice, setVoice] = useState("");
 
   useEffect(() => {
@@ -39,6 +41,7 @@ export default function ProfilePage() {
     const profileData = {
       businessName, 
       category,
+      niche,
       voice,
       updatedAt: new Date().toISOString(),
     };
@@ -111,11 +114,30 @@ export default function ProfilePage() {
                 <select 
                   className="border border-slate-200 p-3 rounded-xl bg-white focus:ring-2 focus:ring-cyan-500 outline-none"
                   value={category}
-                  onChange={(e) => setCategory(e.target.value)}
+                  onChange={(e) => {
+                    setCategory(e.target.value);
+                    setNiche("");
+                  }}
                   required
                 >
                   <option value="">Select Category...</option>
                   {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                </select>
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-sm font-semibold text-slate-700 mb-1">Business Niche (Trade)</label>
+                <select 
+                  className={`border border-slate-200 p-3 rounded-xl bg-white ${!category ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  value={niche}
+                  onChange={(e) => setNiche(e.target.value)}
+                  disabled={!category} // Lock until category is picked [cite: 193]
+                  required
+                >
+                  <option value="">{category ? "Select Trade..." : "Select Category First"}</option>
+                  {category && NICHE_DATA[category].map(n => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
                 </select>
               </div>
 

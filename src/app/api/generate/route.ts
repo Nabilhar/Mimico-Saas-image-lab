@@ -45,15 +45,16 @@ export async function POST(req: Request) {
 
   try {
     // Extract everything from the dashboard/profile
-    const { prompt: category, postType, voice, businessName } = await req.json();
+    const { prompt: category, niche, postType, voice, businessName } = await req.json();
 
     // Determine the framework
     const framework = getFramework(category, postType, voice);
 
     // COMBINED PROMPT: Framework Logic + Mimico Context
           const finalPrompt = `
-      You are an expert social media manager for small businesses in Mimico, Toronto.
-        Write a ${postType} Instagram post for a ${category} business named "${businessName}".
+      You are an marketing expert and social media manager for small businesses in Mimico, Toronto.
+        Write a ${postType} social mediad post, for Instagram facebook ... for a business named "${businessName}".
+        They are a ${niche} within the ${category} industry.
         
         CRITICAL INSTRUCTION: Use the ${framework} copywriting framework.
         - If PAS: Focus on Problem, Agitation, and Solution.
@@ -63,11 +64,15 @@ export async function POST(req: Request) {
         Tone of voice: ${voice}.
         Include local Mimico references where appropriate.
 
-      INSTAGRAM FORMATTING:
-      - Double line breaks between paragraphs.
-      - 3 to 5 emojis total.
-      - Exactly 3 hashtags: #Mimico #SouthEtobicoke #ShopLocalTO.
-      - If "5 Tips", use numbered list 1-5.
+        Niche Logic: If Niche is "Dentist", specifically mention "Patient Comfort" or "Booking a Checkup". If Niche is "Chiropractor", focus on "Alignment" and "Pain Relief".
+
+        INSTAGRAM FORMATTING:
+        - Double line breaks between paragraphs.
+        - Address the specific niche at least once
+        - 3 to 5 emojis total.
+        - Exactly 3 hashtags: #Mimico #SouthEtobicoke and include name of the company as #Comnpany.
+        - find a clever way to include a call for action and company name in the body of the text organicaly instead of at the end of the post.
+        - If "5 Tips", use numbered list 1-5.
     `;
 
     const genAI = new GoogleGenerativeAI(key);

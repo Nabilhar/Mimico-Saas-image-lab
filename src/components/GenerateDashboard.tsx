@@ -2,28 +2,17 @@
 
 import { getFramework } from "@/lib/frameworks";
 import { useState, useEffect } from "react";
+import { CATEGORIES, VOICES, POST_TYPES, NICHE_DATA } from "@/lib/constants";
 
 // Added the missing interface
 interface GenerateDashboardProps {
   onGenerateSuccess?: (content: string) => void;
 }
 
-const CATEGORIES = [
-  "Health & Wellness", "Home Services", "Automotive", "Trades & Industrial",
-  "Food & Beverage", "Beauty & Personal Care", "Fitness & Recreation", 
-  "Retail", "Pets", "Events & Hospitality", "Professional Services", 
-  "Real Estate & Property", "Education & Childcare", "Technology"
-] as const;
-
-const VOICES = ["The Expert", "The Neighbor", "The Hustler", "The Minimalist"] as const;
-
-const POST_TYPES = [
-  "5 Tips", "Promotion / offer", "Local event / news", "Myth-busting", "Behind the scenes"
-] as const;
-
 export function GenerateDashboard({ onGenerateSuccess }: GenerateDashboardProps) {
   const [businessName, setBusinessName] = useState("Our Local Business");
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("Food & Beverage");
+  const [niche, setNiche] = useState("");
   const [voice, setVoice] = useState<(typeof VOICES)[number]>("The Neighbor");
   const [postType, setPostType] = useState<(typeof POST_TYPES)[number]>("5 Tips");
   
@@ -38,6 +27,7 @@ export function GenerateDashboard({ onGenerateSuccess }: GenerateDashboardProps)
         const profileData = JSON.parse(savedProfile);
         if (profileData.businessName) setBusinessName(profileData.businessName);
         if (profileData.category) setCategory(profileData.category as any);
+        if (profileData.niche) setCategory(profileData.niche as any);
         if (profileData.voice) setVoice(profileData.voice as any);
       } catch (e) {
         console.error("Failed to parse saved profile", e);
@@ -59,6 +49,7 @@ export function GenerateDashboard({ onGenerateSuccess }: GenerateDashboardProps)
         body: JSON.stringify({ 
           prompt: `Generate a ${postType} post for ${businessName}`,
           category, 
+          niche,
           postType, 
           voice, 
           businessName,
@@ -88,7 +79,7 @@ export function GenerateDashboard({ onGenerateSuccess }: GenerateDashboardProps)
         
         <div className="space-y-4">
           <div>
-            <label className="text-xs font-bold uppercase text-slate-500">Business Name</label>
+            <label className="text-xs font-bold uppercase text-slate-500">Specific Niche</label>
             <input 
               className="mt-1 w-full p-3 border border-slate-200 rounded-xl bg-slate-50 text-slate-500 cursor-not-allowed outline-none"
               value={businessName}
