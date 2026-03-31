@@ -92,8 +92,8 @@ export function GenerateDashboard({ onGenerateSuccess }: GenerateDashboardProps)
             <input 
               className="mt-1 w-full p-3 border rounded-xl"
               value={businessName}
-              onChange={(e) => setBusinessName(e.target.value)}
-              placeholder="e.g. SanRemo Bakery"
+              readOnly // This "freezes" the text
+              tabIndex={-1} // Skips it when user presses "Tab"
             />
           </div>
 
@@ -102,10 +102,10 @@ export function GenerateDashboard({ onGenerateSuccess }: GenerateDashboardProps)
             <select 
               className="mt-1 w-full p-3 border rounded-xl bg-white"
               value={category}
-              onChange={(e) => setCategory(e.target.value as any)}
+              disabled // This "freezes" the dropdown
             >
-              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
+            <option value={category}>{category}</option>
+              </select>
           </div>
 
           <div>
