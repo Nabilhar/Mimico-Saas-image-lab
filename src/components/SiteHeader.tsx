@@ -16,12 +16,14 @@ export function SiteHeader() {
           <Link href="/" className="transition hover:text-cyan-800">
             Home
           </Link>
+                <Show when="signed-in">
+          <Link href="/profile" className="transition hover:text-cyan-800">
+            Business Profile
+          </Link>
           <Link href="/dashboard" className="transition hover:text-cyan-800">
             Dashboard
           </Link>
-          <Link href="/dashboard" className="transition hover:text-cyan-800">
-            Business Profile
-          </Link>
+        </Show>
 
           {/* Logic for the User Avatar / Sign In button */}
           {/* --- CASE 1: USER IS LOGGED OUT --- */}

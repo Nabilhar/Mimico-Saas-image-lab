@@ -32,6 +32,9 @@ export default function ProfilePage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    // 1. Get existing data first so we don't delete the history!
+    const existingData = JSON.parse(localStorage.getItem("mimico_business_profile") || "{}");
   
     const profileData = {
       businessName, 
