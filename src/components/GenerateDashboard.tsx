@@ -90,7 +90,7 @@ export function GenerateDashboard({ onGenerateSuccess }: GenerateDashboardProps)
           <div>
             <label className="text-xs font-bold uppercase text-slate-500">Business Name</label>
             <input 
-              className="mt-1 w-full p-3 border rounded-xl"
+              className="mt-1 w-full p-3 border border-slate-200 rounded-xl bg-slate-50 text-slate-500 cursor-not-allowed outline-none"
               value={businessName}
               readOnly // This "freezes" the text
               tabIndex={-1} // Skips it when user presses "Tab"
@@ -99,13 +99,11 @@ export function GenerateDashboard({ onGenerateSuccess }: GenerateDashboardProps)
 
           <div>
             <label className="text-xs font-bold uppercase text-slate-500">Business Category</label>
-            <select 
-              className="mt-1 w-full p-3 border rounded-xl bg-white"
+            <input
+              className="mt-1 w-full p-3 border border-slate-200 rounded-xl bg-slate-50 text-slate-500 cursor-not-allowed outline-none"
               value={category}
               disabled // This "freezes" the dropdown
-            >
-            <option value={category}>{category}</option>
-              </select>
+            />
           </div>
 
           <div>
@@ -129,6 +127,11 @@ export function GenerateDashboard({ onGenerateSuccess }: GenerateDashboardProps)
               {POST_TYPES.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
           </div>
+
+          {/* --- SIMPLE TEXT LINE --- */}
+          <p className="mt-2 text-[11px] text-slate-400 italic px-1">
+            **Business Name and Category are managed in your business profile.
+          </p>
 
           <button 
             onClick={handleGenerate}
