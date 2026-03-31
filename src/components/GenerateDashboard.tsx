@@ -79,7 +79,7 @@ export function GenerateDashboard({ onGenerateSuccess }: GenerateDashboardProps)
         
         <div className="space-y-4">
           <div>
-            <label className="text-xs font-bold uppercase text-slate-500">Specific Niche</label>
+            <label className="text-xs font-bold uppercase text-slate-500">business name</label>
             <input 
               className="mt-1 w-full p-3 border border-slate-200 rounded-xl bg-slate-50 text-slate-500 cursor-not-allowed outline-none"
               value={businessName}
@@ -89,7 +89,7 @@ export function GenerateDashboard({ onGenerateSuccess }: GenerateDashboardProps)
           </div>
 
           <div>
-            <label className="text-xs font-bold uppercase text-slate-500">Business Category</label>
+            <label className="text-xs font-bold uppercase text-slate-500">Specific Niche</label>
             <input
               className="mt-1 w-full p-3 border border-slate-200 rounded-xl bg-slate-50 text-slate-500 cursor-not-allowed outline-none"
               value={category}
