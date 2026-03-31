@@ -92,11 +92,11 @@ useEffect(() => {
               </li>
               <li className="flex justify-between gap-4">
                 <span>Formats</span>
-                <span className="font-medium text-slate-900">Tips & myths</span>
+                <span className="font-medium text-slate-900">5Tips & Myth Busters</span>
               </li>
               <li className="flex justify-between gap-4">
                 <span>Engine</span>
-                <span className="font-medium text-slate-900">Gemini</span>
+                <span className="font-medium text-slate-900">Gemini3</span>
               </li>
             </ul>
           </aside>

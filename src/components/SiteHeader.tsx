@@ -19,6 +19,9 @@ export function SiteHeader() {
           <Link href="/dashboard" className="transition hover:text-cyan-800">
             Dashboard
           </Link>
+          <Link href="/dashboard" className="transition hover:text-cyan-800">
+            Business Profile
+          </Link>
 
           {/* Logic for the User Avatar / Sign In button */}
           {/* --- CASE 1: USER IS LOGGED OUT --- */}
@@ -40,9 +43,6 @@ export function SiteHeader() {
             {/* --- CASE 2: USER IS LOGGED IN --- */}
             <Show when="signed-in">
               <div className="flex items-center gap-4">
-                <Link href="/dashboard" className="text-sm font-medium text-slate-600 hover:text-cyan-800">
-                  Dashboard
-                </Link>
                 <UserButton />
               </div>
             </Show>
