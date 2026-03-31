@@ -17,7 +17,7 @@ export default function ProfilePage() {
   const [voice, setVoice] = useState("");
 
   useEffect(() => {
-    const saved = localStorage.getItem("mimico_user_profile");
+    const saved = localStorage.getItem("mimico_business_profile");
     if (saved) {
       const data = JSON.parse(saved);
       if (data.businessName) setBusinessName(data.businessName);
@@ -44,7 +44,7 @@ export default function ProfilePage() {
     };
   
     try {
-      localStorage.setItem("mimico_user_profile", JSON.stringify(profileData));
+      localStorage.setItem("mimico_business_profile", JSON.stringify(profileData));
       
       // OPTIONAL: Small delay so they see the 'Success' state
       setTimeout(() => {
