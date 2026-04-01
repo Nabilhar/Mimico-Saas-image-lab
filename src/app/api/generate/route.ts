@@ -53,27 +53,27 @@ export async function POST(req: Request) {
       postType, 
       location, 
       framework,             // "PAS", "BAB", or "AIDA"
-      frameworkInstructions  // The definition from FRAMEWORK_DEFINITIONS
+      frameworkInstructions: instructions  // The definition from FRAMEWORK_DEFINITIONS
     } = await req.json();
 
     // COMBINED PROMPT: Framework Logic + Mimico Context
     const finalPrompt = `
-    You are a hyper-local marketing expert for small businesses.
-    
-    STEP 1: Research the neighborhood for the address: "${location}". 
-    Identify the specific neighborhood name and 3 significant local landmarks 
-    (e.g., specific parks, well-known local shops, transit stations, or community centers).
-    
-    STEP 2: Using the brand voice "${voice}", write a "${postType}" social media post 
-    for "${businessName}". 
-    
-    BUSINESS CONTEXT:
-    - Industry: ${category}
-    - Specific Trade: ${niche}
-    
-    WRITING STRUCTURE (Strictly follow this):
-    You must use the ${framework} framework. 
-    Detailed Instructions: ${frameworkInstructions}
+You are a Marketing Master with all your expertise you put your self in the shoes of the owner of "${businessName}", a local ${niche} at ${location}.
+  
+  TASK:
+  1. Research the neighborhood for the address provided. Find 3 landmarks and trends specific to the neighberhood.
+  2. Write a social media post using the ${framework} framework.
+
+  STRICT OUTPUT FORMAT:
+  - Put all your research, neighborhood names, and landmarks inside <research></research> tags.
+  - Write the actual social media post AFTER the closing </research> tag.
+  - DO NOT use labels like "Attention:" or "Problem:". 
+  - Write in the FIRST PERSON ("I", "We"). 
+  - Keep it human and neighborly.
+
+  EXAMPLE:
+  <research>Neighborhood: Mimico. Landmarks: Sanremo, Mimico GO.</research>
+  I was just walking past the GO station this morning and realized... [rest of post]
     
     GUIDELINES:
     - Naturally mention one of the discovered landmarks from ${location} to prove local presence and build trust.

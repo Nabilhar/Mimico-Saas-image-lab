@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation"; // Added for redirecting
 import { SiteHeader } from "@/components/SiteHeader"; // Keep consistent branding
 import { getFramework, BUSINESS_ARCHETYPES } from "@/lib/frameworks";
 import { NICHE_DATA, CATEGORIES, VOICES } from "@/lib/constants";
+import { supabase } from "@/lib/supabase";
+
 
 export default function ProfilePage() {
   const { user, isLoaded } = useUser();
@@ -34,6 +36,7 @@ export default function ProfilePage() {
   const categories = Object.keys(BUSINESS_ARCHETYPES);
   const voices = ["The Expert", "The Neighbor", "The Hustler", "The Minimalist"];
 
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -42,6 +45,7 @@ export default function ProfilePage() {
     const existingData = JSON.parse(localStorage.getItem("mimico_business_profile") || "{}");
   
     const profileData = {
+      id: "PASTE-YOUR-ID-HERE", // This tells Supabase "Update THIS specific row"
       businessName, 
       category,
       niche,
@@ -51,16 +55,31 @@ export default function ProfilePage() {
     };
   
     try {
+  // 2. Send to Supabase
+      // .upsert() looks for a matching 'id' or unique field to update
+      const {  error } = await supabase
+        .from('profiles')
+        .upsert({
+          id: 1, // Or whatever your ID is
+          business_name: businessName, // WAS: businessName
+          location: location,          // Matches
+          category: category,          // Matches
+          niche: niche,                // Matches
+          voice: voice                 // Matches
+        });
+
+      if (error) throw error;
+
+      alert("Profile synced to the cloud! ✅");
+    router.push("/dashboard"); // This sends the user to the generator page
+
+      // 3. Optional: Still keep a copy in localStorage for speed
       localStorage.setItem("mimico_business_profile", JSON.stringify(profileData));
       
-      // OPTIONAL: Small delay so they see the 'Success' state
-      setTimeout(() => {
-        router.push('/dashboard'); // LANDING: Send them to the engine!
-      }, 1000);
-      
-    } catch (error) {
-      console.error("Save failed:", error);
-      alert("There was an error saving your profile.");
+      alert("Profile synced to the cloud! ✅");
+    } catch (error: any) {
+      console.error("Error saving to Supabase:", error.message);
+      alert("Cloud sync failed, but saved locally.");
     } finally {
       setLoading(false);
     }

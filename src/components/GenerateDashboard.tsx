@@ -21,6 +21,15 @@ export function GenerateDashboard({ onGenerateSuccess }: GenerateDashboardProps)
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState("Initializing...");
+  const loadingPhases = [
+    "Locating address...",
+    "Identifying local landmarks...",
+    "Researching neighborhood trends...",
+    "Applying strategy...",
+    "Polishing owner voice...",
+    "Finalizing post..."
+  ];
 
   useEffect(() => {
     const savedProfile = localStorage.getItem("mimico_business_profile");
@@ -37,6 +46,20 @@ export function GenerateDashboard({ onGenerateSuccess }: GenerateDashboardProps)
       }
     }
   }, []);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (loading) {
+      let i = 0;
+      setStatus(loadingPhases[0]);
+      interval = setInterval(() => {
+        i++;
+        if (i < loadingPhases.length) setStatus(loadingPhases[i]);
+      }, 2000); // Changes text every 2 seconds
+    }
+    return () => clearInterval(interval);
+  }, [loading]);
+
     const selectedFramework = getFramework(category, postType, voice);
 
   async function handleGenerate() {
@@ -63,14 +86,14 @@ export function GenerateDashboard({ onGenerateSuccess }: GenerateDashboardProps)
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Generation failed");
-      
-      const generatedContent = data.content;
-      setContent(generatedContent);
+      if (res.ok) {
+        
+        // It finds <research>...</research> and replaces it with nothing ""
+        const rawContent = data.content;
+        const cleanPost = rawContent.replace(/<research>[\s\S]*?<\/research>/g, "").trim();
+        
+        setContent(cleanPost);}
 
-      if (onGenerateSuccess) {
-        onGenerateSuccess(generatedContent);
-      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -141,6 +164,34 @@ export function GenerateDashboard({ onGenerateSuccess }: GenerateDashboardProps)
               <strong className="uppercase">{selectedFramework} Strategy:</strong> {FRAMEWORK_DEFINITIONS[selectedFramework]}
             </p>
           </div>
+
+          {/* --- LOADING STATE UI --- */}
+          {loading && (
+            <div className="mb-4 p-4 bg-slate-900 rounded-2xl border border-slate-700 shadow-lg animate-in fade-in zoom-in-95 duration-300">
+              <div className="flex items-center gap-3">
+                {/* Pulsing AI Indicator */}
+                <div className="h-2 w-2 bg-cyan-400 rounded-full animate-ping" />
+                
+                <div className="flex flex-col">
+                  <span className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">
+                    Local Research Agent
+                  </span>
+                  {/* THIS IS THE MISSING STATUS TEXT */}
+                  <span className="text-sm text-cyan-100 font-medium">
+                    {status}
+                  </span>
+                </div>
+              </div>
+              
+              {/* Progress Bar */}
+              <div className="mt-3 w-full bg-slate-800 h-1 rounded-full overflow-hidden">
+                <div 
+                  className="bg-cyan-500 h-full transition-all duration-1000 ease-linear" 
+                  style={{ width: `${((loadingPhases.indexOf(status) + 1) / loadingPhases.length) * 100}%` }} 
+                />
+              </div>
+            </div>
+          )}
 
           <button 
             onClick={handleGenerate}
