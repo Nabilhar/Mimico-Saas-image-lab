@@ -1,12 +1,11 @@
 'use client';
-import { useUser } from "@clerk/nextjs";
+import { useUser, useSession } from "@clerk/nextjs";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation"; // Added for redirecting
 import { SiteHeader } from "@/components/SiteHeader"; // Keep consistent branding
 import { getFramework, BUSINESS_ARCHETYPES } from "@/lib/frameworks";
 import { NICHE_DATA, CATEGORIES, VOICES } from "@/lib/constants";
 import { supabase } from "@/lib/supabase";
-
 
 export default function ProfilePage() {
   const { user, isLoaded } = useUser();
@@ -15,7 +14,7 @@ export default function ProfilePage() {
   const [testResult, setTestResult] = useState("");
 
   // Form States
-  const [businessName, setBusinessName] = useState("");
+  const [business_name, setbusiness_name] = useState("");
   const [category, setCategory] = useState("");
   const [niche, setNiche] = useState("");
   const [location, setLocation] = useState("");
@@ -25,7 +24,7 @@ export default function ProfilePage() {
     const saved = localStorage.getItem("mimico_business_profile");
     if (saved) {
       const data = JSON.parse(saved);
-      if (data.businessName) setBusinessName(data.businessName);
+      if (data.business_name) setbusiness_name(data.business_name);
       if (data.category) setCategory(data.category);
       if (data.niche) setNiche(data.niche);
       if (data.location) setLocation(data.location);
@@ -36,50 +35,58 @@ export default function ProfilePage() {
   const categories = Object.keys(BUSINESS_ARCHETYPES);
   const voices = ["The Expert", "The Neighbor", "The Hustler", "The Minimalist"];
 
+  const { session } = useSession();
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!isLoaded || !user?.id || !session) {
+      alert("Please wait for Clerk to load or sign in again.");
+      return;
+    }
+  
     setLoading(true);
 
-    // 1. Get existing data first so we don't delete the history!
-    const existingData = JSON.parse(localStorage.getItem("mimico_business_profile") || "{}");
-  
-    const profileData = {
-      id: "PASTE-YOUR-ID-HERE", // This tells Supabase "Update THIS specific row"
-      businessName, 
-      category,
-      niche,
-      location,
-      voice,
-      updatedAt: new Date().toISOString(),
-    };
-  
     try {
-  // 2. Send to Supabase
-      // .upsert() looks for a matching 'id' or unique field to update
-      const {  error } = await supabase
+      // 1. Get the JWT Token from Clerk
+      const token = await session.getToken({ template: 'supabase' });
+      
+      // 2. IMPORTANT: This is the standard way to inject the token into the Supabase client
+      // This ensures the "Security Guard" (RLS) knows who you are.
+      supabase.realtime.setAuth(token);
+      
+      // Force the rest client to use the new token
+      // @ts-ignore - internal access to headers
+      supabase.rest.headers['Authorization'] = `Bearer ${token}`;
+
+      // 3. Perform the Upsert
+      const { data, error } = await supabase
         .from('profiles')
         .upsert({
-          id: 1, // Or whatever your ID is
-          business_name: businessName, // WAS: businessName
-          location: location,          // Matches
-          category: category,          // Matches
-          niche: niche,                // Matches
-          voice: voice                 // Matches
-        });
-
-      if (error) throw error;
-
-      alert("Profile synced to the cloud! ✅");
-    router.push("/dashboard"); // This sends the user to the generator page
-
-      // 3. Optional: Still keep a copy in localStorage for speed
-      localStorage.setItem("mimico_business_profile", JSON.stringify(profileData));
-      
-      alert("Profile synced to the cloud! ✅");
-    } catch (error: any) {
-      console.error("Error saving to Supabase:", error.message);
-      alert("Cloud sync failed, but saved locally.");
+          id: user.id, 
+          business_name: business_name, 
+          location: location,
+          category: category,
+          niche: niche,
+          voice: voice,
+          updated_at: new Date().toISOString(),
+        })
+        .select();
+  
+      if (error) {
+        console.error("Supabase Save Error:", error.message);
+        alert("Error saving profile: " + error.message);
+      } else {
+        // 4. Success logic
+        if (data && data[0]) {
+          localStorage.setItem("mimico_business_profile", JSON.stringify(data[0]));
+        }
+        alert("Profile Updated! ✅");
+        router.push("/dashboard"); 
+      }
+    } catch (err: any) {
+      console.error("Unexpected error during save:", err);
+      alert("An unexpected error occurred: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -125,8 +132,8 @@ export default function ProfilePage() {
               <input 
                 className="border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition" 
                 placeholder="e.g. San Remo Bakery" 
-                value={businessName}
-                onChange={(e) => setBusinessName(e.target.value)}
+                value={business_name}
+                onChange={(e) => setbusiness_name(e.target.value)}
                 required
               />
             </div>

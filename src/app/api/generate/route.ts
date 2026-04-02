@@ -1,4 +1,9 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+
+import { 
+  GoogleGenerativeAI, 
+  HarmCategory, 
+  HarmBlockThreshold 
+} from "@google/generative-ai"; // Make sure these three are inside the { }
 import { NextResponse } from "next/server";
 
 // 1. DATA MAPS (Keep these outside the function so they don't re-run)
@@ -46,7 +51,7 @@ export async function POST(req: Request) {
   try {
     // Extract everything from the dashboard/profile
     const { 
-      businessName, 
+      business_name, 
       category, 
       niche, 
       voice, 
@@ -58,7 +63,7 @@ export async function POST(req: Request) {
 
     // COMBINED PROMPT: Framework Logic + Mimico Context
     const finalPrompt = `
-You are a Marketing Master with all your expertise you put your self in the shoes of the owner of "${businessName}", a local ${niche} at ${location}.
+You are a Marketing Master with all your expertise you put your self in the shoes of the owner of "${business_name}", a local ${niche} at ${location}.
   
   TASK:
   1. Research the neighborhood for the address provided. Find 3 landmarks and trends specific to the neighberhood.
@@ -82,20 +87,47 @@ You are a Marketing Master with all your expertise you put your self in the shoe
     - Focus on driving engagement and local relevance.
     `;
 
+              // for SIMULATION to (delete late)*****
+              if (process.env.NEXT_PUBLIC_MOCK_AI === "true") {
+                // Simulate a delay so your loading spinners still work
+                await new Promise((resolve) => setTimeout(resolve, 800)); 
+              
+                return NextResponse.json({ 
+                  content: `<research>TEST MODE ACTIVE: ${location}</research>\n\nThis is a test post for ${business_name} in Mimico. No API tokens were harmed in the making of this draft!` 
+                });
+              }
+              
+              // ... the rest of your real GoogleGenerativeAI code (delete late)*****
+
     const genAI = new GoogleGenerativeAI(key);
     // Note: Using 'gemini-1.5-flash' for reliability, update if using 3-flash-preview
-    const model = genAI.getGenerativeModel({ 
-        model: "gemini-3-flash-preview",
-        
+    const model = genAI.getGenerativeModel( 
+      { model: "gemini-3-flash-preview" }, 
+      { apiVersion: "v1beta" } // Gemini 3 requires the beta endpoint
+
+     );
+
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: finalPrompt }] }],
+      generationConfig: {
+        temperature: 0.8,
+        maxOutputTokens: 1000,
+      }
     });
 
-    const result = await model.generateContent(finalPrompt);
     const text = result.response.text().trim();
 
     return NextResponse.json({ content: text });
 
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Failed to generate content." }, { status: 500 });
+  } catch (error: any) {
+
+    // This helps you see in VS Code if it's a 429 (Too Many Requests)
+    console.error("API ROUTE ERROR:", error?.status || "General Error");
+    
+    if (error?.status === 429) {
+      return NextResponse.json({ error: "Rate limit reached. Please wait 60 seconds." }, { status: 429 });
+    }
+    
+    return NextResponse.json({ error: "Generation failed." }, { status: 500 });
   }
 }

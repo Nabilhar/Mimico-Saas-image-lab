@@ -1,27 +1,32 @@
 "use client";
 
-import { getFramework } from "@/lib/frameworks";
-import { FRAMEWORK_DEFINITIONS } from "@/lib/frameworks";
-import { useState, useEffect } from "react";
-import { CATEGORIES, VOICES, POST_TYPES, NICHE_DATA } from "@/lib/constants";
+import { getFramework, FRAMEWORK_DEFINITIONS } from "@/lib/frameworks";
+import { useState, useEffect, useRef } from "react"; 
+import { VOICES } from "@/lib/constants";
 
-// Added the missing interface
 interface GenerateDashboardProps {
   onGenerateSuccess?: (content: string) => void;
 }
 
 export function GenerateDashboard({ onGenerateSuccess }: GenerateDashboardProps) {
-  const [businessName, setBusinessName] = useState("Our Local Business");
+  // 1. Create the Ref
+  const saveRef = useRef(onGenerateSuccess);
+  const [business_name, setbusiness_name] = useState("Our Local Business");
   const [location, setLocation] = useState("");
-  const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("Food & Beverage");
+  const [category, setCategory] = useState("Food & Beverage");
   const [niche, setNiche] = useState("");
-  const [voice, setVoice] = useState<(typeof VOICES)[number]>("The Neighbor");
+  const [voice, setVoice] = useState("The Neighbor");
   const [postType, setPostType] = useState("PAS");
   
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState("Initializing...");
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    saveRef.current = onGenerateSuccess;
+  }, [onGenerateSuccess]);
+
   const loadingPhases = [
     "Locating address...",
     "Identifying local landmarks...",
@@ -31,22 +36,21 @@ export function GenerateDashboard({ onGenerateSuccess }: GenerateDashboardProps)
     "Finalizing post..."
   ];
 
+  // 1. Load Profile from LocalStorage
   useEffect(() => {
-    const savedProfile = localStorage.getItem("mimico_business_profile");
-    if (savedProfile) {
-      try {
-        const profileData = JSON.parse(savedProfile);
-        if (profileData.businessName) setBusinessName(profileData.businessName);
-        if (profileData.location) setLocation(profileData.location); // Load location
-        if (profileData.category) setCategory(profileData.category);
-        if (profileData.niche) setNiche(profileData.niche);
-        if (profileData.voice) setVoice(profileData.voice as any);
-      } catch (e) {
-        console.error("Failed to parse saved profile", e);
-      }
+    const saved = localStorage.getItem("mimico_business_profile");
+    if (saved) {
+      const data = JSON.parse(saved);
+      setbusiness_name(data.business_name || "");
+      setLocation(data.location || "");
+      setCategory(data.category || "Food & Beverage");
+      setNiche(data.niche || "");
+      setVoice(data.voice || "The Neighbor");
+      
     }
   }, []);
 
+  // 2. The Loading Bar Timer
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (loading) {
@@ -55,19 +59,24 @@ export function GenerateDashboard({ onGenerateSuccess }: GenerateDashboardProps)
       interval = setInterval(() => {
         i++;
         if (i < loadingPhases.length) setStatus(loadingPhases[i]);
-      }, 2000); // Changes text every 2 seconds
+      }, 2000);
     }
     return () => clearInterval(interval);
   }, [loading]);
 
-    const selectedFramework = getFramework(category, postType, voice);
+  const selectedFramework = getFramework(category, postType, voice);
+
+  const handleCopy = async () => {
+    if (!content) return;
+    await navigator.clipboard.writeText(content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000); 
+  };
 
   async function handleGenerate() {
     setLoading(true);
-    setError(null);
     setContent(null);
 
-    
     const instructions = FRAMEWORK_DEFINITIONS[selectedFramework];
 
     try {
@@ -75,27 +84,32 @@ export function GenerateDashboard({ onGenerateSuccess }: GenerateDashboardProps)
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          prompt: `Generate a ${postType} post for ${businessName}`,
-          category, 
-          niche,
-          postType, 
-          voice, 
-          businessName,
-          location,
-          instructions
+          prompt: `Generate a ${postType} post for ${business_name}`,
+          category, niche, postType, voice, business_name, location, instructions
         }),
       });
+      
       const data = await res.json();
       if (res.ok) {
-        
-        // It finds <research>...</research> and replaces it with nothing ""
-        const rawContent = data.content;
-        const cleanPost = rawContent.replace(/<research>[\s\S]*?<\/research>/g, "").trim();
-        
-        setContent(cleanPost);}
+        const cleanPost = data.content.replace(/<research>[\s\S]*?<\/research>/g, "").trim();
+        setContent(cleanPost);
 
-    } catch (err: any) {
-      setError(err.message);
+        //****added for debug */
+        console.log("DEBUG: Calling onGenerateSuccess with:", cleanPost); // <--- ADD THIS
+        // ************ end of debug
+        // Wrap this in a timeout to let the UI breathe
+  setTimeout(() => {
+    if (saveRef.current) {
+      console.log("DEBUG: saveRef is firing!");
+      saveRef.current(cleanPost);
+    } else {
+      console.error("DEBUG ERROR: saveRef.current is still undefined. Check the Dashboard props!");
+    }
+  }, 500);
+
+      }
+    } catch (err) {
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -106,84 +120,39 @@ export function GenerateDashboard({ onGenerateSuccess }: GenerateDashboardProps)
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
         <h2 className="text-xl font-bold text-slate-900 mb-6">Mimico Content AI</h2>
         
+        {/* Form Inputs */}
         <div className="space-y-4">
           <div>
-            <label className="text-xs font-bold uppercase text-slate-500">business name</label>
-            <input 
-              className="mt-1 w-full p-3 border border-slate-200 rounded-xl bg-slate-50 text-slate-500 cursor-not-allowed outline-none"
-              value={businessName}
-              readOnly // This "freezes" the text
-              tabIndex={-1} // Skips it when user presses "Tab"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs font-bold uppercase text-slate-500">Specific Niche</label>
-            <input
-              className="mt-1 w-full p-3 border border-slate-200 rounded-xl bg-slate-50 text-slate-500 cursor-not-allowed outline-none"
-              value={category}
-              disabled // This "freezes" the dropdown
-            />
+            <label className="text-xs font-bold uppercase text-slate-500">Business Name</label>
+            <input className="mt-1 w-full p-3 border rounded-xl bg-slate-50 text-slate-500 outline-none" value={business_name} readOnly />
           </div>
 
           <div>
             <label className="text-xs font-bold uppercase text-slate-500">Brand Voice</label>
-            <select 
-              className="mt-1 w-full p-3 border rounded-xl bg-white"
-              value={voice}
-              onChange={(e) => setVoice(e.target.value as any)}
-            >
+            <select className="mt-1 w-full p-3 border rounded-xl bg-white" value={voice} onChange={(e) => setVoice(e.target.value)}>
               {VOICES.map(v => <option key={v} value={v}>{v}</option>)}
             </select>
           </div>
 
           <div>
             <label className="text-xs font-bold uppercase text-slate-500">Post Style</label>
-            <select 
-              value={postType}
-              onChange={(e) => setPostType(e.target.value)}
-              className="w-full p-3 border rounded-xl"
-            >
-            <option value="PAS">PAS (Problem-Agitation-Solution)</option>
-            <option value="BAB">BAB (Before-After-Bridge)</option>
-            <option value="AIDA">AIDA (Attention-Interest-Desire-Action)</option>
+            <select value={postType} onChange={(e) => setPostType(e.target.value)} className="w-full p-3 border rounded-xl">
+              <option value="PAS">PAS (Problem-Agitation-Solution)</option>
+              <option value="BAB">BAB (Before-After-Bridge)</option>
+              <option value="AIDA">AIDA (Attention-Interest-Desire-Action)</option>
             </select>
           </div>
 
-          {/* --- SIMPLE TEXT LINE --- */}
-          <p className="mt-2 text-[11px] text-slate-400 italic px-1">
-            **Business Name and Category are managed in your business profile.
-          </p>
-
-          {/* --- PASTE THE NEW DYNAMIC DEFINITION HINT HERE --- */}
-          <div className="mt-4 p-3 bg-cyan-50/50 border border-cyan-100 rounded-xl">
-            <p className="text-[11px] text-cyan-800 leading-relaxed italic">
-              {/* Note: We use 'selectedFramework' here because that's the result 
-                of your getFramework() logic 
-              */}
-              <strong className="uppercase">{selectedFramework} Strategy:</strong> {FRAMEWORK_DEFINITIONS[selectedFramework]}
-            </p>
-          </div>
-
-          {/* --- LOADING STATE UI --- */}
+          {/* --- THE LOADING BAR UI --- */}
           {loading && (
-            <div className="mb-4 p-4 bg-slate-900 rounded-2xl border border-slate-700 shadow-lg animate-in fade-in zoom-in-95 duration-300">
+            <div className="mt-6 p-4 bg-slate-900 rounded-2xl border border-slate-700 shadow-lg animate-in fade-in">
               <div className="flex items-center gap-3">
-                {/* Pulsing AI Indicator */}
                 <div className="h-2 w-2 bg-cyan-400 rounded-full animate-ping" />
-                
                 <div className="flex flex-col">
-                  <span className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">
-                    Local Research Agent
-                  </span>
-                  {/* THIS IS THE MISSING STATUS TEXT */}
-                  <span className="text-sm text-cyan-100 font-medium">
-                    {status}
-                  </span>
+                  <span className="text-[10px] uppercase font-bold text-slate-500">Local Research Agent</span>
+                  <span className="text-sm text-cyan-100 font-medium">{status}</span>
                 </div>
               </div>
-              
-              {/* Progress Bar */}
               <div className="mt-3 w-full bg-slate-800 h-1 rounded-full overflow-hidden">
                 <div 
                   className="bg-cyan-500 h-full transition-all duration-1000 ease-linear" 
@@ -195,28 +164,42 @@ export function GenerateDashboard({ onGenerateSuccess }: GenerateDashboardProps)
 
           <button 
             onClick={handleGenerate}
-            disabled={loading || !businessName}
+            disabled={loading}
             className="w-full bg-cyan-800 text-white font-bold py-4 rounded-xl hover:bg-cyan-900 transition disabled:opacity-50"
           >
-            {loading ? "Crafting your post..." : "Generate Mimico Post"}
+            {loading ? "Crafting..." : "Generate Mimico Post"}
           </button>
         </div>
 
+        {/* --- THE RESULT AREA (Includes Copy & Instagram Check) --- */}
         {content && (
           <div className="mt-8 p-6 bg-slate-50 rounded-2xl border border-slate-200">
-            <div className="flex justify-between items-center mb-4">
-              <span className="text-xs font-bold text-cyan-700">Result: {postType}</span>
-              <span className="text-[10px] text-slate-400 italic">Saved to dashboard automatically</span>
-            </div>
-            <p className="whitespace-pre-wrap text-slate-800 leading-relaxed">{content}</p>
-            <div className="mt-6 pt-4 border-t border-slate-200 flex items-center justify-between">
+            <div className="flex justify-between items-start mb-4">
               <div className="flex flex-col">
-                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Instagram Limit</span>
+                <span className="text-xs font-bold text-cyan-700">Result: {postType}</span>
+                <span className="text-[10px] text-slate-400 italic">Saved to dashboard automatically</span>
+              </div>
+              <button 
+                onClick={handleCopy}
+                className={`text-xs font-bold px-3 py-1 rounded-lg transition ${
+                  copied ? 'bg-emerald-500 text-white' : 'bg-white border border-slate-200 text-slate-600'
+                }`}
+              >
+                {copied ? "✓ Copied!" : "Copy Post"}
+              </button>
+            </div>
+
+            <p className="whitespace-pre-wrap text-slate-800 leading-relaxed mb-6">{content}</p>
+            
+            {/* --- INSTAGRAM CHARACTER LIMIT CHECK --- */}
+            <div className="pt-4 border-t border-slate-200 flex items-center justify-between">
+              <div className="flex flex-col">
+                <span className="text-[10px] uppercase font-bold text-slate-400">Instagram Limit</span>
                 <span className={`text-sm font-mono ${content.length > 2200 ? 'text-red-600 font-bold' : 'text-slate-600'}`}>
                   {content.length.toLocaleString()} / 2,200
                 </span>
               </div>
-              <span className={`text-[10px] px-2 py-1 rounded font-bold uppercase ${content.length > 2200 ? 'bg-red-100 text-red-700 animate-pulse' : 'bg-emerald-100 text-emerald-700'}`}>
+              <span className={`text-[10px] px-2 py-1 rounded font-bold uppercase ${content.length > 2200 ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
                 {content.length > 2200 ? 'Too Long' : 'Good to Post'}
               </span>
             </div>
