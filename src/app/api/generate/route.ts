@@ -88,14 +88,6 @@ You are a Marketing Master with all your expertise you put your self in the shoe
     `;
 
               // for SIMULATION to (delete late)*****
-              if (process.env.NEXT_PUBLIC_MOCK_AI === "true") {
-                // Simulate a delay so your loading spinners still work
-                await new Promise((resolve) => setTimeout(resolve, 800)); 
-              
-                return NextResponse.json({ 
-                  content: `<research>TEST MODE ACTIVE: ${location}</research>\n\nThis is a test post for ${business_name} in Mimico. No API tokens were harmed in the making of this draft!` 
-                });
-              }
               
               // ... the rest of your real GoogleGenerativeAI code (delete late)*****
 
