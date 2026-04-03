@@ -93,9 +93,23 @@ export function GenerateDashboard({ onGenerateSuccess, onShare }: GenerateDashbo
     try {
       const googleToken = await (session as any)?.getToken({ provider: "oauth_google" });
       if (!googleToken) {
-        alert("Please sign in with Google to use the scheduler.");
+        alert("To use the Calendar, you need to connect your Google Account.");
+
+        // This helper forces Clerk to open the Google OAuth flow 
+      // and "link" it to the current email account.
+      const res = await user?.createExternalAccount({
+        strategy: 'oauth_google',
+        redirectUrl: window.location.href, // Come back here after linking
+        additionalScopes: ['https://www.googleapis.com/auth/calendar.events'],
+      });
+
+      // Redirect the user to the Google Consent screen
+      if (res?.verification?.externalVerificationRedirectURL) {
+        window.location.href = res.verification.externalVerificationRedirectURL.toString();
+      
         return;
-      }
+
+      }}
       const slotsToSquare = timeSlots.map(t => ({
         date: strategy === 'next' ? selectedDate : undefined,
         time: t
@@ -106,7 +120,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare }: GenerateDashbo
       }
     } catch (error) {
       console.error("Calendar Error:", error);
-      alert("Sync failed. Check Google permissions.");
+      alert("Connection failed. Make sure you allow Google Calendar permissions.");
     }
   };
 
