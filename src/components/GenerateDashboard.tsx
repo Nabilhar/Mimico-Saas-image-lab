@@ -6,9 +6,10 @@ import { VOICES } from "@/lib/constants";
 
 interface GenerateDashboardProps {
   onGenerateSuccess?: (content: string) => void;
+  onShare: (content: string) => void;
 }
 
-export function GenerateDashboard({ onGenerateSuccess }: GenerateDashboardProps) {
+export function GenerateDashboard({ onGenerateSuccess, onShare }: GenerateDashboardProps) {
   // 1. Create the Ref
   const saveRef = useRef(onGenerateSuccess);
   const [business_name, setbusiness_name] = useState("Our Local Business");
@@ -114,7 +115,7 @@ export function GenerateDashboard({ onGenerateSuccess }: GenerateDashboardProps)
       setLoading(false);
     }
   }
-
+  
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
@@ -170,6 +171,7 @@ export function GenerateDashboard({ onGenerateSuccess }: GenerateDashboardProps)
             {loading ? "Crafting..." : "Generate Mimico Post"}
           </button>
         </div>
+        
 
         {/* --- THE RESULT AREA (Includes Copy & Instagram Check) --- */}
         {content && (
@@ -179,14 +181,23 @@ export function GenerateDashboard({ onGenerateSuccess }: GenerateDashboardProps)
                 <span className="text-xs font-bold text-cyan-700">Result: {postType}</span>
                 <span className="text-[10px] text-slate-400 italic">Saved to dashboard automatically</span>
               </div>
-              <button 
-                onClick={handleCopy}
-                className={`text-xs font-bold px-3 py-1 rounded-lg transition ${
-                  copied ? 'bg-emerald-500 text-white' : 'bg-white border border-slate-200 text-slate-600'
-                }`}
-              >
-                {copied ? "✓ Copied!" : "Copy Post"}
-              </button>
+              <div className="flex gap-2 items-center">
+                <button 
+                  onClick={handleCopy}
+                  className={`text-[11px] font-bold uppercase px-4 py-2 rounded-xl bg-cyan-100 text-cyan-700 border border-cyan-200 hover:bg-cyan-200 transition-all shadow-sm" ${
+                    copied 
+
+                  }`}
+                >
+                  {copied ? "✓ Copied!" : "Copy"}
+                </button>
+                <button 
+                  onClick={() => onShare(content)}
+                  className="text-[11px] font-bold uppercase px-4 py-2 rounded-xl bg-cyan-100 text-cyan-700 border border-cyan-200 hover:bg-cyan-200 transition-all shadow-sm"
+                >
+                  Share
+                </button>
+              </div>
             </div>
 
             <p className="whitespace-pre-wrap text-slate-800 leading-relaxed mb-6">{content}</p>

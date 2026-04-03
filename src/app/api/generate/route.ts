@@ -88,7 +88,7 @@ You are a Marketing Master with all your expertise you put your self in the shoe
     `;
 
               // for SIMULATION to (delete late)*****
-              
+
               // ... the rest of your real GoogleGenerativeAI code (delete late)*****
 
     const genAI = new GoogleGenerativeAI(key);

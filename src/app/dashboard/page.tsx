@@ -19,6 +19,7 @@ interface BusinessData {
   category: string;
   niche: string;
   voice: string;
+  credits: number; //
   history: Post[];
 }
 
@@ -61,6 +62,7 @@ export default function DashboardPage() {
           category: profileRes.data.category,
           voice: profileRes.data.voice,
           niche: profileRes.data.niche,
+          credits: profileRes.data.credits || 0,
           history: postsRes.data || []
         };
         setBusinessData(formattedData);
@@ -85,7 +87,13 @@ export default function DashboardPage() {
 
   // 3. SAVE LOGIC
   const savePostToCloud = useCallback(async (newContent: string) => {
-    if (!user?.id) return;
+    if (!user?.id || !businessData) return;
+  
+    // 1. SAFETY CHECK: Do they have credits?
+    if (businessData.credits <= 0) {
+      alert("🚫 Out of credits! Please upgrade your plan to generate more posts.");
+      return;
+    }
     
     const tempId = 'temp-' + Date.now();
     const temporaryPost: Post = {
@@ -95,7 +103,7 @@ export default function DashboardPage() {
       business_id: user.id
     };
     setPosts(prev => [temporaryPost, ...prev]);
-    setActiveTab("saved"); 
+    // setActiveTab("saved"); 
 
     setLoading(true);
     try {
@@ -104,20 +112,35 @@ export default function DashboardPage() {
 
       const { error } = await supabase
         .from("posts")
-        .insert([{ content: newContent, business_id: user.id }]);
+        .insert([{ content: newContent, business_id: user.id,created_at: new Date().toISOString() }]);
 
       if (error) {
         setPosts(prev => prev.filter(p => p.id !== tempId));
-        alert("Database Error: Sync failed.");
-      } else {
-        loadBusinessData();
+        alert("❌ Failed to save post. Your credits were NOT charged..");
+      return;
       }
+
+      const newCreditCount = businessData.credits - 1;
+    setBusinessData(prev => prev ? { ...prev, credits: newCreditCount } : null);
+
+      const { error: creditError } = await supabase
+      .from('profiles')
+      .update({ credits: newCreditCount })
+      .eq('id', user.id);
+
+    if (creditError) {
+      console.error("Database failed to sync credits:", creditError);
+      // Even if this fails, the post is saved. We can refresh to see if it eventually syncs.
+    }
+    // 4. REFRESH UI: Update the post list and the credit counter
+    await loadBusinessData();
+
     } catch (err) {
       console.error("Save crash:", err);
     } finally {
       setLoading(false);
     }
-  }, [user?.id, getToken, loadBusinessData]);
+  }, [user?.id, getToken, loadBusinessData, businessData]);
 
   // 4. LISTENER
   useEffect(() => {
@@ -145,6 +168,56 @@ export default function DashboardPage() {
     }
   };
 
+  const deleteAllPosts = async () => {
+    // 1. Safety Confirmation
+    const confirmClear = window.confirm(
+      "Are you sure you want to delete ALL saved posts? This cannot be undone."
+    );
+    if (!confirmClear) return;
+  
+    setLoading(true);
+    try {
+      const token = await getToken({ template: 'supabase' });
+      const supabase = createClerkSupabaseClient(token || "");
+  
+      // 2. Delete all posts where business_id matches the user
+      const { error } = await supabase
+        .from('posts')
+        .delete()
+        .eq('business_id', user?.id);
+  
+      if (error) throw error;
+  
+      // 3. Update Local State (Clear the UI immediately)
+      setPosts([]);
+      setBusinessData(prev => prev ? { ...prev, history: [] } : null);
+      
+      alert("Library cleared successfully.");
+    } catch (err) {
+      console.error("Delete All Error:", err);
+      alert("Failed to delete posts. Check your connection.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+    // 7. SHARE LOGIC
+      const sharePost = async (content: string) => {
+        if (navigator?.share) {
+          try {
+            await navigator.share({
+              title: 'Content from Orali',
+              text: content,
+            });
+          } catch (err) {
+            console.log('Share dismissed');
+          }
+        } else {
+          await navigator.clipboard.writeText(content);
+          alert("Share menu not supported on this device. Content copied to clipboard!");
+        }
+      };
+
   if (!isLoaded) return <div className="p-20 text-center">Loading Studio...</div>;
 
   return (
@@ -157,12 +230,21 @@ export default function DashboardPage() {
             <p className="text-slate-500">
               Managing drafts for <span className="text-cyan-800 font-semibold">{businessData?.business_name || "Your Business"}</span>
             </p>
+                {/* CREDIT BADGE */}
+          <div className="flex items-center justify-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg">
+          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+          <p className="text-xs font-medium text-slate-600">
+            <span className="font-bold text-slate-900">{businessData?.credits ?? 0}</span> Credits Remaining
+          </p>
           </div>
-          {businessData?.category && (
+        
+          </div>
+          {businessData?.niche && (
             <div className="bg-cyan-50 border border-cyan-100 px-4 py-2 rounded-full">
-              <p className="text-xs font-bold text-cyan-800 uppercase tracking-widest">{businessData.category}</p>
-            </div>
+              <p className="text-xs font-bold text-cyan-800 uppercase tracking-widest">{businessData.niche}</p>
+            </div>          
           )}
+
         </header>
 
         <div className="flex gap-6 mb-8 border-b border-slate-200">
@@ -174,8 +256,11 @@ export default function DashboardPage() {
           {activeTab === "generate" ? (
             <section className="bento-card border-cyan-100 bg-white shadow-sm p-6 rounded-2xl">
               {businessData ? (
-                <GenerateDashboard onGenerateSuccess={savePostToCloud} />
+                <GenerateDashboard onGenerateSuccess={savePostToCloud}
+                onShare={sharePost}
+                 />
               ) : (
+
                 <div className="p-10 text-center border-2 border-dashed rounded-xl">
                   <p className="text-slate-500">Please complete your Profile to start generating.</p>
                 </div> 
@@ -183,23 +268,61 @@ export default function DashboardPage() {
               {loading && <p className="text-sm text-cyan-600 mt-2 animate-pulse">Syncing...</p>}
             </section>
           ) : (
+
+            <div className="space-y-6"> 
+            
+            {/* 1. THE HEADER WITH THE CLEAR BUTTON */}
+            <div className="flex justify-between items-center bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+              <div>
+                <h2 className="text-sm font-bold text-slate-700 uppercase tracking-tight">Saved Library</h2>
+                <p className="text-[10px] text-slate-400">{posts.length} posts saved</p>
+              </div>
+        
+              {posts.length > 0 && (
+                <button 
+                  onClick={deleteAllPosts}
+                  className="text-[10px] font-bold text-red-400 hover:text-white hover:bg-red-500 border border-red-100 px-3 py-1.5 rounded-lg transition-all"
+                >
+                  CLEAR ALL
+                </button>
+              )}
+            </div>
+            
+
+            
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {posts.length > 0 ? (
                 posts.map((post) => (
                   <div key={post.id} className="p-4 bg-white rounded-xl border border-slate-100 shadow-sm flex flex-col justify-between hover:border-cyan-200 transition-all">
                     <div className="flex justify-between items-start mb-3">
                       <p className="text-[10px] text-slate-400 font-mono">
-                        {post.created_at ? new Date(post.created_at).toLocaleDateString() : 'Just now'}
+                      {post.created_at 
+                          ? new Date(post.created_at).toLocaleString([], { 
+                              month: 'short', 
+                              day: 'numeric', 
+                              hour: '2-digit', 
+                              minute: '2-digit' 
+                            }) 
+                          : 'Just now'}
                       </p>
+                      <div className="flex gap-2">
                       <button 
                         onClick={() => {
                           navigator.clipboard.writeText(post.content);
                           alert("Copied!");
                         }}
-                        className="text-[10px] font-bold uppercase bg-cyan-50 text-cyan-700 px-2 py-1 rounded"
+                        className="text-[10px] font-bold uppercase bg-cyan-50 text-cyan-700 px-2 py-1 rounded hover:bg-cyan-100 transition-colors"
                       >
                         Copy
                       </button>
+
+                      <button 
+                        onClick={() => sharePost(post.content)}
+                        className="text-[10px] font-bold uppercase bg-cyan-50 text-cyan-700 px-2 py-1 rounded hover:bg-cyan-100 transition-colors"
+                      >
+                        Share
+                      </button>
+                      </div>
                     </div>
                     <p className="text-slate-700 whitespace-pre-wrap text-sm leading-relaxed mb-4">
                       {post.content}
@@ -214,6 +337,7 @@ export default function DashboardPage() {
                 <p className="text-slate-400 italic">No saved drafts yet.</p>
               )}
             </div>
+          </div>
           )}
         </div>
       </main>
