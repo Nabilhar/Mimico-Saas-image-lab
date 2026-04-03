@@ -92,6 +92,8 @@ export function GenerateDashboard({ onGenerateSuccess, onShare }: GenerateDashbo
   const handleSmartScheduleSubmit = async () => {
     try {
       const googleToken = await (session as any)?.getToken({ provider: "oauth_google" });
+      console.log("My Google Token is:", googleToken);
+      
       if (!googleToken) {
         alert("To use the Calendar, you need to connect your Google Account.");
 
