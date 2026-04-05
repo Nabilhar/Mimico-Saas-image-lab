@@ -5,15 +5,18 @@ import { useState, useEffect, useRef } from "react";
 import { VOICES } from "@/lib/constants";
 import { useUser } from "@clerk/nextjs";
 import { createEvents, EventAttributes } from 'ics';
+import PostActions from "./PostActions";
+
 
 interface GenerateDashboardProps {
   onGenerateSuccess?: (content: string) => void;
   onShare: (content: string) => void;
-  canGenerate: boolean; // This is the definition
+  canGenerate: boolean; 
+  onDelete: () => void;
 }
 
 // FIX: Added canGenerate here so the component can actually use the value
-export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate }: GenerateDashboardProps) {
+export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, onDelete }: GenerateDashboardProps) {
   const { user } = useUser();
   const saveRef = useRef(onGenerateSuccess);
 
@@ -29,7 +32,6 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate }: G
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("Initializing...");
-  const [copied, setCopied] = useState(false);
 
   // Scheduler States
   const [strategy, setStrategy] = useState("none");
@@ -76,12 +78,6 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate }: G
     return () => clearInterval(interval);
   }, [loading]);
 
-  const handleCopy = async () => {
-    if (!content) return;
-    await navigator.clipboard.writeText(content);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000); 
-  };
 
   const handleStrategyChange = (val: string) => {
     setStrategy(val);
@@ -92,9 +88,19 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate }: G
 
   // --- LOCAL CALENDAR SYNC (ICS) ---
   const handleSmartScheduleSubmit = async () => {
+
+    const dateToUse = (strategy === "daily" || strategy === "2-day" || strategy === "3-day") 
+    ? new Date().toISOString().split('T')[0] 
+    : selectedDate;
+
     const events: EventAttributes[] = timeSlots.map((time) => {
       const [hours, minutes] = time.split(':').map(Number);
       const [year, month, day] = selectedDate.split('-').map(Number);
+
+      let recurrenceRule = '';
+    if (strategy === "daily" || strategy === "2-day" || strategy === "3-day") {
+      recurrenceRule = 'FREQ=DAILY;INTERVAL=1'; // Repeats every single day
+    }
 
       return {
         start: [year, month, day, hours, minutes],
@@ -105,7 +111,8 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate }: G
         url: window.location.origin,
         status: 'CONFIRMED',
         busyStatus: 'FREE',
-        categories: ['Business Habit', 'Mimico Studio'],
+        categories: ['Marketing (Mimico Studio)'],
+        ...(recurrenceRule && { recurrenceRule })        
       };
     });
 
@@ -123,7 +130,10 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate }: G
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-      alert(`📅 Habit Synced! Your ${strategy} reminders are ready to add.`);
+      const msg = strategy === "next"
+      ? "📅 Reminder set for your selected date!" 
+      : "📅 Daily Habit Synced! Your calendar will now remind you every day.";
+    alert(msg);
       setStrategy("none");
     });
   };
@@ -238,14 +248,11 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate }: G
             <div className="flex flex-col">
               <span className="text-xs font-bold text-cyan-700 uppercase tracking-wider">Mimico Draft Ready</span>
             </div>
-            <div className="flex gap-2">
-              <button onClick={handleCopy} className="text-[11px] font-bold uppercase px-4 py-2 rounded-xl bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100 transition-all">
-                {copied ? "✓ Copied" : "Copy"}
-              </button>
-              <button onClick={() => onShare(content)} className="text-[11px] font-bold uppercase px-4 py-2 rounded-xl bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100 transition-all">
-                Share
-              </button>
-            </div>
+            <PostActions 
+                content={content} 
+                onDelete={() => setContent(null)} // Make sure onDelete is passed into this component's props
+                showCopy={false} 
+              />
           </div>
           <p className="whitespace-pre-wrap text-slate-800 leading-relaxed mb-8 font-medium text-sm">{content}</p>
         </div>
@@ -276,20 +283,29 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate }: G
 
           {strategy !== "none" && (
             <div className="space-y-3">
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Target Date</label>
-                <input 
-                  type="date" 
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold" 
-                />
-              </div>
+              {/* ONLY show date picker for One-Time Reminders */}
+              {strategy === "next" && (
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-black uppercase text-slate-400 ml-2">
+                    Reminder Date
+                  </label>
+                  <input 
+                    type="date" 
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold" 
+                  />
+                </div>
+              )}
+
               <div className="grid grid-cols-1 gap-2">
+                {/* Time slots always show so they can pick THEIR preferred time for the habit */}
                 {timeSlots.map((time, idx) => (
                   <div key={idx} className="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-100">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Slot {idx + 1}</span>
-                    <input 
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">
+                      {strategy === "next" ? "Reminder Time" : `Daily Slot ${idx + 1}`}
+                    </span>
+                    <input
                       type="time" 
                       value={time}
                       onChange={(e) => {
@@ -308,7 +324,12 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate }: G
           <div className="pt-2">
             <button 
               onClick={handleSmartScheduleSubmit}
-              className="w-full bg-slate-900 text-white font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest hover:bg-black active:scale-95 transition-all shadow-xl"
+              disabled={strategy === "none"}
+              className={`w-full font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest transition-all shadow-xl active:scale-95 ${
+                strategy === "none"
+                  ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
+                  : "bg-slate-900 text-white hover:bg-black shadow-slate-900/20"
+              }`}
             >
               Sync Habit to Calendar
             </button>

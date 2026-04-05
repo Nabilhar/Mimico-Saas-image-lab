@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { GenerateDashboard } from "@/components/GenerateDashboard";
 import { createClerksupabase } from '@/lib/supabase';
 import { useRouter } from "next/navigation";
+import PostActions from "@/components/PostActions";
 
 interface Post { id: string; content: string; created_at: string; business_id: string; }
 interface BusinessData { business_name: string; location: string; category: string; niche: string; voice: string; credits: number; history: Post[]; }
@@ -135,6 +136,7 @@ export default function DashboardPage() {
                   onGenerateSuccess={savePostToCloud}
                   onShare={sharePost}
                   canGenerate={(businessData?.credits ?? 0) > 0}
+                  onDelete={() => {}}
                 />
               ) : (
                 <div className="p-10 text-center border-2 border-dashed rounded-xl">
@@ -148,10 +150,11 @@ export default function DashboardPage() {
                 {posts.length > 0 ? posts.map(post => (
                   <div key={post.id} className="p-4 bg-white rounded-xl border border-slate-100 shadow-sm">
                     <p className="text-sm text-slate-700 mb-4 whitespace-pre-wrap">{post.content}</p>
-                    <div className="flex justify-between items-center">
-                       <button onClick={() => deletePost(post.id)} className="text-[10px] font-bold text-red-400 uppercase">Delete</button>
-                       <button onClick={() => sharePost(post.content)} className="text-[10px] font-bold text-cyan-600 uppercase">Share</button>
-                    </div>
+                    <PostActions 
+                    content={post.content} 
+                    onDelete={() => deletePost(post.id)} 
+                    showCopy={true} // This enables that green "Copied!" button logic
+                  />
                   </div>
                 )) : (
                   <p className="text-slate-400 italic">No saved drafts yet.</p>
