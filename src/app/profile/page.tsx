@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation"; // Added for redirecting
 import { SiteHeader } from "@/components/SiteHeader"; // Keep consistent branding
 import { getFramework, BUSINESS_ARCHETYPES } from "@/lib/frameworks";
 import { NICHE_DATA, CATEGORIES, VOICES } from "@/lib/constants";
-import { createClerksupabase } from '@/lib/supabaseV';
+import { createClerksupabase } from '@/lib/supabase';
 
+let globalSupabase: any;
 
 export default function ProfilePage() {
   // 1. Define all hooks
@@ -15,11 +16,14 @@ export default function ProfilePage() {
   const { getToken } = useAuth();
   const router = useRouter();
 
-  // Initialize the supabaseV client
-  const supabaseV = useMemo(() => {
-    return createClerksupabase(() => getToken({ template: 'supabaseV' }));
+  // Initialize the supabase client
+  const supabase = useMemo(() => {
+    if (!globalSupabase) {
+      globalSupabase = createClerksupabase(() => getToken({ template: 'supabase' }));
+    }
+    return globalSupabase;
   }, [getToken]);
-
+  
   // STATES DEFINITIONS
   const [loading, setLoading] = useState(false);
   const [testResult, setTestResult] = useState("");
@@ -28,13 +32,14 @@ export default function ProfilePage() {
   const [niche, setNiche] = useState("");
   const [location, setLocation] = useState("");
   const [voice, setVoice] = useState("");
+  const [credits, setCredits] = useState("");
 
     // 4. Effects and Handlers
     useEffect(() => {
       const fetchProfile = async () => {
-        if (!user?.id || !supabaseV) return;
+        if (!user?.id || !supabase) return;
         
-        const { data, error } = await supabaseV
+        const { data, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', user.id)
@@ -43,20 +48,23 @@ export default function ProfilePage() {
         if (data) {
           // If we found data in Supabase, use it
           setbusiness_name(data.business_name || "");
-          setCategory(data.category || "");
-          setNiche(data.niche || "");
           setLocation(data.location || "");
+          setCategory(data.category || "");
           setVoice(data.voice || "");
+          setNiche(data.niche || "");
+          setCredits(data.credits || "" )
+
         } else {
           // If no data in DB, check localStorage
           const saved = localStorage.getItem("mimico_business_profile");
           if (saved) {
             const localData = JSON.parse(saved);
             setbusiness_name(localData.business_name || "");
-            setCategory(localData.category || "");
-            setNiche(localData.niche || "");
             setLocation(localData.location || "");
+            setCategory(localData.category || "");
             setVoice(localData.voice || "");
+            setNiche(localData.niche || "");
+            setCredits(localData.credits || "")
           }
         }
       };
@@ -64,7 +72,7 @@ export default function ProfilePage() {
       if (isLoaded && user) {
         fetchProfile();
       }
-    }, [isLoaded, user, supabaseV]);
+    }, [isLoaded, user, supabase]);
     // 3. Early Return (Now 'session' is defined and safe to check)
     if (!isLoaded || !user || !session) {
       return <div className="p-10 text-center text-slate-500">Loading Profile...</div>;
@@ -76,22 +84,23 @@ export default function ProfilePage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !supabaseV) return;
+    if (!user || !supabase) return;
     
     setLoading(true);
     try {
       // We define the object HERE so both Supabase and LocalStorage can use it
       const profileData = {
         id: user.id,
-        business_name,
-        location,
-        category,
-        niche,
-        voice,
+        business_name :business_name,
+        location: location,
+        category: category,
+        niche: niche,
+        voice: voice,
+        credits: 9,
         updated_at: new Date().toISOString(),
       };
   
-      const { error } = await supabaseV
+      const { error } = await supabase
         .from('profiles')
         .upsert(profileData); // Use the object here
   

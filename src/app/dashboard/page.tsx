@@ -3,7 +3,7 @@ import { useUser, useAuth } from "@clerk/nextjs";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { GenerateDashboard } from "@/components/GenerateDashboard";
-import { createClerksupabase } from '@/lib/supabaseV';
+import { createClerksupabase } from '@/lib/supabase';
 import { useRouter } from "next/navigation";
 
 interface Post { id: string; content: string; created_at: string; business_id: string; }
@@ -18,21 +18,21 @@ export default function DashboardPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("generate");
-  const [supabaseVToken, setsupabaseVToken] = useState<string | null>(null);
+  const [supabaseToken, setsupabaseToken] = useState<string | null>(null);
 
   // 1. Get Token
-  const supabaseV = useMemo(() => {
-    return createClerksupabase(() => getToken({ template: 'supabaseV' }));
+  const supabase = useMemo(() => {
+    return createClerksupabase(() => getToken({ template: 'supabase' }));
   }, [getToken]);
 
   // 3. Load Data
   const loadBusinessData = useCallback(async () => {
-    if (!user?.id || !supabaseV) return;
+    if (!user?.id || !supabase) return;
     setLoading(true);
     try {
       const [profileRes, postsRes] = await Promise.all([
-        supabaseV.from('profiles').select('*').eq('id', user.id).maybeSingle(),
-        supabaseV.from('posts').select('*').eq('business_id', user.id).order('created_at', { ascending: false })
+        supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
+        supabase.from('posts').select('*').eq('business_id', user.id).order('created_at', { ascending: false })
       ]);
 
       if (!profileRes.data && !profileRes.error) {
@@ -54,12 +54,12 @@ export default function DashboardPage() {
         setPosts(postsRes.data || []);
       }
     } catch (err) { console.error(err); } finally { setLoading(false); }
-  }, [user?.id, supabaseV, router]);
+  }, [user?.id, supabase, router]);
 
   // 4. Load Trigger
   useEffect(() => {
-    if (isLoaded && user && supabaseV) { loadBusinessData(); }
-  }, [isLoaded, user, supabaseV, loadBusinessData]);
+    if (isLoaded && user && supabase) { loadBusinessData(); }
+  }, [isLoaded, user, supabase, loadBusinessData]);
 
   // 5. Actions
   const sharePost = async (content: string) => {
@@ -72,28 +72,28 @@ export default function DashboardPage() {
   };
 
   const savePostToCloud = useCallback(async (newContent: string) => {
-    if (!user?.id || !businessData || !supabaseV) return;
+    if (!user?.id || !businessData || !supabase) return;
     if (businessData.credits <= 0) return alert("No credits!");
     
     setLoading(true);
-    const { error } = await supabaseV.from("posts").insert([{ content: newContent, business_id: user.id }]);
+    const { error } = await supabase.from("posts").insert([{ content: newContent, business_id: user.id }]);
     if (!error) {
-      await supabaseV.from('profiles').update({ credits: businessData.credits - 1 }).eq('id', user.id);
+      await supabase.from('profiles').update({ credits: businessData.credits - 1 }).eq('id', user.id);
       await loadBusinessData();
     }
     setLoading(false);
-  }, [user?.id, loadBusinessData, businessData, supabaseV]);
+  }, [user?.id, loadBusinessData, businessData, supabase]);
 
   const deletePost = async (postId: string) => {
-    if (!window.confirm("Delete?") || !supabaseV) return;
-    await supabaseV.from('posts').delete().eq('id', postId);
+    if (!window.confirm("Delete?") || !supabase) return;
+    await supabase.from('posts').delete().eq('id', postId);
     loadBusinessData();
   };
 
   // --- RENDERING ---
 
   // Handle the Loading State
-  if (!isLoaded || !user || !supabaseV) {
+  if (!isLoaded || !user || !supabase) {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-slate-50">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-cyan-600 border-t-transparent"></div>
