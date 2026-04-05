@@ -1,27 +1,13 @@
 "use client";
 import { useUser, useAuth } from "@clerk/nextjs";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { GenerateDashboard } from "@/components/GenerateDashboard";
-import { createClerkSupabaseClient } from '@/lib/supabaseClient';
+import { createClerksupabase } from '@/lib/supabaseV';
 import { useRouter } from "next/navigation";
 
-interface Post {
-  id: string;
-  content: string;
-  created_at: string;
-  business_id: string;
-}
-
-interface BusinessData {
-  business_name: string;
-  location: string;
-  category: string;
-  niche: string;
-  voice: string;
-  credits: number; //
-  history: Post[];
-}
+interface Post { id: string; content: string; created_at: string; business_id: string; }
+interface BusinessData { business_name: string; location: string; category: string; niche: string; voice: string; credits: number; history: Post[]; }
 
 export default function DashboardPage() {
   const { user, isLoaded } = useUser();
@@ -32,26 +18,25 @@ export default function DashboardPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("generate");
+  const [supabaseVToken, setsupabaseVToken] = useState<string | null>(null);
 
-  // 1. THE LOAD FUNCTION
+  // 1. Get Token
+  const supabaseV = useMemo(() => {
+    return createClerksupabase(() => getToken({ template: 'supabaseV' }));
+  }, [getToken]);
+
+  // 3. Load Data
   const loadBusinessData = useCallback(async () => {
-    if (!user?.id) return;
-    console.log("🔍 DEBUG: Starting data load for user:", user.id);
+    if (!user?.id || !supabaseV) return;
     setLoading(true);
-    
     try {
-      const token = await getToken({ template: 'supabase' });
-      const supabase = createClerkSupabaseClient(token || "");
-
       const [profileRes, postsRes] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
-        supabase.from('posts').select('*').eq('business_id', user.id).order('created_at', { ascending: false })
+        supabaseV.from('profiles').select('*').eq('id', user.id).maybeSingle(),
+        supabaseV.from('posts').select('*').eq('business_id', user.id).order('created_at', { ascending: false })
       ]);
 
-      // --- THE NEW REDIRECT LOGIC ---
-      if (!profileRes.data) {
-        console.log("⚠️ No profile found. Redirecting to onboarding...");
-        router.push('/profile'); // This kicks the user to setup if 'Orali' doesn't exist
+      if (!profileRes.data && !profileRes.error) {
+        router.push('/profile');
         return; 
       }
 
@@ -67,159 +52,57 @@ export default function DashboardPage() {
         };
         setBusinessData(formattedData);
         setPosts(postsRes.data || []);
-        localStorage.setItem("mimico_business_profile", JSON.stringify(formattedData));
-      } else {
-        console.log("⚠️ No profile found in database.");
       }
-    } catch (err) {
-      console.error("Sync Error:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.id, getToken]);
+    } catch (err) { console.error(err); } finally { setLoading(false); }
+  }, [user?.id, supabaseV, router]);
 
-  // 2. THE TRIGGER (This was missing!)
+  // 4. Load Trigger
   useEffect(() => {
-    if (isLoaded && user) {
-      loadBusinessData();
-    }
-  }, [isLoaded, user, loadBusinessData]);
+    if (isLoaded && user && supabaseV) { loadBusinessData(); }
+  }, [isLoaded, user, supabaseV, loadBusinessData]);
 
-  // 3. SAVE LOGIC
+  // 5. Actions
+  const sharePost = async (content: string) => {
+    if (navigator?.share) {
+      await navigator.share({ title: 'Mimico Studio', text: content }).catch(() => {});
+    } else {
+      await navigator.clipboard.writeText(content);
+      alert("Copied!");
+    }
+  };
+
   const savePostToCloud = useCallback(async (newContent: string) => {
-    if (!user?.id || !businessData) return;
-  
-    // 1. SAFETY CHECK: Do they have credits?
-    if (businessData.credits <= 0) {
-      alert("🚫 Out of credits! Please upgrade your plan to generate more posts.");
-      return;
-    }
+    if (!user?.id || !businessData || !supabaseV) return;
+    if (businessData.credits <= 0) return alert("No credits!");
     
-    const tempId = 'temp-' + Date.now();
-    const temporaryPost: Post = {
-      id: tempId,
-      content: newContent,
-      created_at: new Date().toISOString(),
-      business_id: user.id
-    };
-    setPosts(prev => [temporaryPost, ...prev]);
-    // setActiveTab("saved"); 
-
     setLoading(true);
-    try {
-      const token = await getToken({ template: 'supabase' });
-      const supabase = createClerkSupabaseClient(token || "");
-
-      const { error } = await supabase
-        .from("posts")
-        .insert([{ content: newContent, business_id: user.id,created_at: new Date().toISOString() }]);
-
-      if (error) {
-        setPosts(prev => prev.filter(p => p.id !== tempId));
-        alert("❌ Failed to save post. Your credits were NOT charged..");
-      return;
-      }
-
-      const newCreditCount = businessData.credits - 1;
-    setBusinessData(prev => prev ? { ...prev, credits: newCreditCount } : null);
-
-      const { error: creditError } = await supabase
-      .from('profiles')
-      .update({ credits: newCreditCount })
-      .eq('id', user.id);
-
-    if (creditError) {
-      console.error("Database failed to sync credits:", creditError);
-      // Even if this fails, the post is saved. We can refresh to see if it eventually syncs.
+    const { error } = await supabaseV.from("posts").insert([{ content: newContent, business_id: user.id }]);
+    if (!error) {
+      await supabaseV.from('profiles').update({ credits: businessData.credits - 1 }).eq('id', user.id);
+      await loadBusinessData();
     }
-    // 4. REFRESH UI: Update the post list and the credit counter
-    await loadBusinessData();
+    setLoading(false);
+  }, [user?.id, loadBusinessData, businessData, supabaseV]);
 
-    } catch (err) {
-      console.error("Save crash:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.id, getToken, loadBusinessData, businessData]);
-
-  // 4. LISTENER
-  useEffect(() => {
-    const handleAutoSave = (event: any) => {
-      if (event.detail.content) savePostToCloud(event.detail.content);
-    };
-    window.addEventListener('save-mimico-post', handleAutoSave);
-    return () => window.removeEventListener('save-mimico-post', handleAutoSave);
-  }, [savePostToCloud]);
-
-  // 5. DELETE LOGIC
   const deletePost = async (postId: string) => {
-    if (!window.confirm("Delete this post?")) return;
-    try {
-      const token = await getToken({ template: 'supabase' });
-      const supabase = createClerkSupabaseClient(token || "");
-      const { error } = await supabase.from('posts').delete().eq('id', postId);
-      
-      if (!error) {
-        setPosts(prev => prev.filter(p => p.id !== postId));
-        setBusinessData(prev => prev ? { ...prev, history: prev.history.filter(h => h.id !== postId) } : null);
-      }
-    } catch (err) {
-      console.error("Delete error:", err);
-    }
+    if (!window.confirm("Delete?") || !supabaseV) return;
+    await supabaseV.from('posts').delete().eq('id', postId);
+    loadBusinessData();
   };
 
-  const deleteAllPosts = async () => {
-    // 1. Safety Confirmation
-    const confirmClear = window.confirm(
-      "Are you sure you want to delete ALL saved posts? This cannot be undone."
+  // --- RENDERING ---
+
+  // Handle the Loading State
+  if (!isLoaded || !user || !supabaseV) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center bg-slate-50">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-cyan-600 border-t-transparent"></div>
+        <p className="mt-4 font-bold text-slate-600 uppercase tracking-widest text-[10px]">Mimico Studio Securing Session...</p>
+      </div>
     );
-    if (!confirmClear) return;
-  
-    setLoading(true);
-    try {
-      const token = await getToken({ template: 'supabase' });
-      const supabase = createClerkSupabaseClient(token || "");
-  
-      // 2. Delete all posts where business_id matches the user
-      const { error } = await supabase
-        .from('posts')
-        .delete()
-        .eq('business_id', user?.id);
-  
-      if (error) throw error;
-  
-      // 3. Update Local State (Clear the UI immediately)
-      setPosts([]);
-      setBusinessData(prev => prev ? { ...prev, history: [] } : null);
-      
-      alert("Library cleared successfully.");
-    } catch (err) {
-      console.error("Delete All Error:", err);
-      alert("Failed to delete posts. Check your connection.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  }
 
-    // 7. SHARE LOGIC
-      const sharePost = async (content: string) => {
-        if (navigator?.share) {
-          try {
-            await navigator.share({
-              title: 'Content from Orali',
-              text: content,
-            });
-          } catch (err) {
-            console.log('Share dismissed');
-          }
-        } else {
-          await navigator.clipboard.writeText(content);
-          alert("Share menu not supported on this device. Content copied to clipboard!");
-        }
-      };
-
-  if (!isLoaded) return <div className="p-20 text-center">Loading Studio...</div>;
-
+  // Handle the Main UI
   return (
     <>
       <SiteHeader />
@@ -230,21 +113,13 @@ export default function DashboardPage() {
             <p className="text-slate-500">
               Managing drafts for <span className="text-cyan-800 font-semibold">{businessData?.business_name || "Your Business"}</span>
             </p>
-                {/* CREDIT BADGE */}
-          <div className="flex items-center justify-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg">
-          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-          <p className="text-xs font-medium text-slate-600">
-            <span className="font-bold text-slate-900">{businessData?.credits ?? 0}</span> Credits Remaining
-          </p>
+            <div className="mt-2 flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg w-fit">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+              <p className="text-xs font-medium text-slate-600">
+                <span className="font-bold text-slate-900">{businessData?.credits ?? 0}</span> Credits Remaining
+              </p>
+            </div>
           </div>
-        
-          </div>
-          {businessData?.niche && (
-            <div className="bg-cyan-50 border border-cyan-100 px-4 py-2 rounded-full">
-              <p className="text-xs font-bold text-cyan-800 uppercase tracking-widest">{businessData.niche}</p>
-            </div>          
-          )}
-
         </header>
 
         <div className="flex gap-6 mb-8 border-b border-slate-200">
@@ -256,88 +131,32 @@ export default function DashboardPage() {
           {activeTab === "generate" ? (
             <section className="bento-card border-cyan-100 bg-white shadow-sm p-6 rounded-2xl">
               {businessData ? (
-                <GenerateDashboard onGenerateSuccess={savePostToCloud}
-                onShare={sharePost}
-                 />
+                <GenerateDashboard 
+                  onGenerateSuccess={savePostToCloud}
+                  onShare={sharePost}
+                  canGenerate={(businessData?.credits ?? 0) > 0}
+                />
               ) : (
-
                 <div className="p-10 text-center border-2 border-dashed rounded-xl">
-                  <p className="text-slate-500">Please complete your Profile to start generating.</p>
+                  <p className="text-slate-500">Loading your Mimico profile...</p>
                 </div> 
               )}
-              {loading && <p className="text-sm text-cyan-600 mt-2 animate-pulse">Syncing...</p>}
+              {loading && <p className="text-xs text-cyan-600 animate-pulse mt-2">Updating...</p>}
             </section>
           ) : (
-
-            <div className="space-y-6"> 
-            
-            {/* 1. THE HEADER WITH THE CLEAR BUTTON */}
-            <div className="flex justify-between items-center bg-slate-50/50 p-4 rounded-xl border border-slate-100">
-              <div>
-                <h2 className="text-sm font-bold text-slate-700 uppercase tracking-tight">Saved Library</h2>
-                <p className="text-[10px] text-slate-400">{posts.length} posts saved</p>
-              </div>
-        
-              {posts.length > 0 && (
-                <button 
-                  onClick={deleteAllPosts}
-                  className="text-[10px] font-bold text-red-400 hover:text-white hover:bg-red-500 border border-red-100 px-3 py-1.5 rounded-lg transition-all"
-                >
-                  CLEAR ALL
-                </button>
-              )}
-            </div>
-            
-
-            
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {posts.length > 0 ? (
-                posts.map((post) => (
-                  <div key={post.id} className="p-4 bg-white rounded-xl border border-slate-100 shadow-sm flex flex-col justify-between hover:border-cyan-200 transition-all">
-                    <div className="flex justify-between items-start mb-3">
-                      <p className="text-[10px] text-slate-400 font-mono">
-                      {post.created_at 
-                          ? new Date(post.created_at).toLocaleString([], { 
-                              month: 'short', 
-                              day: 'numeric', 
-                              hour: '2-digit', 
-                              minute: '2-digit' 
-                            }) 
-                          : 'Just now'}
-                      </p>
-                      <div className="flex gap-2">
-                      <button 
-                        onClick={() => {
-                          navigator.clipboard.writeText(post.content);
-                          alert("Copied!");
-                        }}
-                        className="text-[10px] font-bold uppercase bg-cyan-50 text-cyan-700 px-2 py-1 rounded hover:bg-cyan-100 transition-colors"
-                      >
-                        Copy
-                      </button>
-
-                      <button 
-                        onClick={() => sharePost(post.content)}
-                        className="text-[10px] font-bold uppercase bg-cyan-50 text-cyan-700 px-2 py-1 rounded hover:bg-cyan-100 transition-colors"
-                      >
-                        Share
-                      </button>
-                      </div>
-                    </div>
-                    <p className="text-slate-700 whitespace-pre-wrap text-sm leading-relaxed mb-4">
-                      {post.content}
-                    </p>
-                    <div className="pt-3 border-t border-slate-50 flex justify-between items-center">
-                      <button onClick={() => deletePost(post.id)} className="text-[10px] font-bold uppercase text-red-400 hover:text-red-600">Delete</button>
-                      <span className="text-[9px] text-slate-300 font-mono">{post.content.length} chars</span>
+             <div className="grid gap-4 sm:grid-cols-2">
+                {posts.length > 0 ? posts.map(post => (
+                  <div key={post.id} className="p-4 bg-white rounded-xl border border-slate-100 shadow-sm">
+                    <p className="text-sm text-slate-700 mb-4 whitespace-pre-wrap">{post.content}</p>
+                    <div className="flex justify-between items-center">
+                       <button onClick={() => deletePost(post.id)} className="text-[10px] font-bold text-red-400 uppercase">Delete</button>
+                       <button onClick={() => sharePost(post.content)} className="text-[10px] font-bold text-cyan-600 uppercase">Share</button>
                     </div>
                   </div>
-                ))
-              ) : (
-                <p className="text-slate-400 italic">No saved drafts yet.</p>
-              )}
-            </div>
-          </div>
+                )) : (
+                  <p className="text-slate-400 italic">No saved drafts yet.</p>
+                )}
+             </div>
           )}
         </div>
       </main>

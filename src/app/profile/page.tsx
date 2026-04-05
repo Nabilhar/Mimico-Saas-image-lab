@@ -1,97 +1,116 @@
 'use client';
-import { useUser, useSession } from "@clerk/nextjs";
-import { useState, useEffect } from "react";
+import { useUser, useSession, useAuth } from "@clerk/nextjs";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation"; // Added for redirecting
 import { SiteHeader } from "@/components/SiteHeader"; // Keep consistent branding
 import { getFramework, BUSINESS_ARCHETYPES } from "@/lib/frameworks";
 import { NICHE_DATA, CATEGORIES, VOICES } from "@/lib/constants";
-import { supabase } from "@/lib/supabase";
+import { createClerksupabase } from '@/lib/supabaseV';
+
 
 export default function ProfilePage() {
+  // 1. Define all hooks
   const { user, isLoaded } = useUser();
+  const { session } = useSession();
+  const { getToken } = useAuth();
   const router = useRouter();
+
+  // Initialize the supabaseV client
+  const supabaseV = useMemo(() => {
+    return createClerksupabase(() => getToken({ template: 'supabaseV' }));
+  }, [getToken]);
+
+  // STATES DEFINITIONS
   const [loading, setLoading] = useState(false);
   const [testResult, setTestResult] = useState("");
-
-  // Form States
   const [business_name, setbusiness_name] = useState("");
   const [category, setCategory] = useState("");
   const [niche, setNiche] = useState("");
   const [location, setLocation] = useState("");
   const [voice, setVoice] = useState("");
 
-  useEffect(() => {
-    const saved = localStorage.getItem("mimico_business_profile");
-    if (saved) {
-      const data = JSON.parse(saved);
-      if (data.business_name) setbusiness_name(data.business_name);
-      if (data.category) setCategory(data.category);
-      if (data.niche) setNiche(data.niche);
-      if (data.location) setLocation(data.location);
-      if (data.voice) setVoice(data.voice);
+    // 4. Effects and Handlers
+    useEffect(() => {
+      const fetchProfile = async () => {
+        if (!user?.id || !supabaseV) return;
+        
+        const { data, error } = await supabaseV
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .maybeSingle();
+    
+        if (data) {
+          // If we found data in Supabase, use it
+          setbusiness_name(data.business_name || "");
+          setCategory(data.category || "");
+          setNiche(data.niche || "");
+          setLocation(data.location || "");
+          setVoice(data.voice || "");
+        } else {
+          // If no data in DB, check localStorage
+          const saved = localStorage.getItem("mimico_business_profile");
+          if (saved) {
+            const localData = JSON.parse(saved);
+            setbusiness_name(localData.business_name || "");
+            setCategory(localData.category || "");
+            setNiche(localData.niche || "");
+            setLocation(localData.location || "");
+            setVoice(localData.voice || "");
+          }
+        }
+      };
+    
+      if (isLoaded && user) {
+        fetchProfile();
+      }
+    }, [isLoaded, user, supabaseV]);
+    // 3. Early Return (Now 'session' is defined and safe to check)
+    if (!isLoaded || !user || !session) {
+      return <div className="p-10 text-center text-slate-500">Loading Profile...</div>;
     }
-  }, []);
 
   const categories = Object.keys(BUSINESS_ARCHETYPES);
   const voices = ["The Expert", "The Neighbor", "The Hustler", "The Minimalist"];
 
-  const { session } = useSession();
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user || !supabaseV) return;
     
-    if (!isLoaded || !user?.id || !session) {
-      alert("Please wait for Clerk to load or sign in again.");
-      return;
-    }
-  
     setLoading(true);
-
     try {
-      // 1. Get the JWT Token from Clerk
-      const token = await session.getToken({ template: 'supabase' });
-      
-      // 2. IMPORTANT: This is the standard way to inject the token into the Supabase client
-      // This ensures the "Security Guard" (RLS) knows who you are.
-      supabase.realtime.setAuth(token);
-      
-      // Force the rest client to use the new token
-      // @ts-ignore - internal access to headers
-      supabase.rest.headers['Authorization'] = `Bearer ${token}`;
-
-      // 3. Perform the Upsert
-      const { data, error } = await supabase
-        .from('profiles')
-        .upsert({
-          id: user.id, 
-          business_name: business_name, 
-          location: location,
-          category: category,
-          niche: niche,
-          voice: voice,
-          updated_at: new Date().toISOString(),
-        })
-        .select();
+      // We define the object HERE so both Supabase and LocalStorage can use it
+      const profileData = {
+        id: user.id,
+        business_name,
+        location,
+        category,
+        niche,
+        voice,
+        updated_at: new Date().toISOString(),
+      };
   
-      if (error) {
-        console.error("Supabase Save Error:", error.message);
-        alert("Error saving profile: " + error.message);
-      } else {
-        // 4. Success logic
-        if (data && data[0]) {
-          localStorage.setItem("mimico_business_profile", JSON.stringify(data[0]));
-        }
-        alert("Profile Updated! ✅");
-        router.push("/dashboard"); 
-      }
+      const { error } = await supabaseV
+        .from('profiles')
+        .upsert(profileData); // Use the object here
+  
+      if (error) throw error;
+  
+      // Now this won't throw an error because profileData is defined above
+      localStorage.setItem("mimico_business_profile", JSON.stringify(profileData));
+  
+      alert("SUCCESS! Mimico Profile Saved.");
+      router.push("/dashboard");
+  
     } catch (err: any) {
-      console.error("Unexpected error during save:", err);
-      alert("An unexpected error occurred: " + err.message);
+      console.error("Save failed:", err.message);
+      alert("Save Error: " + err.message);
     } finally {
       setLoading(false);
     }
   };
-
+  
   const runLogicCheck = () => {
     if (!category || !voice) {
       setTestResult("Please select a category and voice first!");
