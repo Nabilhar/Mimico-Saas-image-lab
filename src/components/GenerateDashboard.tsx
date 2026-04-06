@@ -1,6 +1,5 @@
 "use client";
 
-import { getFramework, FRAMEWORK_DEFINITIONS } from "@/lib/frameworks";
 import { useState, useEffect, useRef } from "react"; 
 import { VOICES } from "@/lib/constants";
 import { useUser } from "@clerk/nextjs";
@@ -141,8 +140,6 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, onD
   async function handleGenerate() {
     setLoading(true);
     setContent(null);
-    const selectedFramework = getFramework(category, postType, voice);
-    const instructions = FRAMEWORK_DEFINITIONS[selectedFramework];
 
     try {
       const res = await fetch("/api/generate", {
@@ -150,7 +147,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, onD
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           prompt: `Generate a ${postType} post for ${business_name}`,
-          category, niche, postType, voice, business_name, location, instructions
+          business_name, location,category, niche, voice,  postType, 
         }),
       });
       const data = await res.json();
@@ -160,7 +157,11 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, onD
         setTimeout(() => {
           if (saveRef.current) saveRef.current(cleanPost);
         }, 500);
+      } else {
+        // Show the error from the API (rate limit, missing key, etc.)
+        setContent(data.error || "Something went wrong. Please try again.");
       }
+      
     } catch (err) {
       console.error(err);
     } finally {
@@ -179,7 +180,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, onD
         <div className="space-y-4">
           <div>
             <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Business</label>
-            <input className="mt-1 w-full p-3 border rounded-xl bg-slate-50 text-slate-500 outline-none cursor-not-allowed" value={business_name} readOnly />
+            <input className="mt-1 w-full p-3 border rounded-xl bg-slate-50 text-slate-500 outline-none cursor-not-allowed" value={business_name} onChange={(e) => setVoice(e.target.value)} readOnly />
           </div>
   
           <div className="grid grid-cols-2 gap-4">
@@ -247,6 +248,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, onD
           <div className="flex justify-between items-start mb-6">
             <div className="flex flex-col">
               <span className="text-xs font-bold text-cyan-700 uppercase tracking-wider">Mimico Draft Ready</span>
+              <span className="text-[10px] font-medium text-slate-400 mt-1 italic">Generated Just Now</span>
             </div>
             <PostActions 
                 content={content} 

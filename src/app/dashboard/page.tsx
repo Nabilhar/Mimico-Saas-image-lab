@@ -149,7 +149,22 @@ export default function DashboardPage() {
              <div className="grid gap-4 sm:grid-cols-2">
                 {posts.length > 0 ? posts.map(post => (
                   <div key={post.id} className="p-4 bg-white rounded-xl border border-slate-100 shadow-sm">
-                    <p className="text-sm text-slate-700 mb-4 whitespace-pre-wrap">{post.content}</p>
+                    
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
+                        {new Date(post.created_at).toLocaleDateString('en-US', { 
+                          month: 'short', 
+                          day: 'numeric', 
+                          hour: 'numeric', 
+                          minute: '2-digit', 
+                          hour12:true
+                        })}
+                      </span>
+                    </div>
+
+                    <p className="text-sm text-slate-700 mb-4 whitespace-pre-wrap">
+                      {post.content}
+                    </p>
                     <PostActions 
                     content={post.content} 
                     onDelete={() => deletePost(post.id)} 
