@@ -151,7 +151,7 @@ export default function DashboardPage() {
                   <div key={post.id} className="p-4 bg-white rounded-xl border border-slate-100 shadow-sm">
                     
                     <div className="flex items-center justify-between mb-3">
-                      <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
+                    <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">
                         {new Date(post.created_at).toLocaleDateString('en-US', { 
                           month: 'short', 
                           day: 'numeric', 

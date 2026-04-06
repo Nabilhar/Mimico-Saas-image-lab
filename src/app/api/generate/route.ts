@@ -98,7 +98,7 @@ Write as someone who genuinely lives and works in this community, not as a marke
 One rule: even though you write from your own perspective, every sentence must still serve the reader — not just talk about yourself.
 
 TASK:
-1. Research the neighbourhood around ${location}. Identify 3 real, named local landmarks or community touchpoints specific to this area.
+1. In ONE brief line, note the neighbourhood name around ${location}and 2-3 landmark names only. No descriptions, no sentences — just names.
 2. Write a social media post using the ${framework} framework.
 
 STRICT OUTPUT FORMAT:
@@ -124,12 +124,19 @@ FRAMEWORK — apply ${framework} exactly:
 ${FRAMEWORK_PROMPTS[framework] || FRAMEWORK_PROMPTS["PAS"]}
 
 FORMAT RULES:
-- 80–160 words in the post body (not counting the <research> block)
+- 80-160 words in the post body (not counting the <research> block)
 - Short paragraphs, one blank line between each
 - First sentence must contain a natural-language keyword a local would search on Instagram (e.g. "best sourdough in Mimico") — written as a statement, not a hashtag
-- 3–4 hashtags on the final line: neighbourhood first, then niche, then broad
-- Max 1 emoji — only if it adds meaning, never decoration
-- Banned phrases: "passionate about", "quality service", "reach out", "don't hesitate", "we pride ourselves"`;
+- The call to action must emerge naturally from the story — not sit as a 
+  separate closing sentence. It should feel like the next logical thought, 
+  not an instruction. The reader should feel invited, not directed.
+  Wrong: "Book your table tonight — link in bio."
+  Right: "If your evening is still wide open, we have a table with your name on it."
+- 3-4 hashtags on the final line: neighbourhood first, then niche, then broad
+- Max 3 emojis — only if it adds meaning, never decoration
+- Banned phrases: "a stone's throw", "pour our hearts", "passionate about", "quality service", "reach out", "don't hesitate", "we pride ourselves"`
+;
+
 }
 
 // ─────────────────────────────────────────────
@@ -189,7 +196,7 @@ export async function POST(req: Request) {
       contents: [{ role: "user", parts: [{ text: finalPrompt }] }],
       generationConfig: {
         temperature: 0.8,
-        maxOutputTokens: 1000,
+        maxOutputTokens: 2500,
       },
       safetySettings: [
         { category: HarmCategory.HARM_CATEGORY_HARASSMENT,        threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
@@ -201,10 +208,31 @@ export async function POST(req: Request) {
 
     const rawText = result.response.text().trim();
 
+    console.log("--- RAW RESPONSE ---");
+    console.log(rawText);
+    console.log("--- END RAW ---");
+
+    let content: string;
+
     // Strip the <research> block — AI thinks out loud, user sees only the post
-    const content = rawText
-      .replace(/<research>[\s\S]*?<\/research>/g, "")
-      .trim();
+    if (rawText.includes("</research>")) {
+      // Normal case — strip the research block cleanly
+      content = rawText
+        .replace(/<research>[\s\S]*?<\/research>/g, "")
+        .trim();
+    } else if (rawText.includes("<research>")) {
+      // Truncated — research tag never closed, find the last blank line
+      // and take everything after it as the post
+      const parts = rawText.split(/\n\n+/);
+      content = parts[parts.length - 1].trim();
+    } else {
+      // No tags at all — use the full response
+      content = rawText;
+    }
+
+    console.log("--- STRIPPED CONTENT ---");
+    console.log(content);
+    console.log("--- END STRIPPED ---");
 
     return NextResponse.json({ content, framework });
 

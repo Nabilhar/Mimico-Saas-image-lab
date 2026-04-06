@@ -152,7 +152,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, onD
       });
       const data = await res.json();
       if (res.ok) {
-        const cleanPost = data.content.replace(/<research>[\s\S]*?<\/research>/g, "").trim();
+        const cleanPost = data.content.replace(/<research>[\s\S]*?<\/research>/gi, "").replace(/<research>[\s\S]*/gi, "")  .trim();
         setContent(cleanPost);
         setTimeout(() => {
           if (saveRef.current) saveRef.current(cleanPost);
