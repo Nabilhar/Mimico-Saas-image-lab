@@ -76,13 +76,22 @@ export default function DashboardPage() {
     if (!user?.id || !businessData || !supabase) return;
     if (businessData.credits <= 0) return alert("No credits!");
     
-    setLoading(true);
-    const { error } = await supabase.from("posts").insert([{ content: newContent, business_id: user.id }]);
-    if (!error) {
-      await supabase.from('profiles').update({ credits: businessData.credits - 1 }).eq('id', user.id);
+    const { error: postError } = await supabase
+    .from("posts")
+    .insert([{ content: newContent, business_id: user.id }]);
+    
+    if (!postError) {
+      const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ credits: businessData.credits - 1 })
+      .eq('id', user.id);
+
+      if (!profileError) {
       await loadBusinessData();
+      }
+    } else {
+      console.error("Database Save Error:", postError);
     }
-    setLoading(false);
   }, [user?.id, loadBusinessData, businessData, supabase]);
 
   const deletePost = async (postId: string) => {
@@ -115,9 +124,18 @@ export default function DashboardPage() {
               Managing drafts for <span className="text-cyan-800 font-semibold">{businessData?.business_name || "Your Business"}</span>
             </p>
             <div className="mt-2 flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg w-fit">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+              
+              <div 
+                className={`w-2 h-2 rounded-full animate-pulse transition-colors duration-500 ${
+                  (businessData?.credits ?? 0) < 3 
+                    ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]' 
+                    : 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.3)]'
+                }`}
+              ></div>
+             
               <p className="text-xs font-medium text-slate-600">
-                <span className="font-bold text-slate-900">{businessData?.credits ?? 0}</span> Credits Remaining
+                <span className="font-bold text-slate-900">{businessData?.credits ?? 0}
+                </span> Credits Remaining
               </p>
             </div>
           </div>

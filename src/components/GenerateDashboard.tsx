@@ -25,7 +25,10 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, onD
   const [category, setCategory] = useState("Food & Beverage");
   const [niche, setNiche] = useState("");
   const [voice, setVoice] = useState("The Neighbor");
-  const [postType, setPostType] = useState("PAS");
+  const [postType, setPostType] = useState("5 Tips");
+  const [promoType, setPromoType] = useState("discount");
+  const [eventType, setEventType] = useState("event");
+  const [customDetails, setCustomDetails] = useState("")
   
   // Generation States
   const [content, setContent] = useState<string | null>(null);
@@ -92,7 +95,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, onD
     ? new Date().toISOString().split('T')[0] 
     : selectedDate;
 
-    const events: EventAttributes[] = timeSlots.map((time) => {
+    const callendarEvents: EventAttributes[] = timeSlots.map((time) => {
       const [hours, minutes] = time.split(':').map(Number);
       const [year, month, day] = selectedDate.split('-').map(Number);
 
@@ -115,7 +118,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, onD
       };
     });
 
-    createEvents(events, (error, value) => {
+    createEvents(callendarEvents, (error, value) => {
       if (error) {
         console.error("❌ Calendar Error:", error);
         return;
@@ -137,38 +140,103 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, onD
     });
   };
 
-  async function handleGenerate() {
+  const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+
+  async function handleGenerate(retryCount = 0) {
+    
+    if (retryCount === 0) {
     setLoading(true);
     setContent(null);
-
+    }
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           prompt: `Generate a ${postType} post for ${business_name}`,
-          business_name, location,category, niche, voice,  postType, 
+          business_name,
+           location,
+           category,
+           niche,
+           voice,  
+           postType, 
+           promoType,    // "discount", "freebie", or "custom"
+           eventType,    // "news", "event", "update"
+           customDetails, // The raw text from the box
+           business_id: user?.id
         }),
       });
       const data = await res.json();
-      if (res.ok) {
-        const cleanPost = data.content.replace(/<research>[\s\S]*?<\/research>/gi, "").replace(/<research>[\s\S]*/gi, "")  .trim();
-        setContent(cleanPost);
-        setTimeout(() => {
-          if (saveRef.current) saveRef.current(cleanPost);
-        }, 500);
-      } else {
-        // Show the error from the API (rate limit, missing key, etc.)
-        setContent(data.error || "Something went wrong. Please try again.");
-      }
+      if (!res.ok)throw new Error(data.error || "Generation failed");
       
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }
+        //1. Clean the post content
+        const cleanPost = data.content
+        .replace(/<research>[\s\S]*?<\/research>/gi, "") // Remove research tags
+        .replace(/--- RAW RESPONSE ---[\s\S]*?--- END STRIPPED ---/gi, "") // Remove debug headers if they exist
+        .replace(/\*Check.*?\*/gi, "") // Remove bulleted checks
+        .replace(/Total words: \d+/gi, "") // Remove word count comments
+        .trim();
+        
+        setContent(cleanPost);
 
+        if (saveRef.current) {
+          await saveRef.current(cleanPost);
+        }
+  
+        setLoading(false); 
+  
+      } catch (err: any) {
+        console.error("Generation Error:", err);
+        setContent(err.message || "The M8V engine is temporarily unavailable.");
+        setLoading(false);
+      }
+
+/*        // 2. RUN THE QUALITY CHECK (The "Bouncer")
+        const wordCount = cleanPost.split(/\s+/).filter(Boolean).length;
+        const lastChar = cleanPost.trim().slice(-1);
+        const endsWithPunctuation = ['.', '!', '?', '"', '”','#' ].includes(lastChar);
+        const endsWithHashtag = /#\w+$/.test(cleanPost);
+
+        const isComplete = endsWithPunctuation || endsWithHashtag;
+
+       // 3. SILENT RETRY LOGIC
+      // If too short OR unfinished, and we haven't tried 3 times yet...
+         if ((wordCount < 30 || !isComplete) && retryCount < 2) {
+          console.warn(`Retry #${retryCount + 1}: Post was ${wordCount} words/incomplete. Retrying...`);
+          await delay(6000);
+          return await handleGenerate(retryCount + 1); // <--- Recursion happens here
+        }
+
+        // 4. SUCCESS: Set content and trigger save
+        setContent(cleanPost);
+
+        // Save it immediately
+        if (saveRef.current) {
+          await saveRef.current(cleanPost);
+        }
+
+        setLoading(false); // Stop loading ONLY on success
+
+      } catch (err: any) {
+        console.error(`Error on try #${retryCount + 1}:`, err);
+        
+        // If it's a "Failed to fetch" or similar network error, 
+        // retrying usually won't help immediately, so we stop.
+        // But if you want to retry even on network errors, use this logic:
+        if (retryCount < 2) {
+          console.warn("Network/Server error. Retrying...");
+          await delay(2000);
+          return await handleGenerate(retryCount + 1);
+        }
+  
+        // If we've hit the max retries (2, which is the 3rd attempt) 
+        // or we decide not to retry this specific error:
+        setContent(err.message || "The M8V engine is temporarily unavailable. Please try again.");
+        setLoading(false);
+      }
+  
+*/ 
+    }  
   return (
     <div className="mx-auto max-w-2xl space-y-6 pb-24">
       <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
@@ -178,11 +246,13 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, onD
         </div>
         
         <div className="space-y-4">
+          {/* BUSINESS NAME (READ ONLY) */}
           <div>
             <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Business</label>
-            <input className="mt-1 w-full p-3 border rounded-xl bg-slate-50 text-slate-500 outline-none cursor-not-allowed" value={business_name} onChange={(e) => setVoice(e.target.value)} readOnly />
+            <input className="mt-1 w-full p-3 border rounded-xl bg-slate-50 text-slate-500 outline-none cursor-not-allowed" value={business_name} readOnly />
           </div>
   
+          {/* VOICE & STYLE GRID */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Brand Voice</label>
@@ -190,20 +260,86 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, onD
                 {VOICES.map(v => <option key={v} value={v}>{v}</option>)}
               </select>
             </div>
+           
             <div>
               <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Post Style</label>
-              <select value={postType} onChange={(e) => setPostType(e.target.value)} className="mt-1 w-full p-3 border rounded-xl bg-white focus:ring-2 focus:ring-cyan-100 outline-none transition-all">
-                <option value="PAS">PAS (Problem)</option>
-                <option value="BAB">BAB (Bridge)</option>
-                <option value="AIDA">AIDA (Action)</option>
+              <select 
+                value={postType} 
+                onChange={(e) => {
+                  setPostType(e.target.value);
+                  setCustomDetails(""); 
+                }} 
+                className="mt-1 w-full p-3 border rounded-xl bg-white focus:ring-2 focus:ring-cyan-100 outline-none transition-all"
+              >
+                <option value="5 Tips">5 Tips</option>
+                <option value="Myth-busting">Myth-busting</option>
+                <option value="Behind the scenes">Behind the scenes</option>
+                <option value="Promotion / offer">Promotion / offer</option>
+                <option value="Local event / news">Local event / news</option>
               </select>
             </div>
           </div>
+
+          {/* --- CONDITIONAL PROMOTION BOXES --- */}
+          {postType === "Promotion / offer" && (
+            <div className="mt-4 space-y-4 animate-in fade-in slide-in-from-top-2">
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Promotion Type</label>
+                <select 
+                  value={promoType}
+                  onChange={(e) => setPromoType(e.target.value)}
+                  className="w-full p-3 border rounded-xl bg-white border-slate-200 shadow-sm outline-none focus:ring-2 focus:ring-cyan-100 transition-all"
+                >
+                  <option value="discount">Discount %</option>
+                  <option value="freebie">Freebie / Gift</option>
+                  <option value="custom">Custom Offer</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Offer Details</label>
+                <textarea 
+                  value={customDetails}
+                  onChange={(e) => setCustomDetails(e.target.value)}
+                  placeholder="e.g., 20% off all curries until Friday..."
+                  className="w-full p-3 border rounded-xl border-slate-200 min-h-[100px] outline-none focus:ring-2 focus:ring-cyan-100 transition-all"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* --- CONDITIONAL EVENT BOXES --- */}
+          {postType === "Local event / news" && (
+            <div className="mt-4 space-y-4 animate-in fade-in slide-in-from-top-2">
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Update Category</label>
+                <select 
+                  value={eventType}
+                  onChange={(e) => setEventType(e.target.value)}
+                  className="w-full p-3 border rounded-xl bg-white border-slate-200 shadow-sm outline-none focus:ring-2 focus:ring-cyan-100 transition-all"
+                >
+                  <option value="event">Community Event</option>
+                  <option value="news">Local News</option>
+                  <option value="update">General Update</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Event/News Details</label>
+                <textarea 
+                  value={customDetails}
+                  onChange={(e) => setCustomDetails(e.target.value)}
+                  placeholder="e.g., The Mimico Waterfront Festival is happening this Saturday!"
+                  className="w-full p-3 border rounded-xl border-slate-200 min-h-[100px] outline-none focus:ring-2 focus:ring-cyan-100 transition-all"
+                />
+              </div>
+            </div>
+          )}
   
           {/* BUTTON SECTION */}
           <div className="mt-6">
             <button 
-              onClick={handleGenerate}
+              onClick={() => { handleGenerate(); }}
               disabled={loading || !canGenerate}
               className={`w-full font-bold py-4 rounded-2xl transition-all shadow-lg active:scale-[0.98] disabled:opacity-50 ${
                 !canGenerate 
@@ -211,17 +347,11 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, onD
                   : 'bg-cyan-800 text-white hover:bg-cyan-900 shadow-cyan-900/10'
               }`}
             >
-              {loading ? (
-                "Analyzing Mimico Data..."
-              ) : !canGenerate ? (
-                "No credits remaining - Contact to recharge"
-              ) : (
-                "Generate Local Post"
-              )}
+              {loading ? "Analyzing Mimico Data..." : !canGenerate ? "No credits remaining" : "Generate Local Post"}
             </button>
           </div>
 
-          {/* STATUS & RESEARCH AGENT SECTION */}
+          {/* STATUS AGENT */}
           {loading && (
             <div className="mt-4 p-4 bg-slate-900 rounded-2xl border border-slate-700 shadow-xl">
               <div className="flex items-center gap-3">
@@ -233,16 +363,10 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, onD
               </div>
             </div>
           )}
-
-          {/* HELPFUL RECHARGE HINT */}
-          {!canGenerate && !loading && (
-            <p className="mt-3 text-center text-[10px] text-slate-400 italic">
-              Need more posts? Reach out to support to recharge your credits.
-            </p>
-          )}
         </div>
       </div>
 
+      {/* RESULT SECTION */}
       {content && (
         <div className="p-6 bg-white rounded-3xl border border-slate-200 shadow-sm">
           <div className="flex justify-between items-start mb-6">
@@ -250,17 +374,28 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, onD
               <span className="text-xs font-bold text-cyan-700 uppercase tracking-wider">Mimico Draft Ready</span>
               <span className="text-[10px] font-medium text-slate-400 mt-1 italic">Generated Just Now</span>
             </div>
-            <PostActions 
-                content={content} 
-                onDelete={() => setContent(null)} // Make sure onDelete is passed into this component's props
-                showCopy={false} 
-              />
+            <PostActions content={content} onDelete={() => setContent(null)} />
           </div>
-          <p className="whitespace-pre-wrap text-slate-800 leading-relaxed mb-8 font-medium text-sm">{content}</p>
+          <p className="whitespace-pre-wrap text-slate-800 leading-relaxed mb-8 font-medium text-sm">
+            {content}
+          </p>
+          <div className="mt-6 pt-4 border-t border-slate-200/60 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+              </div>
+              <span className="text-[11px] font-bold uppercase tracking-[0.05em] text-cyan-700">M8V Engine: Share Ready</span>
+            </div>
+            <div className="flex items-center gap-2 px-2.5 py-1 bg-white rounded-lg border border-slate-200 shadow-sm">
+              <span className="text-[10px] font-semibold text-slate-400 uppercase">Words</span>
+              <span className="text-[11px] font-bold text-slate-900">{content.trim().split(/\s+/).length}</span>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* STRATEGY & HABIT BUILDER */}
+      {/* STRATEGY SECTION */}
       <div className="p-6 bg-white rounded-3xl border border-slate-100 shadow-sm space-y-4">
         <div className="flex items-center justify-between border-b border-slate-50 pb-4">
           <div>
@@ -285,38 +420,23 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, onD
 
           {strategy !== "none" && (
             <div className="space-y-3">
-              {/* ONLY show date picker for One-Time Reminders */}
               {strategy === "next" && (
                 <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400 ml-2">
-                    Reminder Date
-                  </label>
-                  <input 
-                    type="date" 
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold" 
-                  />
+                  <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Reminder Date</label>
+                  <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold" />
                 </div>
               )}
-
               <div className="grid grid-cols-1 gap-2">
-                {/* Time slots always show so they can pick THEIR preferred time for the habit */}
                 {timeSlots.map((time, idx) => (
                   <div key={idx} className="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-100">
                     <span className="text-[10px] font-bold text-slate-400 uppercase">
                       {strategy === "next" ? "Reminder Time" : `Daily Slot ${idx + 1}`}
                     </span>
-                    <input
-                      type="time" 
-                      value={time}
-                      onChange={(e) => {
-                        const newTimes = [...timeSlots];
-                        newTimes[idx] = e.target.value;
-                        setTimeSlots(newTimes);
-                      }}
-                      className="text-sm font-bold text-slate-700 outline-none bg-transparent"
-                    />
+                    <input type="time" value={time} onChange={(e) => {
+                      const newTimes = [...timeSlots];
+                      newTimes[idx] = e.target.value;
+                      setTimeSlots(newTimes);
+                    }} className="text-sm font-bold text-slate-700 outline-none bg-transparent" />
                   </div>
                 ))}
               </div>
@@ -328,9 +448,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, onD
               onClick={handleSmartScheduleSubmit}
               disabled={strategy === "none"}
               className={`w-full font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest transition-all shadow-xl active:scale-95 ${
-                strategy === "none"
-                  ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
-                  : "bg-slate-900 text-white hover:bg-black shadow-slate-900/20"
+                strategy === "none" ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none" : "bg-slate-900 text-white hover:bg-black shadow-slate-900/20"
               }`}
             >
               Sync Habit to Calendar
