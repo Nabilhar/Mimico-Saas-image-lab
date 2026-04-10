@@ -236,7 +236,7 @@ FORMAT RULES:
   Right: "If your evening is still wide open, we have a table with your name on it."
 - 3-4 hashtags on the final line: neighbourhood first, then niche, then broad
 - Max 3 emojis — only if it adds meaning, never decoration
-- Banned phrases: "After a day...", "Juggling...", "Finding a...", "a stone's throw", "pour our hearts", "passionate about", "quality service", "reach out", "don't hesitate", "we pride ourselves"`
+- Banned phrases: "I'm always...",  "After a day...", "Juggling...", "Finding a...", "a stone's throw", "pour our hearts", "passionate about", "quality service", "reach out", "don't hesitate", "we pride ourselves"`
 ;
 
 }
@@ -262,33 +262,28 @@ export async function POST(req: Request) {
       postType = "5 Tips", 
       promoType = "discount",    // <-- Make sure these are here
       eventType = "event",    // <-- Make sure these are here
-      customDetails = "" // <-- Make sure these are here
-    } = await req.json();
+      customDetails = "", // <-- Make sure these are here
+      history
 
-    const { data: recentPosts } = await supabase
-  .from("posts")
-  .select("content")
-  .eq("business_id", business_id)
-  .neq("content", "EMPTY")           // filter out the EMPTY rows you have
-  .order("created_at", { ascending: false })
-  .limit(3);
+    } = await req.json();
 
       // --- ADD THIS DEBUG BLOCK ---
       // --- ADD THIS DEBUG BLOCK ---
       console.log("--- M8V MEMORY CHECK ---");
-      if (recentPosts && recentPosts.length > 0) {
-        console.log(`Found ${recentPosts.length} previous posts.`);
-        recentPosts.forEach((p, i) => console.log(`Post ${i + 1}: ${p.content.substring(0, 50)}...`));
+      if ( history && history.length > 0) {
+        console.log(`Found ${history.length} previous posts.`);
+        history.slice(0, 3).forEach((p: any, i: number) => console.log(`Post ${i + 1}: ${p.content.substring(0, 50)}...`));
       } else {
         console.log("NO HISTORY FOUND. Generating from scratch.");
       }
       console.log("-----------------------");
 
-  const recentHistory = recentPosts?.length
-  ? recentPosts
-      .map((p, i) => `- Post ${i + 1}: "${(p.content || "").slice(0, 300)}..."`)
-      .join("\n")
-  : "No previous posts found.";
+    const recentHistory = history?.length
+    ? history
+        .slice(0, 3) // Just take the last 3 for the AI context
+        .map((p: any, i: number) => `- Post ${i + 1}: "${(p.content || "").slice(0, 200)}..."`)
+        .join("\n")
+    : "No previous posts found.";
 
     // Auto-select framework — user never has to choose
     const framework = getFramework(category, postType, voice) || "PAS";

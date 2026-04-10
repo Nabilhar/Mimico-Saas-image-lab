@@ -5,19 +5,24 @@ import { VOICES } from "@/lib/constants";
 import { useUser } from "@clerk/nextjs";
 import { createEvents, EventAttributes } from 'ics';
 import PostActions from "./PostActions";
+import { Post } from "@/app/dashboard/page";
+import { SavedImage } from "@/components/SavedImage";
 
 
 interface GenerateDashboardProps {
-  onGenerateSuccess?: (content: string) => void;
-  onShare: (content: string) => void;
+  onGenerateSuccess?: (content: string, imageUrl: string) => Promise<string | undefined>;
+  onShare?: (content: string, imageUrl?: string) => void;
   canGenerate: boolean; 
   onDelete: () => void;
+  supabase: any;
+  history?: Post[];
+  onImageUpdated?: () => void;
 }
 
 // FIX: Added canGenerate here so the component can actually use the value
-export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, onDelete }: GenerateDashboardProps) {
+export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, onDelete, supabase, history, onImageUpdated }: GenerateDashboardProps) {
   const { user } = useUser();
-  const saveRef = useRef(onGenerateSuccess);
+
 
   // Profile States
   const [business_name, setbusiness_name] = useState("Our Local Business");
@@ -34,6 +39,10 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, onD
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("Initializing...");
+  const [lastPostId, setLastPostId] = useState<string | null>(null);
+
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [currentImage, setCurrentImage] = useState<string | null>(null);
 
   // Scheduler States
   const [strategy, setStrategy] = useState("none");
@@ -48,10 +57,6 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, onD
     "Polishing owner voice...",
     "Finalizing post..."
   ];
-
-  useEffect(() => {
-    saveRef.current = onGenerateSuccess;
-  }, [onGenerateSuccess]);
 
   // Load Profile
   useEffect(() => {
@@ -97,7 +102,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, onD
 
     const callendarEvents: EventAttributes[] = timeSlots.map((time) => {
       const [hours, minutes] = time.split(':').map(Number);
-      const [year, month, day] = selectedDate.split('-').map(Number);
+      const [year, month, day] = dateToUse.split('-').map(Number);
 
       let recurrenceRule = '';
     if (strategy === "daily" || strategy === "2-day" || strategy === "3-day") {
@@ -147,6 +152,8 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, onD
     if (retryCount === 0) {
     setLoading(true);
     setContent(null);
+    setLastPostId(null);
+    setCurrentImage(null);
     }
     try {
       const res = await fetch("/api/generate", {
@@ -163,11 +170,19 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, onD
            promoType,    // "discount", "freebie", or "custom"
            eventType,    // "news", "event", "update"
            customDetails, // The raw text from the box
-           business_id: user?.id
+           business_id: user?.id,
+           history: history
         }),
       });
+
+      if (!res.ok) {
+        const errorText = await res.text(); // Get the "Internal Server Error" text
+        console.error("Post Generator Server crashed:", errorText);
+        throw new Error(`Server Error (${res.status}): ${errorText}`);
+      }
+
       const data = await res.json();
-      if (!res.ok)throw new Error(data.error || "Generation failed");
+      if (!res.ok) throw new Error(data.error || "Generation failed");
       
         //1. Clean the post content
         const cleanPost = data.content
@@ -179,8 +194,17 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, onD
         
         setContent(cleanPost);
 
-        if (saveRef.current) {
-          await saveRef.current(cleanPost);
+        // --- THE FIX: Capture the ID ---
+        if (onGenerateSuccess) {
+          // Assuming your parent function returns the ID from the Supabase insert
+          const generatedUuid = await onGenerateSuccess(cleanPost, "");
+          if (generatedUuid) {
+            setLastPostId(generatedUuid); // Now we have the auto-generated Supabase ID!
+            console.log("✅ Post recorded in Supabase. ID:", generatedUuid);
+            } else {
+              console.error("❌ Failed to get UUID. Image generation will fail.");
+
+          }
         }
   
         setLoading(false); 
@@ -188,55 +212,71 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, onD
       } catch (err: any) {
         console.error("Generation Error:", err);
         setContent(err.message || "The M8V engine is temporarily unavailable.");
+      } finally {
         setLoading(false);
       }
-
-/*        // 2. RUN THE QUALITY CHECK (The "Bouncer")
-        const wordCount = cleanPost.split(/\s+/).filter(Boolean).length;
-        const lastChar = cleanPost.trim().slice(-1);
-        const endsWithPunctuation = ['.', '!', '?', '"', '”','#' ].includes(lastChar);
-        const endsWithHashtag = /#\w+$/.test(cleanPost);
-
-        const isComplete = endsWithPunctuation || endsWithHashtag;
-
-       // 3. SILENT RETRY LOGIC
-      // If too short OR unfinished, and we haven't tried 3 times yet...
-         if ((wordCount < 30 || !isComplete) && retryCount < 2) {
-          console.warn(`Retry #${retryCount + 1}: Post was ${wordCount} words/incomplete. Retrying...`);
-          await delay(6000);
-          return await handleGenerate(retryCount + 1); // <--- Recursion happens here
-        }
-
-        // 4. SUCCESS: Set content and trigger save
-        setContent(cleanPost);
-
-        // Save it immediately
-        if (saveRef.current) {
-          await saveRef.current(cleanPost);
-        }
-
-        setLoading(false); // Stop loading ONLY on success
-
-      } catch (err: any) {
-        console.error(`Error on try #${retryCount + 1}:`, err);
-        
-        // If it's a "Failed to fetch" or similar network error, 
-        // retrying usually won't help immediately, so we stop.
-        // But if you want to retry even on network errors, use this logic:
-        if (retryCount < 2) {
-          console.warn("Network/Server error. Retrying...");
-          await delay(2000);
-          return await handleGenerate(retryCount + 1);
-        }
+  }
   
-        // If we've hit the max retries (2, which is the 3rd attempt) 
-        // or we decide not to retry this specific error:
-        setContent(err.message || "The M8V engine is temporarily unavailable. Please try again.");
-        setLoading(false);
+    const handleGenerateImage = async () => {
+      // Guard: Don't run if we don't have the UUID from the DB yet
+      if (!lastPostId || !content) {
+        alert("Save the post first to generate an image.");
+        return;
       }
+        setIsGeneratingImage(true);
+        try {
+          const response = await fetch('/api/generate-image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              generatedPost: content, 
+              business_name, // Pull from your context/state
+              location,   // "Mimico, Toronto"
+              postId: lastPostId
+            }),
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text(); 
+            console.error("Image Generator Server crashed:", errorText);
+            throw new Error(`Image Server Error (${response.status}): ${errorText}`);
+          }
+
+          const data = await response.json();
+
+          if (data.url) {
+
+            // 1. Update Local UI State
+            setCurrentImage(data.url);
+
+            // 2. Log it so you can verify in the console!
+            console.log("Attempting Supabase Update for ID:", lastPostId);
+
+            // 3. Update the specific row using the UUID we stored
+            const { data: updateData, error } = await supabase
+            .from('community_posts')
+            .update({ image_url: data.url })
+            .eq('id', lastPostId) 
+            .select();
+
+            if (updateData && updateData.length > 0) {
+              console.log("✅ Database Updated Successfully:", updateData);
+              if (onImageUpdated) onImageUpdated();
+            } else {
+              console.warn("⚠️ No rows updated. Check if ID exists in Supabase:", lastPostId);
+            }
+            
+            if (error) throw error;
+
+          }
+        } catch (err) {
+          console.error("Lab Error:", err);
+          alert("Image generation failed. Check terminal.");
+        } finally {
+          setIsGeneratingImage(false);
+        }
+      };
   
-*/ 
-    }  
   return (
     <div className="mx-auto max-w-2xl space-y-6 pb-24">
       <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
@@ -366,30 +406,104 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, onD
         </div>
       </div>
 
-      {/* RESULT SECTION */}
+{/* RESULT SECTION - Facebook Style Preview */}
       {content && (
-        <div className="p-6 bg-white rounded-3xl border border-slate-200 shadow-sm">
-          <div className="flex justify-between items-start mb-6">
-            <div className="flex flex-col">
-              <span className="text-xs font-bold text-cyan-700 uppercase tracking-wider">Mimico Draft Ready</span>
-              <span className="text-[10px] font-medium text-slate-400 mt-1 italic">Generated Just Now</span>
-            </div>
-            <PostActions content={content} onDelete={() => setContent(null)} />
-          </div>
-          <p className="whitespace-pre-wrap text-slate-800 leading-relaxed mb-8 font-medium text-sm">
-            {content}
-          </p>
-          <div className="mt-6 pt-4 border-t border-slate-200/60 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+        <div className="mt-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <h2 className="text-[10px] font-black uppercase text-slate-400 mb-3 ml-1 tracking-widest">
+            New Post Preview
+          </h2>
+          
+          <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
+            
+            {/* 1. Mock Header (Standard Social Layout) */}
+            <div className="p-4 flex items-center justify-between border-b border-slate-50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-cyan-800 flex items-center justify-center text-white font-bold text-lg shadow-inner">
+                  {business_name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p className="font-bold text-slate-900 text-sm leading-tight">{business_name}</p>
+                  <p className="text-[10px] text-slate-500 font-medium tracking-tight mt-0.5">Just now • Mimico, ON 🌐</p>
+                </div>
               </div>
-              <span className="text-[11px] font-bold uppercase tracking-[0.05em] text-cyan-700">M8V Engine: Share Ready</span>
+              <PostActions content={content} onDelete={onDelete} />
             </div>
-            <div className="flex items-center gap-2 px-2.5 py-1 bg-white rounded-lg border border-slate-200 shadow-sm">
-              <span className="text-[10px] font-semibold text-slate-400 uppercase">Words</span>
-              <span className="text-[11px] font-bold text-slate-900">{content.trim().split(/\s+/).length}</span>
+
+            {/* 2. Caption Area (Before the Image) */}
+            <div className="px-5 py-4">
+              <p className="text-slate-800 whitespace-pre-wrap text-[15px] leading-relaxed font-normal">
+                {content}
+              </p>
+            </div>
+
+            {/* 3. Creative Canvas (The Improved "Ugly Box") */}
+            <div className="aspect-square w-full relative group overflow-hidden bg-slate-50 border-y border-slate-100">
+              {currentImage ? (
+                <img 
+                  src={currentImage} 
+                  alt="Generated visual"
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-8 transition-all">
+                  
+                  {isGeneratingImage ? (
+                    /* --- MODERN SPINNER STATE --- */
+                    <div className="flex flex-col items-center text-center">
+                      <div className="relative w-20 h-20 mb-6">
+                        {/* Outer Glow */}
+                        <div className="absolute inset-0 rounded-full border-4 border-cyan-100 opacity-25"></div>
+                        {/* Spinning Ring */}
+                        <div className="absolute inset-0 rounded-full border-4 border-t-cyan-600 animate-spin"></div>
+                        {/* Pulsing Center */}
+                        <div className="absolute inset-2 rounded-full bg-cyan-50 animate-pulse flex items-center justify-center">
+                          <span className="text-2xl">🎨</span>
+                        </div>
+                      </div>
+                      
+                      <h3 className="text-lg font-bold text-slate-800 animate-pulse">
+                        Painting your Mimico scene...
+                      </h3>
+                      <p className="text-[11px] text-slate-500 mt-2 max-w-[240px] font-medium leading-tight">
+                        Applying local textures and lighting to match your brand voice.
+                      </p>
+                    </div>
+                  ) : (
+                    /* --- IDLE STATE (The "Ugly Box" Replacement) --- */
+                    <button 
+                      onClick={handleGenerateImage}
+                      disabled={!lastPostId}
+                      className="flex flex-col items-center text-center group/btn active:scale-95 transition-all"
+                    >
+                      <div className="w-16 h-16 rounded-2xl bg-white shadow-sm border border-slate-200 flex items-center justify-center mb-4 group-hover/btn:border-cyan-300 group-hover/btn:shadow-md transition-all">
+                        <svg className="w-8 h-8 text-slate-400 group-hover/btn:text-cyan-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <span className="text-sm font-bold text-slate-900 group-hover/btn:text-cyan-700">
+                        Generate Matching Image
+                      </span>
+                      <p className="text-[10px] text-slate-400 mt-1 uppercase font-black tracking-widest">
+                        Powered by Nano Banana
+                      </p>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+{/* 4. Footer Stats */}
+<div className="px-5 py-3 bg-slate-50/50 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-cyan-700">M8V Engine: Optimized</span>
+              </div>
+              <div className="text-[10px] font-black text-slate-400 uppercase">
+                {content.trim().split(/\s+/).filter(Boolean).length} Words
+              </div>
             </div>
           </div>
         </div>
@@ -456,6 +570,6 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, onD
           </div>
         </div>
       </div>
-    </div>
-  );
-}
+    </div> // This closes the main mx-auto container
+  ); // This closes the return statement
+} // This closes the function

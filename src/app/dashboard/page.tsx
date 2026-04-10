@@ -6,8 +6,11 @@ import { GenerateDashboard } from "@/components/GenerateDashboard";
 import { createClerksupabase } from '@/lib/supabase';
 import { useRouter } from "next/navigation";
 import PostActions from "@/components/PostActions";
+import { SavedImage } from "@/components/SavedImage";
 
-interface Post { id: string; content: string; created_at: string; business_id: string; }
+  let supabaseClient: any;
+
+export interface Post { id: string; content: string; created_at: string; business_id: string; image_url?: string; }
 interface BusinessData { business_name: string; location: string; category: string; niche: string; voice: string; credits: number; history: Post[]; }
 
 export default function DashboardPage() {
@@ -23,8 +26,9 @@ export default function DashboardPage() {
 
   // 1. Get Token
   const supabase = useMemo(() => {
+    // We pass a stable reference to getToken
     return createClerksupabase(() => getToken({ template: 'supabase' }));
-  }, [getToken]);
+  }, []); // Empty dependency array!
 
   // 3. Load Data
   const loadBusinessData = useCallback(async () => {
@@ -33,7 +37,10 @@ export default function DashboardPage() {
     try {
       const [profileRes, postsRes] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
-        supabase.from('posts').select('*').eq('business_id', user.id).order('created_at', { ascending: false })
+        supabase.from('community_posts')
+        .select('*')
+        .eq('business_id', user.id)
+        .order('created_at', { ascending: false })
       ]);
 
       if (!profileRes.data && !profileRes.error) {
@@ -62,41 +69,41 @@ export default function DashboardPage() {
     if (isLoaded && user && supabase) { loadBusinessData(); }
   }, [isLoaded, user, supabase, loadBusinessData]);
 
-  // 5. Actions
-  const sharePost = async (content: string) => {
-    if (navigator?.share) {
-      await navigator.share({ title: 'Mimico Studio', text: content }).catch(() => {});
-    } else {
-      await navigator.clipboard.writeText(content);
-      alert("Copied!");
-    }
-  };
 
-  const savePostToCloud = useCallback(async (newContent: string) => {
+  const savePostToCloud = useCallback(async (newContent: string, imageUrl?: string) => {
     if (!user?.id || !businessData || !supabase) return;
     if (businessData.credits <= 0) return alert("No credits!");
     
-    const { error: postError } = await supabase
-    .from("posts")
-    .insert([{ content: newContent, business_id: user.id }]);
+    const { data, error: postError } = await supabase
+    .from("community_posts")
+    .insert([{ content: newContent, business_id: user.id, image_url: imageUrl }])
+    .select('*')
+    .single()
     
-    if (!postError) {
-      const { error: profileError } = await supabase
+    if (postError) {
+      console.error("Database Save Error:", postError);
+      return undefined;
+    }
+
+    setPosts(prev => [data, ...prev]);
+
+    // Even if the credit update fails, we already have the post ID, 
+    // so let's make sure we return it to the dashboard.
+    const { error: profileError } = await supabase
       .from('profiles')
       .update({ credits: businessData.credits - 1 })
       .eq('id', user.id);
 
-      if (!profileError) {
+    if (!profileError) {
       await loadBusinessData();
-      }
-    } else {
-      console.error("Database Save Error:", postError);
     }
+
+    return data.id; // Always return the ID if the post was created!
   }, [user?.id, loadBusinessData, businessData, supabase]);
 
   const deletePost = async (postId: string) => {
     if (!window.confirm("Delete?") || !supabase) return;
-    await supabase.from('posts').delete().eq('id', postId);
+    await supabase.from('community_posts').delete().eq('id', postId);
     loadBusinessData();
   };
 
@@ -151,10 +158,12 @@ export default function DashboardPage() {
             <section className="bento-card border-cyan-100 bg-white shadow-sm p-6 rounded-2xl">
               {businessData ? (
                 <GenerateDashboard 
-                  onGenerateSuccess={savePostToCloud}
-                  onShare={sharePost}
+                  supabase={supabase}
+                  onGenerateSuccess={(content, url) => savePostToCloud(content, url)}
                   canGenerate={(businessData?.credits ?? 0) > 0}
                   onDelete={() => {}}
+                  history={posts} 
+                  onImageUpdated={loadBusinessData}
                 />
               ) : (
                 <div className="p-10 text-center border-2 border-dashed rounded-xl">
@@ -163,37 +172,106 @@ export default function DashboardPage() {
               )}
               {loading && <p className="text-xs text-cyan-600 animate-pulse mt-2">Updating...</p>}
             </section>
-          ) : (
-             <div className="grid gap-4 sm:grid-cols-2">
-                {posts.length > 0 ? posts.map(post => (
-                  <div key={post.id} className="p-4 bg-white rounded-xl border border-slate-100 shadow-sm">
-                    
-                    <div className="flex items-center justify-between mb-3">
-                    <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">
-                        {new Date(post.created_at).toLocaleDateString('en-US', { 
-                          month: 'short', 
-                          day: 'numeric', 
-                          hour: 'numeric', 
-                          minute: '2-digit', 
-                          hour12:true
-                        })}
-                      </span>
-                    </div>
 
-                    <p className="text-sm text-slate-700 mb-4 whitespace-pre-wrap">
-                      {post.content}
-                    </p>
-                    <PostActions 
-                    content={post.content} 
-                    onDelete={() => deletePost(post.id)} 
-                    showCopy={true} // This enables that green "Copied!" button logic
-                  />
+// ─────────────────────────────────────────────────────────────────
+// REPLACE the saved library section in your DashboardPage.tsx
+// Find the block that starts with:
+//   ) : (
+//     <div className="grid gap-4 sm:grid-cols-2">
+// and replace it entirely with this:
+      // ─────────────────────────────────────────────────────────────────
+
+      ) : (
+        <div className="grid gap-5 sm:grid-cols-2">
+          {posts.length > 0 ? (
+            posts.map(post => (
+              <div
+                key={post.id}
+                className="flex flex-col bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden"
+              >
+                {/* ── FACEBOOK-STYLE HEADER ───────────────── */}
+                <div className="flex items-center gap-3 px-4 pt-4 pb-3">
+                  {/* Avatar circle with business initial */}
+                  <div className="w-9 h-9 rounded-full bg-cyan-700 flex items-center justify-center shrink-0">
+                    <span className="text-white text-sm font-bold">
+                      {businessData?.business_name?.charAt(0).toUpperCase() || 'M'}
+                    </span>
                   </div>
-                )) : (
-                  <p className="text-slate-400 italic">No saved drafts yet.</p>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-sm font-bold text-slate-900 truncate">
+                      {businessData?.business_name || 'Your Business'}
+                    </span>
+                    <span className="text-[11px] text-slate-400">
+                      {new Date(post.created_at).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true,
+                      })}
+                      {businessData?.location ? ` · ${businessData.location.split(',')[0]}` : ''}
+                    </span>
+                  </div>
+                  {/* M8V badge */}
+                  <span className="ml-auto text-[9px] font-black text-cyan-600 bg-cyan-50 px-2 py-1 rounded uppercase tracking-widest shrink-0">
+                    M8V
+                  </span>
+                </div>
+
+                {/* ── CAPTION (above image, like Facebook) ── */}
+                <div className="px-4 pb-3">
+                  <p className="text-sm text-slate-800 leading-relaxed line-clamp-4">
+                    {post.content}
+                  </p>
+                  {/* Show full caption hint if truncated */}
+                  {post.content.length > 220 && (
+                    <button
+                      className="text-xs text-cyan-600 mt-1 hover:underline"
+                      onClick={(e) => {
+                        const p = (e.currentTarget.previousElementSibling as HTMLElement);
+                        if (p) {
+                          p.classList.toggle('line-clamp-4');
+                          e.currentTarget.textContent =
+                            p.classList.contains('line-clamp-4') ? '...see more' : 'see less';
+                        }
+                      }}
+                    >
+                      ...see more
+                    </button>
+                  )}
+                </div>
+
+                {/* ── IMAGE (full-bleed, 1:1 square) ────────── */}
+                {post.image_url ? (
+                  <div className="w-full aspect-square bg-slate-100 border-y border-slate-100 shrink-0">
+                    <SavedImage url={post.image_url} />
+                  </div>
+                ) : (
+                  /* No image — subtle placeholder so cards stay consistent */
+                  <div className="mx-4 mb-3 h-12 rounded-xl bg-slate-50 border border-dashed border-slate-200 flex items-center justify-center">
+                    <span className="text-[10px] text-slate-300 uppercase tracking-widest font-bold">Text only</span>
+                  </div>
                 )}
-             </div>
+
+                {/* ── ACTIONS FOOTER ──────────────────────── */}
+                <div className="px-4 pb-4">
+                  <PostActions
+                    content={post.content}
+                    imageUrl={post.image_url}
+                    onDelete={() => deletePost(post.id)}
+                    showCopy={true}
+                  />
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="col-span-full py-16 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+              <p className="text-slate-400 italic text-sm">No saved drafts yet.</p>
+              <p className="text-slate-300 text-xs mt-1">Generate your first post to see it here.</p>
+            </div>
           )}
+        </div>
+            )}
         </div>
       </main>
     </>

@@ -7,8 +7,6 @@ import { getFramework, BUSINESS_ARCHETYPES } from "@/lib/frameworks";
 import { NICHE_DATA, CATEGORIES, VOICES } from "@/lib/constants";
 import { createClerksupabase } from '@/lib/supabase';
 
-let globalSupabase: any;
-
 export default function ProfilePage() {
   // 1. Define all hooks
   const { user, isLoaded } = useUser();
@@ -17,13 +15,12 @@ export default function ProfilePage() {
   const router = useRouter();
 
   // Initialize the supabase client
+
   const supabase = useMemo(() => {
-    if (!globalSupabase) {
-      globalSupabase = createClerksupabase(() => getToken({ template: 'supabase' }));
-    }
-    return globalSupabase;
-  }, [getToken]);
-  
+    // We pass a stable reference to getToken
+    return createClerksupabase(() => getToken({ template: 'supabase' }));
+  }, []); // Empty dependency array!
+
   // STATES DEFINITIONS
   const [loading, setLoading] = useState(false);
   const [testResult, setTestResult] = useState("");
