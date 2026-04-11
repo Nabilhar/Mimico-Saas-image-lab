@@ -180,12 +180,8 @@ export default function DashboardPage() {
               {loading && <p className="text-xs text-cyan-600 animate-pulse mt-2">Updating...</p>}
             </section>
 
-// ─────────────────────────────────────────────────────────────────
-// REPLACE the saved library section in your DashboardPage.tsx
-// Find the block that starts with:
-//   ) : (
-//     <div className="grid gap-4 sm:grid-cols-2">
-// and replace it entirely with this:
+      // ─────────────────────────────────────────────────────────────────
+      // REPLACE the saved library section in your DashboardPage.tsx
       // ─────────────────────────────────────────────────────────────────
 
       ) : (

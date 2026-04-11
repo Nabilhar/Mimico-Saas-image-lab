@@ -375,14 +375,78 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
               </div>
             </div>
           )}
-  
+
+    {/* STRATEGY SECTION WRAPPER */}
+    <div className="flex flex-col gap-3">
+               {/* STRATEGY SECTION */}
+      <div className="p-4 bg-white rounded-3xl border border-slate-100 shadow-sm space-y-3">
+        <div className="flex items-center justify-between border-b border-slate-50 pb-2">
+          <div>
+            <h3 className="font-bold text-slate-900 text-sm italic">Post Strategy & Habit Builder</h3>
+            <p className="text-[9px] text-slate-400 uppercase font-black tracking-widest mt-1">Local Calendar Reminders</p>
+          </div>
+          <span className="text-xl">📅</span>
+        </div>
+
+        <div className="space-y-3">
+          <select 
+            value={strategy}
+            onChange={(e) => handleStrategyChange(e.target.value)}
+            className="w-full p-3 bg-slate-50 border-2 border-transparent rounded-2xl text-xs font-bold text-slate-700 focus:border-cyan-500 focus:bg-white outline-none transition-all cursor-pointer"
+          >
+            <option value="none">No Automated Reminders</option>
+            <option value="next">One-Time Reminder</option>
+            <option value="daily">Daily Habit (1/day)</option>
+            <option value="2-day">Growth Mode (2/day)</option>
+            <option value="3-day">Aggressive Mode (3/day)</option>
+          </select>
+
+          {strategy !== "none" && (
+            <div className="space-y-2">
+              {strategy === "next" && (
+                <div className="flex flex-col gap-1">
+                  <label className="text-[9px] font-black uppercase text-slate-400 ml-2">Reminder Date</label>
+                  <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold" />
+                </div>
+              )}
+              <div className="grid grid-cols-1 gap-1">
+                {timeSlots.map((time, idx) => (
+                  <div key={idx} className="flex items-center justify-between bg-slate-50 p-2 rounded-xl border border-slate-100">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase">
+                      {strategy === "next" ? "Reminder Time" : `Daily Slot ${idx + 1}`}
+                    </span>
+                    <input type="time" value={time} onChange={(e) => {
+                      const newTimes = [...timeSlots];
+                      newTimes[idx] = e.target.value;
+                      setTimeSlots(newTimes);
+                    }} className="text-xs font-bold text-slate-700 outline-none bg-transparent" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+
+            <button 
+              onClick={handleSmartScheduleSubmit}
+              disabled={strategy === "none"}
+              className={`w-full font-black py-3 rounded-xl text-[10px] uppercase tracking-widest transition-all shadow-xl active:scale-95 ${
+                strategy === "none" ? "bg-slate-100 text-slate-300 cursor-not-allowed shadow-none" : "bg-slate-900 text-white hover:bg-black shadow-slate-900/20"
+              }`}
+            >
+              Sync Habit to Calendar
+            </button>
+        </div>
+      </div> {/* <--- THIS CLOSES BOX 1 */}
+   
+
           {/* BUTTON SECTION */}
-          <div className="mt-6">
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">  
             <button 
               onClick={() => { handleGenerate(); }}
               // UPDATE: Disable if loading OR if credits are less than 1
               disabled={loading || userCredits < 1} 
-              className={`w-full font-bold py-4 rounded-2xl transition-all shadow-lg active:scale-[0.98] disabled:opacity-50 ${
+              className={`w-full font-bold py-4 rounded-2xl text-md transition-all shadow-lg active:scale-[0.98] disabled:opacity-50 ${
                 userCredits < 1 // UPDATE: Check credits here for styling
                   ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none' 
                   : 'bg-cyan-800 text-white hover:bg-cyan-900 shadow-cyan-900/10'
@@ -394,7 +458,8 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
                   ? "Fill up credits" // UPDATE: Custom message
                   : "Generate Local Post (1 Credit)"}
             </button>
-          </div>
+          </div>  {/* <--- THIS CLOSES THE BUTTON BOX */}
+
 
           {/* STATUS AGENT */}
           {loading && (
@@ -409,7 +474,6 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
             </div>
           )}
         </div>
-      </div>
 
 {/* RESULT SECTION - Facebook Style Preview */}
       {content && (
@@ -524,65 +588,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
         </div>
       )}
 
-      {/* STRATEGY SECTION */}
-      <div className="p-6 bg-white rounded-3xl border border-slate-100 shadow-sm space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-50 pb-4">
-          <div>
-            <h3 className="font-bold text-slate-900 text-sm italic">Post Strategy & Habit Builder</h3>
-            <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest mt-1">Local Calendar Reminders</p>
-          </div>
-          <span className="text-xl">📅</span>
-        </div>
-
-        <div className="space-y-4">
-          <select 
-            value={strategy}
-            onChange={(e) => handleStrategyChange(e.target.value)}
-            className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl text-sm font-bold text-slate-700 focus:border-cyan-500 focus:bg-white outline-none transition-all cursor-pointer"
-          >
-            <option value="none">No Automated Reminders</option>
-            <option value="next">One-Time Reminder</option>
-            <option value="daily">Daily Habit (1/day)</option>
-            <option value="2-day">Growth Mode (2/day)</option>
-            <option value="3-day">Aggressive Mode (3/day)</option>
-          </select>
-
-          {strategy !== "none" && (
-            <div className="space-y-3">
-              {strategy === "next" && (
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Reminder Date</label>
-                  <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold" />
-                </div>
-              )}
-              <div className="grid grid-cols-1 gap-2">
-                {timeSlots.map((time, idx) => (
-                  <div key={idx} className="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-100">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">
-                      {strategy === "next" ? "Reminder Time" : `Daily Slot ${idx + 1}`}
-                    </span>
-                    <input type="time" value={time} onChange={(e) => {
-                      const newTimes = [...timeSlots];
-                      newTimes[idx] = e.target.value;
-                      setTimeSlots(newTimes);
-                    }} className="text-sm font-bold text-slate-700 outline-none bg-transparent" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="pt-2">
-            <button 
-              onClick={handleSmartScheduleSubmit}
-              disabled={strategy === "none"}
-              className={`w-full font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest transition-all shadow-xl active:scale-95 ${
-                strategy === "none" ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none" : "bg-slate-900 text-white hover:bg-black shadow-slate-900/20"
-              }`}
-            >
-              Sync Habit to Calendar
-            </button>
-          </div>
+ 
         </div>
       </div>
     </div> // This closes the main mx-auto container
