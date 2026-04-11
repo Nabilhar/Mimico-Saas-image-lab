@@ -1,43 +1,37 @@
-"use client"; // Required because we use useState/useEffect
+"use client";
 
 import { useState } from "react";
 
-  export const SavedImage = ({ url }: { url: string }) => {
-    const [loading, setLoading] = useState(true);
-    const [retry, setRetry] = useState(0);
-    const validUrl = url?.startsWith('https//') 
-    ? url.replace('https//', 'https://') 
-    : url;
+export const SavedImage = ({ url }: { url: string }) => {
+  const [loading, setLoading] = useState(true);
 
-    return (
-      <div className="relative w-full h-full bg-slate-100">
-        {loading && (
-          <div className="absolute inset-0 flex items-center justify-center text-xs text-slate-400 animate-pulse">
-            Waking up AI image...
-          </div>
-        )}
-        <img
-          key={`${validUrl}-${retry}`}
-          src={validUrl}
-          alt="Saved local scene"
-          referrerPolicy="no-referrer"
-          loading="lazy"
-          className={`w-full h-full object-cover transition-opacity duration-500 ${ 
-            loading ? 'opacity-0' : 'opacity-100'
-          }`}
-          onLoad={() =>  {
-            console.log("✅ Image Loaded:", validUrl);
-            setLoading(false);
-          }}
-          onError={() => {
-            console.error("❌ Image Failed:", validUrl);
-            if (retry < 5) {
-              setTimeout(() => setRetry((prev) => prev + 1), 3000);
-            } else {
-              setLoading(false); // Stop the animation so it doesn't spin forever
-            }
-          }}
-        />
-      </div>
-    );
-  };
+  return (
+    <div className="relative w-full aspect-square bg-slate-100 rounded-lg overflow-hidden">
+      {/* 1. The Loading State */}
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-slate-50">
+           <div className="flex flex-col items-center gap-2">
+             <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+             <span className="text-[10px] text-slate-400 font-medium">Loading scene...</span>
+           </div>
+        </div>
+      )}
+
+      {/* 2. The Actual Image */}
+      <img
+        src={url}
+        alt="Saved local scene"
+        className={`w-full h-full object-cover transition-opacity duration-500 ${
+          loading ? "opacity-0" : "opacity-100"
+        }`}
+        onLoad={() => setLoading(false)}
+        onError={(e) => {
+          setLoading(false);
+          console.error("Image load error:", url);
+          // Fallback to a clean placeholder if the link is broken/old
+          e.currentTarget.src = "https://placehold.co/1024x1024/e2e8f0/64748b?text=Image+Unavailable";
+        }}
+      />
+    </div>
+  );
+};

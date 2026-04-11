@@ -13,14 +13,15 @@ interface GenerateDashboardProps {
   onGenerateSuccess?: (content: string, imageUrl: string) => Promise<string | undefined>;
   onShare?: (content: string, imageUrl?: string) => void;
   canGenerate: boolean; 
+  userCredits: number;
   onDelete: () => void;
   supabase: any;
   history?: Post[];
-  onImageUpdated?: () => void;
+  onImageUpdated?: () => Promise<void>;
 }
 
 // FIX: Added canGenerate here so the component can actually use the value
-export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, onDelete, supabase, history, onImageUpdated }: GenerateDashboardProps) {
+export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, userCredits, onDelete, supabase, history, onImageUpdated }: GenerateDashboardProps) {
   const { user } = useUser();
 
 
@@ -246,27 +247,26 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, onD
 
           if (data.url) {
 
-            // 1. Update Local UI State
-            setCurrentImage(data.url);
+            console.log("Attempting Image Credit Deduction & URL Update...");
 
-            // 2. Log it so you can verify in the console!
-            console.log("Attempting Supabase Update for ID:", lastPostId);
-
-            // 3. Update the specific row using the UUID we stored
-            const { data: updateData, error } = await supabase
-            .from('community_posts')
-            .update({ image_url: data.url })
-            .eq('id', lastPostId) 
-            .select();
-
-            if (updateData && updateData.length > 0) {
-              console.log("✅ Database Updated Successfully:", updateData);
-              if (onImageUpdated) onImageUpdated();
-            } else {
-              console.warn("⚠️ No rows updated. Check if ID exists in Supabase:", lastPostId);
+            // CALL THE BOUNCER: This deducts 2 credits AND saves the URL
+            const { error: rpcError } = await supabase.rpc('save_image_and_deduct', {
+              target_post_id: lastPostId,
+              new_image_url: data.url,
+              clerk_user_id: user?.id
+            });
+  
+            if (rpcError) {
+              console.error("❌ Bouncer rejected image save:", rpcError);
+              throw new Error(rpcError.message);
             }
+  
+            // Success State
+            console.log("✅ 2 Credits Deducted and Database Updated");
+            setCurrentImage(data.url);
             
-            if (error) throw error;
+            // This triggers the parent to refresh the credit count display
+            if (onImageUpdated) await onImageUpdated();
 
           }
         } catch (err) {
@@ -380,14 +380,19 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, onD
           <div className="mt-6">
             <button 
               onClick={() => { handleGenerate(); }}
-              disabled={loading || !canGenerate}
+              // UPDATE: Disable if loading OR if credits are less than 1
+              disabled={loading || userCredits < 1} 
               className={`w-full font-bold py-4 rounded-2xl transition-all shadow-lg active:scale-[0.98] disabled:opacity-50 ${
-                !canGenerate 
+                userCredits < 1 // UPDATE: Check credits here for styling
                   ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none' 
                   : 'bg-cyan-800 text-white hover:bg-cyan-900 shadow-cyan-900/10'
               }`}
             >
-              {loading ? "Analyzing Mimico Data..." : !canGenerate ? "No credits remaining" : "Generate Local Post"}
+              {loading 
+                ? "Analyzing Mimico Data..." 
+                : userCredits < 1 
+                  ? "Fill up credits" // UPDATE: Custom message
+                  : "Generate Local Post (1 Credit)"}
             </button>
           </div>
 
@@ -469,24 +474,34 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, onD
                       </p>
                     </div>
                   ) : (
-                    /* --- IDLE STATE (The "Ugly Box" Replacement) --- */
-                    <button 
-                      onClick={handleGenerateImage}
-                      disabled={!lastPostId}
-                      className="flex flex-col items-center text-center group/btn active:scale-95 transition-all"
-                    >
-                      <div className="w-16 h-16 rounded-2xl bg-white shadow-sm border border-slate-200 flex items-center justify-center mb-4 group-hover/btn:border-cyan-300 group-hover/btn:shadow-md transition-all">
-                        <svg className="w-8 h-8 text-slate-400 group-hover/btn:text-cyan-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                      </div>
-                      <span className="text-sm font-bold text-slate-900 group-hover/btn:text-cyan-700">
-                        Generate Matching Image
-                      </span>
-                      <p className="text-[10px] text-slate-400 mt-1 uppercase font-black tracking-widest">
-                        Powered by Nano Banana
-                      </p>
-                    </button>
+
+                    /* --- IDLE STATE (Inside the Creative Canvas) --- */
+                  <button 
+                    onClick={handleGenerateImage}
+                    // UPDATE: Disable if no Post ID OR if credits are less than 2
+                    disabled={!lastPostId || userCredits < 2} 
+                    className={`flex flex-col items-center text-center group/btn active:scale-95 transition-all ${
+                      userCredits < 2 ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                  >
+                    <div className={`w-16 h-16 rounded-2xl bg-white shadow-sm border flex items-center justify-center mb-4 transition-all ${
+                      userCredits < 2 
+                        ? 'border-slate-100' 
+                        : 'border-slate-200 group-hover/btn:border-cyan-300 group-hover/btn:shadow-md'
+                    }`}>
+                      <svg className={`w-8 h-8 ${userCredits < 2 ? 'text-slate-200' : 'text-slate-400 group-hover/btn:text-cyan-600'} transition-colors`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    
+                    <span className={`text-sm font-bold ${userCredits < 2 ? 'text-slate-400' : 'text-slate-900 group-hover/btn:text-cyan-700'}`}>
+                      {userCredits < 2 ? "Fill up credits" : "Generate Matching Image"}
+                    </span>
+                    
+                    <p className="text-[10px] text-slate-400 mt-1 uppercase font-black tracking-widest">
+                      {userCredits < 2 ? "Requires 2 Credits" : "Costs 2 Credits"}
+                    </p>
+                  </button>
                   )}
                 </div>
               )}

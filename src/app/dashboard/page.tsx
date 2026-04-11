@@ -72,33 +72,39 @@ export default function DashboardPage() {
 
   const savePostToCloud = useCallback(async (newContent: string, imageUrl?: string) => {
     if (!user?.id || !businessData || !supabase) return;
-    if (businessData.credits <= 0) return alert("No credits!");
-    
-    const { data, error: postError } = await supabase
-    .from("community_posts")
-    .insert([{ content: newContent, business_id: user.id, image_url: imageUrl }])
-    .select('*')
-    .single()
-    
-    if (postError) {
-      console.error("Database Save Error:", postError);
+  
+    const cost = 1 + (imageUrl ? 2 : 0);
+  
+    try {
+      const { data: rpcResult, error: rpcError } = await supabase
+        .rpc('save_post_and_deduct', {
+          p_user_id: user.id,
+          p_content: newContent,
+          p_image_url: imageUrl || '',
+          p_amount: cost
+        });
+  
+      if (rpcError || !rpcResult[0]?.success) {
+        alert("Insufficient credits! Email Nabil for a refill.");
+        return undefined;
+      }
+  
+      // Update local state immediately for a fast UI
+      setPosts(prev => [{
+        id: rpcResult[0].new_post_id,
+        content: newContent,
+        image_url: imageUrl,
+        created_at: new Date().toISOString(),
+        business_id: user.id
+      }, ...prev]);
+      
+      await loadBusinessData(); // Sync the credit count
+      return rpcResult[0].new_post_id;
+  
+    } catch (err: any) {
+      console.error("Deduction error:", err.message);
       return undefined;
     }
-
-    setPosts(prev => [data, ...prev]);
-
-    // Even if the credit update fails, we already have the post ID, 
-    // so let's make sure we return it to the dashboard.
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update({ credits: businessData.credits - 1 })
-      .eq('id', user.id);
-
-    if (!profileError) {
-      await loadBusinessData();
-    }
-
-    return data.id; // Always return the ID if the post was created!
   }, [user?.id, loadBusinessData, businessData, supabase]);
 
   const deletePost = async (postId: string) => {
@@ -161,6 +167,7 @@ export default function DashboardPage() {
                   supabase={supabase}
                   onGenerateSuccess={(content, url) => savePostToCloud(content, url)}
                   canGenerate={(businessData?.credits ?? 0) > 0}
+                  userCredits={businessData?.credits ?? 0}
                   onDelete={() => {}}
                   history={posts} 
                   onImageUpdated={loadBusinessData}

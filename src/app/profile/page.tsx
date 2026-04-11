@@ -93,7 +93,6 @@ export default function ProfilePage() {
         category: category,
         niche: niche,
         voice: voice,
-        credits: 10,
         updated_at: new Date().toISOString(),
       };
   
