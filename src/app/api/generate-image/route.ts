@@ -7,7 +7,20 @@ import { InferenceClient } from "@huggingface/inference";
 import { NextResponse } from "next/server";
 import { createClient } from '@supabase/supabase-js';
 
+
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+
+const tools = [
+  {
+    googleSearch: {}, // Use 'googleSearch' for the latest 2026 models
+  },
+] as any;
+
+const gemmaModel = genAI.getGenerativeModel({ 
+  model: "gemma-4-26b-a4b-it", 
+  tools: tools // <--- INTEGRATING THE RESEARCH TOOL
+}, { apiVersion: 'v1beta' });
+
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY! });
 const hf = new InferenceClient(process.env.HF_TOKEN!);
 
@@ -18,10 +31,10 @@ const supabase = createClient(
 
 // Toggle between GEMINI and GROQ for the Architect (text) step
 // Set to "GROQ" when Gemini hits 429
-const ARCHITECT_MODE: "GEMINI" | "GROQ" = "GROQ";
+const ARCHITECT_MODE: "GEMINI" | "GROQ" | "GEMMA" = "GEMMA";
 
-const textModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-const imageModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash-image" });
+const textModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }, { apiVersion: 'v1beta' });
+const imageModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash-image" }, { apiVersion: 'v1beta' });
 
 // ─────────────────────────────────────────────
 // HELPER: Upload a blob to Supabase Storage
@@ -69,18 +82,42 @@ function buildPollinationsUrl(visualDescription: string): string {
 // ─────────────────────────────────────────────
 export async function POST(req: Request) {
   try {
-    const { generatedPost, business_name, location } = await req.json();
+    const { generatedPost, business_name, location, niche } = await req.json();
+    const currentTime = new Date().toLocaleTimeString('en-US', { 
+      hour: 'numeric', 
+      minute: '2-digit', 
+      hour12: true 
+    });
+    const currentMonth = new Date().toLocaleString('default', { month: 'long' });
 
     // ── STEP A: ARCHITECT (text → visual description) ─────────
     const architectPrompt = `
-      You are a world-class commercial photographer. 
-      Analyze this social media post: "${generatedPost}"
-      Based on this post, write a 1-sentence visual description for a professional photo.
+      You are a prompt engineer specializing in hyper-local commercial and lifestyle photography for AI image models.
+
+      Analyze this social media post and extract the visual essence:
+      "${generatedPost}"
+
+      CONTEXT:
+      - Business: ${business_name} — ${niche}
+      - Location: ${location}
+      - Season / Time: ${currentMonth}, ${currentTime}
+
+      YOUR TASK:
+      Write an image generation prompt (3-5 sentences) that will produce a stunning, hyper-local lifestyle photo matching the mood and story of this post.
+
+      STRUCTURE YOUR PROMPT IN THIS ORDER:
+      1. SUBJECT: What is the hero of the image? (food, drink, storefront, product, scene — never a person's face)
+      2. SETTING: Where is it set? Reference the specific neighbourhood feel of ${location}
+      3. LIGHTING: Describe the exact light quality matching ${currentMonth} and ${currentTime}
+      4. MOOD: What emotion should the viewer feel? Extract this from the post's tone
+      5. TECHNICAL: End with — "Shot on Sony A7, f/1.8, shallow depth of field, 1:1 square crop, no text, no watermark, no people"
+
       RULES:
-      - Focus on lighting, textures, and composition.
-      - Keep it grounded in ${location}.
-      - Do not mention text, emojis, or people's faces.
-      - Style: High-end smartphone photography, natural vibes, Instagram 1:1 ratio.
+      - Never mention faces, people, text overlays, logos, or watermarks
+      - Never use abstract words like "beautiful" or "stunning" — describe what you SEE
+      - Ground every detail in the physical reality of ${location} — mention the season, the light, the textures
+      - The image must feel like it was taken by the business owner on a good day, not by a commercial photographer
+      - Output ONLY the image prompt. No explanation, no preamble, no labels.
     `;
 
     let visualDescription = "";
@@ -88,21 +125,28 @@ export async function POST(req: Request) {
     if (ARCHITECT_MODE === "GEMINI") {
       const result = await textModel.generateContent(architectPrompt);
       visualDescription = result.response.text();
-    } else {
+    } else if (ARCHITECT_MODE === "GROQ") {
       const result = await groq.chat.completions.create({
         messages: [{ role: "user", content: architectPrompt }],
         model: "llama-3.1-8b-instant",
       });
       visualDescription = result.choices[0]?.message?.content || "";
+    } else if (ARCHITECT_MODE === "GEMMA") {
+      console.log("M8V Architect: Requesting Gemma 4 via Google AI SDK...");
+      // Routing to Gemma 4 via Hugging Face Inference
+      const result = await gemmaModel.generateContent(architectPrompt);
+      visualDescription = result.response.text();
     }
 
-    const cleanDescription = visualDescription.replace(/\s+/g, ' ').trim();
+    const cleanDescription = visualDescription.replace(/<[^>]*>/g, "").replace(/\s+/g, ' ').trim();
     const finalImagePrompt = `Professional photography of ${cleanDescription}. For a local business named "${business_name}" in ${location}. Style: cinematic natural light, shallow depth of field, 4k, perfect for a 1:1 Instagram square post.`;
 
     console.log("Architect output:", cleanDescription);
 
     let hostedUrl: string | null = null;
     let finalProvider = "UNKNOWN";
+
+    /*---------------------------TRY AGAIN WHEN GEMINI LIMITS RESET--------------------------------------
 
     // ── PROVIDER 1: GEMINI IMAGE ───────────────────────────────
     try {
@@ -126,6 +170,9 @@ export async function POST(req: Request) {
     // ── PROVIDER 2: POLLINATIONS (download & upload) ───────────
     // Free, unlimited, reliable enough for MVP — host it in Supabase
     if (!hostedUrl) {
+
+          ---------------------------------------------------------------*/
+
       try {
         console.log("Trying Pollinations download...");
         const pollinationsUrl = buildPollinationsUrl(visualDescription);
@@ -154,7 +201,6 @@ export async function POST(req: Request) {
       } catch (e) {
         console.warn("Pollinations download failed:", e);
       }
-    }
 
     // ── PROVIDER 3: HUGGING FACE SDK ───────────────────────────
     // Uses your free monthly credits (~200-300 images/month on free tier)

@@ -204,26 +204,28 @@ export default function DashboardPage() {
                     <span className="text-sm font-bold text-slate-900 truncate">
                       {businessData?.business_name || 'Your Business'}
                     </span>
-                    <span className="text-[11px] text-slate-400">
-                      {new Date(post.created_at).toLocaleDateString('en-US', {
+
+                    {businessData?.location && (
+                    <span className="text-[11px] text-slate-500 font-medium truncate">
+                      {businessData.location.split(',')[0]}
+                    </span>
+                  )}
+                  </div>
+                  {/* Date/time*/}
+                  <span className="ml-auto text-[9px] font-black text-cyan-600 bg-cyan-50 px-2 py-1 rounded uppercase tracking-widest shrink-0">
+                  {new Date(post.created_at).toLocaleDateString('en-US', {
                         month: 'short',
                         day: 'numeric',
                         hour: 'numeric',
                         minute: '2-digit',
                         hour12: true,
                       })}
-                      {businessData?.location ? ` · ${businessData.location.split(',')[0]}` : ''}
-                    </span>
-                  </div>
-                  {/* M8V badge */}
-                  <span className="ml-auto text-[9px] font-black text-cyan-600 bg-cyan-50 px-2 py-1 rounded uppercase tracking-widest shrink-0">
-                    M8V
                   </span>
                 </div>
 
                 {/* ── CAPTION (above image, like Facebook) ── */}
                 <div className="px-4 pb-3">
-                  <p className="text-sm text-slate-800 leading-relaxed line-clamp-4">
+                  <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap line-clamp-4">
                     {post.content}
                   </p>
                   {/* Show full caption hint if truncated */}

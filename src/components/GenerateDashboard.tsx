@@ -115,7 +115,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
         duration: { minutes: 10 },
         title: `🎨 Mimico Studio: Time to Create!`,
         description: `Open your Mimico Studio dashboard to generate and share today's local post for ${business_name}.\n\nGo to: ${window.location.origin}/dashboard`,
-        location: 'Mimico, Toronto',
+        location: `${location}`,
         url: window.location.origin,
         status: 'CONFIRMED',
         busyStatus: 'FREE',
@@ -212,7 +212,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
   
       } catch (err: any) {
         console.error("Generation Error:", err);
-        setContent(err.message || "The M8V engine is temporarily unavailable.");
+        setContent(err.message || "The AI engine is temporarily unavailable.");
       } finally {
         setLoading(false);
       }
@@ -282,7 +282,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
       <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-slate-900 tracking-tight">Mimico Content AI</h2>
-          <span className="text-[10px] font-black text-cyan-600 bg-cyan-50 px-2 py-1 rounded uppercase tracking-widest">M8V Engine</span>
+          <span className="text-[10px] font-black text-cyan-600 bg-cyan-50 px-2 py-1 rounded uppercase tracking-widest">AI Engine</span>
         </div>
         
         <div className="space-y-4">
@@ -441,12 +441,11 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
    
 
           {/* BUTTON SECTION */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">  
             <button 
               onClick={() => { handleGenerate(); }}
               // UPDATE: Disable if loading OR if credits are less than 1
               disabled={loading || userCredits < 1} 
-              className={`w-full font-bold py-4 rounded-2xl text-md transition-all shadow-lg active:scale-[0.98] disabled:opacity-50 ${
+              className={`w-full font-bold py-4 rounded-2xl text-md transition-all shadow-xl shadow-cyan-900/30 active:scale-[0.98] disabled:opacity-50 ${
                 userCredits < 1 // UPDATE: Check credits here for styling
                   ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none' 
                   : 'bg-cyan-800 text-white hover:bg-cyan-900 shadow-cyan-900/10'
@@ -458,7 +457,6 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
                   ? "Fill up credits" // UPDATE: Custom message
                   : "Generate Local Post (1 Credit)"}
             </button>
-          </div>  {/* <--- THIS CLOSES THE BUTTON BOX */}
 
 
           {/* STATUS AGENT */}
@@ -474,6 +472,8 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
             </div>
           )}
         </div>
+      </div>
+    </div>
 
 {/* RESULT SECTION - Facebook Style Preview */}
       {content && (
@@ -492,16 +492,21 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
                 </div>
                 <div>
                   <p className="font-bold text-slate-900 text-sm leading-tight">{business_name}</p>
-                  <p className="text-[10px] text-slate-500 font-medium tracking-tight mt-0.5">Just now • Mimico, ON 🌐</p>
+                  <p className="text-[10px] text-slate-500 font-medium tracking-tight mt-0.5">Just now • {location} 🌐</p>
                 </div>
               </div>
               <PostActions content={content} onDelete={onDelete} />
             </div>
 
             {/* 2. Caption Area (Before the Image) */}
-            <div className="px-5 py-4">
+            <div className="px-5 py-4 pb-2">
               <p className="text-slate-800 whitespace-pre-wrap text-[15px] leading-relaxed font-normal">
-                {content}
+                {content.split('\n').map((line, i) => (
+                  <span key={i}>
+                    {line}
+                    <br />
+                  </span>
+                ))}
               </p>
             </div>
 
@@ -578,7 +583,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
                 </div>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-cyan-700">M8V Engine: Optimized</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-cyan-700">AI Engine: Optimized</span>
               </div>
               <div className="text-[10px] font-black text-slate-400 uppercase">
                 {content.trim().split(/\s+/).filter(Boolean).length} Words
@@ -588,9 +593,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
         </div>
       )}
 
+      </div>  
  
-        </div>
-      </div>
-    </div> // This closes the main mx-auto container
-  ); // This closes the return statement
-} // This closes the function
+  ); 
+};

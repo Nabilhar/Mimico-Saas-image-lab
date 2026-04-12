@@ -110,7 +110,7 @@ Make it feel like a privilege to read. Specific beats generic:
 "4am sourdough proofing" beats "we work hard every day."`,
 
 
-"Promotion / offer": (promoType: string, details: string) => {
+"Promotion / offer": (promoType: string, details: string, location: string) => {
   const strategies = {
     discount: "Act like a friend giving a neighbor a 'heads up' on a way to save. Focus on the ease of the transaction. Use words like 'lighter on the wallet' or 'a little break'.",
     freebie: "Act like a generous host. The focus is 100% on hospitality and 'our treat'. It's about a gift, not a transaction. Use words like 'on the house' or 'tucked in for you'.",
@@ -121,7 +121,7 @@ Make it feel like a privilege to read. Specific beats generic:
     [GOAL]: Announce a ${promoType} without sounding like a flyer.
     [DATA]: ${details}
     [TONE]: ${strategies[promoType as keyof typeof strategies] || "Neighborly and warm."}
-    [STRICT RULE]: The details "${details}" must be the center of the story, but woven in as a solution to a specific Mimico moment (e.g., a post-work treat or a weekend reward).
+    [STRICT RULE]: The details "${details}" must be the center of the story, but woven in as a solution to a specific ${location} moment (e.g., a post-work treat or a weekend reward).
 
 Rules:
 - "CRITICAL: You MUST use the following specific details: '${details}'. If these details are missing from the post, the post is a failure. Do not use generic placeholders like [Insert Date]."
@@ -133,7 +133,7 @@ Rules:
 },
 
 
-"Local event / news": (eventType: string, details: string) => {
+"Local event / news": (eventType: string, details: string, location: string) => {
     return `
       [GOAL]: Position the business as the neighborhood's information hub for this ${eventType}.
       [DATA]: ${details}
@@ -169,77 +169,85 @@ function buildPrompt(
   customDetails: string  
 ): string {
 
+
   const rawInstruction = POST_TYPE_PROMPTS[postType] 
 
   // Check: If it's a function, call it. If it's a string, use it as is.
   const postSpecificInstructions = typeof rawInstruction === "function"
-    ? rawInstruction(postType === "Promotion / offer" ? promoType : eventType, customDetails)
+    ? rawInstruction(postType === "Promotion / offer" ? promoType : eventType, customDetails, location)
     : rawInstruction;
-  
-  
 
-  return `You are a Marketing Master. Put yourself in the shoes of the owner of "${business_name}", a local ${niche} at ${location}.
-You are writing this post yourself — in your own voice, from your own experience on the ground.
-You know your neighbours, your street, and your regulars by name.
-Write as someone who genuinely lives and works in this community, not as a marketer.
-One rule: even though you write from your own perspective, every sentence must still serve the reader — not just talk about yourself.
+    const currentTime = new Date().toLocaleTimeString('en-US', { 
+      hour: 'numeric', 
+      minute: '2-digit', 
+      hour12: true 
+    });
 
-CONTEXT:
-  Here are the LAST 3 posts generated for this business. 
-  ATTENTION: AVoid the opening lines, hooks, or specific stories used in these posts:
-  ---
-  ${recentHistory}
-  ---
+    return `
+    CRITICAL OUTPUT RULE: You must output ONLY the following, in this exact order:
+        1. One <research> tag with keywords only
+        2. You MUST use the provided Google Search tool to find REAL, CURRENT landmarks and trends for ${location} before writing.
+        3. The social media post body
+        4. Hashtags
 
-TASK:
+        Do NOT output any reasoning, analysis, word counts, self-checks, or commentary. 
+        If you need to think, do it silently before writing. Your visible output starts with <research>.
 
-1. In ONE brief line, note the neighbourhood name around ${location}and 2-3 landmark names only and 2-3 trends in the neighberhood. No descriptions, no sentences — just names.
-2. Write a NEW, fresh social media post using the ${framework} framework.
-  -If the previous posts mentioned the waterfront, focus on a specific street or landmark instead.
-  - Change the opening "hook" entirely.
+    You are a Marketing Master. Put yourself in the shoes of the owner of "${business_name}", a local ${niche} at ${location}.
+    You are writing this post yourself at time :${currentTime} / season : ${month} — in your own voice, from your own experience on the ground.
+    You know your neighbours, your street, and your regulars by name.
+    Write as someone who genuinely lives and works in this community, not as a marketer.
+    One rule: even though you write from your own perspective, every sentence must still serve the reader — not just talk about yourself.
+    
+    RECENT POST HISTORY — avoid repeating these opening lines, hooks, or stories:
+    ${recentHistory || "No previous posts."}
+    
+    TASK:
+    1. Open with a <research> tag containing: neighbourhood name + up to 3 landmark names + up to 2 current local trends. Keywords only, no sentences, max 20 words total.
+       Format exactly like this: <research>Neighborhood Name: Landmark 1, Landmark 2, Local Trend 1, Local Trend 2</research>
+    
+    2. Immediately after the closing </research> tag, write the social media post. Nothing between the tag and the post.
+    
+    SEASONALITY:
+    It is currently ${month}. Let the season shape the mood — weather, what locals are doing, what feels timely right now.
+    
+    POST TYPE:
+    ${postSpecificInstructions}
+    
+    BRAND VOICE — ${voice}:
+    ${VOICE_PROMPTS[voice] || "Warm, conversational, and community-first."}
+    
+    FRAMEWORK — apply ${framework} exactly:
+    ${FRAMEWORK_PROMPTS[framework] || FRAMEWORK_PROMPTS["PAS"]}
 
-STRICT OUTPUT FORMAT:
-EXAMPLE FORMAT:
-<research>Neighbourhood: Mimico. Landmarks: Amos Waites Park, Mimico GO Station, SanRemo Bakery. Local pulse: spring waterfront walks are back.</research>
-Walking past the GO station this morning with a tray of fresh sourdough, I thought about how many of you grab that 7:42 train after stopping in... [rest of post]
 
-SEASONALITY:
-It is currently ${month}. Let the season and local mood shape the post — weather, community rhythm, what people are doing right now in this neighbourhood.
+    
+    POST RULES:
+    - 130-180 words in the post body (the <research> block does not count)
+    - Write in first person ("I" or "We")
+    - First sentence must contain a natural-language search keyword (e.g. "local trend 1 in the neighborhood") — as a statement, not a hashtag
+    - Short paragraphs, one blank line between each
+    - The call to action must feel like the natural next thought in the story, not a closing instruction
+      Wrong: ["Book your table tonight — link in bio."]
+      Right: [A natural, low-pressure invitation that fits a ${niche}. e.g., "The chair is open if you need a refresh," or "We'll be here with the kettle on if you want to talk shop."]
+    - NO PARROTING: Do not use any phrases found in the "Right/Wrong" examples of this prompt. Those are for structural guidance only. Use your own words to achieve the same feeling.
+    - End with 3-4 hashtags on their own line: neighbourhood first, then niche, then broad
+    - Max 3 emojis, only if they add meaning
+    - Never stop mid-sentence. If you near your output limit, close the sentence and jump to hashtags.
+    - Do NOT label sections ("Before:", "Problem:", "Attention:" etc.)
+    - Do NOT output word counts, commentary, or self-evaluation
+    
+    BANNED PHRASES:
+    "I'm always", "After a day", "Juggling", "Finding a", "a stone's throw", "pour our hearts", "passionate about", "quality service", "reach out", "don't hesitate", "we pride ourselves"
 
-POST TYPE SPECIFIC RULES:
-${postSpecificInstructions}
-
-BRAND VOICE — ${voice}:
-${VOICE_PROMPTS[voice] || "Warm, conversational, and community-first."}
-
-FRAMEWORK — apply ${framework} exactly:
-${FRAMEWORK_PROMPTS[framework] || FRAMEWORK_PROMPTS["PAS"]}
-
-FORMAT RULES:
-- Put ALL your research, neighbourhood name, and landmark notes inside <research></research>, provide ONLY the neighborhood name and 5 keywords. Max 20 words total. (e.g. <research>Mimico: GO Station, rainy, spring jackets</research>).
-- STRICT RULE: Do not output word counts, meta-commentary, or feedback. After the <research> tag, output the social media post and NOTHING ELSE. If you do not finish the post, the output is a failure. 
-- Write the actual social media post AFTER the closing </research> tag.
-- Do NOT use structural labels like "Attention:", "Problem:", "Before:" in the post body.
-- Write in first person ("I", "We").
-- Keep it human, warm, and neighbourly.
-- 130-180 words in the post body (not counting the <research> block)
-- Short paragraphs, one blank line between each
-- CRITICAL: Never stop writing mid-sentence. 
-- LENGTH: You must exceed 130 words. 
-- TERMINATION: If you reach your output limit, you MUST stop the current sentence and skip immediately to the hashtags. Do not leave a sentence hanging.
-- COMPLETION: Every post must end with a clear punctuation or a hashtag.
-- First sentence must contain a natural-language keyword a local would search on Instagram (e.g. "best sourdough in Mimico") — written as a statement, not a hashtag
-- The call to action must emerge naturally from the story — not sit as a 
-  separate closing sentence. It should feel like the next logical thought, 
-  not an instruction. The reader should feel invited, not directed.
-  Wrong: "Book your table tonight — link in bio."
-  Right: "If your evening is still wide open, we have a table with your name on it."
-- 3-4 hashtags on the final line: neighbourhood first, then niche, then broad
-- Max 3 emojis — only if it adds meaning, never decoration
-- Banned phrases: "I'm always...",  "After a day...", "Juggling...", "Finding a...", "a stone's throw", "pour our hearts", "passionate about", "quality service", "reach out", "don't hesitate", "we pride ourselves"`
-;
-
-}
+    CRITICAL CTA LOGIC:
+    - You are a ${niche}. Your invitation must be physically possible for this business.
+    - NO RESTAURANT TALK: Do not mention tables, reservations, menus, or dining unless you are a food business.
+    - If a Barbershop: Invite them to stop by for a refresh, a fresh cut, or to grab a chair.
+    - If a Plumber: Reference getting things flowing or a quick house call.
+    - If a Florist: Reference grabbing a bouquet or adding some color to the room.
+    - THE FINAL WORD: Use the unique voice of a local owner, not the example text from the prompt.
+`;}
 
 // ─────────────────────────────────────────────
 // 5. API ROUTE HANDLER
@@ -252,6 +260,7 @@ export async function POST(req: Request) {
   }
 
   try {
+    const body = await req.json();
     const {
       business_name,
       location,
@@ -265,7 +274,7 @@ export async function POST(req: Request) {
       customDetails = "", // <-- Make sure these are here
       history
 
-    } = await req.json();
+    } = body;
 
       // --- ADD THIS DEBUG BLOCK ---
       // --- ADD THIS DEBUG BLOCK ---
@@ -317,6 +326,12 @@ export async function POST(req: Request) {
     }
     // ─────────────────────────────────────────────────────
 
+    const tools = [
+      {
+        googleSearch: {}, // Use 'googleSearch' for the latest 2026 models
+      },
+    ] as any;
+
 // 1. READ THE HIDDEN SWITCH (Check your .env.local for AI_PROVIDER)
 const provider = process.env.AI_PROVIDER || "gemini"; 
 let rawResponse = "";
@@ -326,18 +341,69 @@ try {
     console.log("--- M8V ENGINE: ROUTING TO GROQ (LLAMA 3) ---");
     const chatCompletion = await groq.chat.completions.create({
       messages: [
-        { role: "system", content: "You are a local marketing expert for Mimico." },
+        { 
+          role: "system", 
+          // FIX: No more hardcoded Mimico. We tell it exactly where it is.
+          content: `You are a local marketing expert for ${location}. 
+          You know the streets, the local landmarks, and the specific vibe of ${location} perfectly. 
+          Write in a way that feels authentic to a business owner living in this specific area.` 
+        },
         { role: "user", content: finalPrompt }
       ],
       model: "llama-3.3-70b-versatile",
       temperature: 0.7,
     });
+
     rawResponse = chatCompletion.choices[0]?.message?.content || "";
   } 
+  else if (provider === "gemma") {
+    console.log("--- M8V ENGINE: ROUTING TO GEMMA 4 (26B MoE) ---");
+    
+    // Using the 26B Mixture-of-Experts model for the best balance of speed and logic
+    const model = genAI.getGenerativeModel({ 
+      model: "gemma-4-26b-a4b-it", 
+      tools: tools // <--- INTEGRATING THE RESEARCH TOOL
+    }, { apiVersion: 'v1beta' });
+
+    const result = await model.generateContent({
+      contents: [{ 
+        role: "user", 
+        parts: [{ 
+          text: `Use your <research> thinking mode to check for current ${location} news or events before writing: \n\n ${finalPrompt}` 
+        }] 
+      }],
+      generationConfig: {
+        temperature: 1.0, // Higher temp is better for the 'thinking' phase
+        maxOutputTokens: 6000,
+        thinkingConfig: {
+        includeThoughts: true,
+        thinkingLevel: "high" 
+        },
+      } as any,
+    });
+    
+    rawResponse = result.response.text();
+
+
+    // 2. LOGGING LOGIC (For your terminal eyes only)
+    if (rawResponse.includes("<research>")) {
+      console.log("\x1b[32m%s\x1b[0m", "--- [M8V RESEARCH LOG] ---");
+      const researchMatch = rawResponse.match(/<research>([\s\S]*?)<\/research>/);
+      console.log(researchMatch ? researchMatch[1].trim() : "Research tags found but content empty.");
+    }
+
+    if (rawResponse.includes("`")) {
+      console.log("\x1b[36m%s\x1b[0m", "--- [M8V THINKING LOG] ---");
+      // Grabs the content inside the backticks/thinking block
+      const thinkingMatch = rawResponse.match(/`([\s\S]*?)`/); 
+      console.log(thinkingMatch ? thinkingMatch[1].trim() : "Thinking block found but empty.");
+    }
+  }
+  
   else {
     console.log("--- M8V ENGINE: ROUTING TO GOOGLE GEMINI ---");
     // We'll keep the v1 stable config here
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }, { apiVersion: 'v1beta' });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }, { apiVersion: 'v1beta' });
     const result = await model.generateContent({
       contents: [{ role: "user", parts: [{ text: finalPrompt }] }],
       generationConfig: {
@@ -374,17 +440,43 @@ try {
 }
 
 // 2. SMART CLEANUP (Handles the <research> tags for BOTH models)
-let content: string;
+let content = rawResponse
 
-if (rawResponse.includes("</research>")) {
-  content = rawResponse.split("</research>")[1].trim();
-} else if (rawResponse.includes("<research>")) {
-  // If the tag was opened but never closed, take the last paragraph
-  const parts = rawResponse.split(/\n\n+/);
-  content = parts[parts.length - 1].trim();
-} else {
-  content = rawResponse.trim();
+// 3. THE CLEANUP PIPELINE
+// Step A: Remove everything from the start of the response 
+// up to the LAST research or thinking tag.
+if (content.includes("</research>")) {
+  content = content.split("</research>").pop()?.trim() || content;
+} else if (content.includes("`")) {
+  // If it used backticks for thinking, take the part AFTER the last backtick
+  const parts = content.split("`").filter(p => p.trim().length > 10);
+  content = parts[parts.length - 1].trim(); 
 }
+
+// Step B: Nuclear Scrub
+// This removes any stray tags that might be left (like <research> without a close)
+content = content
+  .replace(/<[^>]*>/g, "") // Removes <research>, <|think|>, etc.
+  .replace(/\[\d+\]/g, "") // Removes [1], [2] citations
+  .trim();
+
+// 4. Final Fallback
+// If the content still looks like a log (contains "Word Count" or "Keywords"), 
+// we take the last paragraph only.
+if (content.includes("Word Count:") || content.includes("Keyword:")) {
+  const paragraphs = content.split("\n\n");
+  content = paragraphs[paragraphs.length - 1].trim();
+}
+
+content = content
+  .replace(/([.!?])\s+(?=[1-5]\.)/g, "$1\n\n") // Gap before bullets
+  .replace(/(\d\.)\s+/g, "$1 ")                // Ensure space after number
+  .replace(/\n(?=[1-5]\.)/g, "\n")             // Single line for bullets
+  .replace(/(#\w+)/g, "\n\n$1")                // Push first hashtag to new line
+  .replace(/(#\w+)\s+(?=#\w+)/g, "$1 ");       // Keep hashtags together on that new line
+
+// Final check to make sure we don't have triple breaks
+content = content.replace(/\n{3,}/g, "\n\n");
 
 console.log("--- GENERATION SUCCESSFUL ---");
 return NextResponse.json({ content, framework });
