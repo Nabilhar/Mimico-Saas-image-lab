@@ -92,32 +92,54 @@ export async function POST(req: Request) {
 
     // ── STEP A: ARCHITECT (text → visual description) ─────────
     const architectPrompt = `
-      You are a prompt engineer specializing in hyper-local commercial and lifestyle photography for AI image models.
+        You are a prompt engineer for AI image generation, specializing in hyper-local 
+        commercial and lifestyle photography.
 
-      Analyze this social media post and extract the visual essence:
-      "${generatedPost}"
+        STEP 1 — RESEARCH (use Google Search):
+        Search for "${business_name}" at "${location}".
+        Find and note:
+        - Does this business have a patio, terrace, or outdoor seating?
+        - Is there a water view, park, or landmark visible from the business?
+        - What is the interior style — lighting, colours, materials, vibe?
+        - What is their signature food, drink, or product?
+        - Any distinctive visual details (signage, decor, uniforms, packaging)?
 
-      CONTEXT:
-      - Business: ${business_name} — ${niche}
-      - Location: ${location}
-      - Season / Time: ${currentMonth}, ${currentTime}
+        If you cannot find specific results, use your knowledge of ${location} 
+        and the neighbourhood context instead.
 
-      YOUR TASK:
-      Write an image generation prompt (3-5 sentences) that will produce a stunning, hyper-local lifestyle photo matching the mood and story of this post.
+        STEP 2 — ANALYZE THE POST:
+        Social media post to match:
+        "${generatedPost}"
 
-      STRUCTURE YOUR PROMPT IN THIS ORDER:
-      1. SUBJECT: What is the hero of the image? (food, drink, storefront, product, scene — never a person's face)
-      2. SETTING: Where is it set? Reference the specific neighbourhood feel of ${location}
-      3. LIGHTING: Describe the exact light quality matching ${currentMonth} and ${currentTime}
-      4. MOOD: What emotion should the viewer feel? Extract this from the post's tone
-      5. TECHNICAL: End with — "Shot on Sony A7, f/1.8, shallow depth of field, 1:1 square crop, no text, no watermark, no people"
+        Business: ${business_name} — ${niche}
+        Location: ${location}
+        Season / Time: ${currentMonth}, ${currentTime}
 
-      RULES:
-      - Never mention faces, people, text overlays, logos, or watermarks
-      - Never use abstract words like "beautiful" or "stunning" — describe what you SEE
-      - Ground every detail in the physical reality of ${location} — mention the season, the light, the textures
-      - The image must feel like it was taken by the business owner on a good day, not by a commercial photographer
-      - Output ONLY the image prompt. No explanation, no preamble, no labels.
+        STEP 3 — ENGINEER THE IMAGE PROMPT:
+        Using what you found in Step 1 and the post mood from Step 2, write 
+        a 3-5 sentence image generation prompt for FLUX.1-schnell.
+
+        Structure it in this order:
+        1. SUBJECT: The hero of the image — food, drink, storefront, product, 
+          or scene. Use real details from your research (e.g. "a ceramic bowl 
+          of poutine on a weathered wood table"). Never a person's face.
+        2. SETTING: Reference the real physical space of this business — 
+          patio with lake view, brick interior, waterfront neighbourhood, etc.
+          Use what you found in Step 1.
+        3. LIGHTING: Exact light quality for ${currentMonth} at ${currentTime} 
+          in ${location} — golden hour, overcast spring light, warm indoor lamp, etc.
+        4. MOOD: The emotion the viewer should feel, extracted from the post's tone.
+        5. TECHNICAL: End every prompt with exactly this — 
+          "Shot on Sony A7, f/1.8, shallow depth of field, 1:1 square crop, 
+          no text, no watermark, no people, no faces"
+
+        RULES:
+        - Use concrete visual details from your research — not generic guesses
+        - Never say "beautiful", "stunning", "amazing" — describe what you SEE
+        - If the business has a patio with a lake view, put that in the setting
+        - The image should feel like the owner took it on their best day
+        - Output ONLY the final image prompt. No labels, no explanation, 
+          no "Here is the prompt:", no preamble. Just the prompt text itself.
     `;
 
     let visualDescription = "";
@@ -135,6 +157,19 @@ export async function POST(req: Request) {
       console.log("M8V Architect: Requesting Gemma 4 via Google AI SDK...");
       // Routing to Gemma 4 via Hugging Face Inference
       const result = await gemmaModel.generateContent(architectPrompt);
+
+      const response = result.response;
+
+    // Log what Gemma actually searched for
+    const groundingMeta = (response as any).candidates?.[0]
+      ?.groundingMetadata?.webSearchQueries;
+      
+    if (groundingMeta) {
+      console.log("--- GEMMA SEARCHED FOR ---");
+      console.log(groundingMeta);
+
+    }
+
       visualDescription = result.response.text();
     }
 
