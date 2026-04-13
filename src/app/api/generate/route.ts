@@ -368,12 +368,8 @@ try {
           content: `You are a helpful assistant. Follow the user's instructions precisely and output only what is requested. Do not add explanations, preambles, or commentary.` 
         },
         { role: "user", content: finalPrompt }],
-      model: "groq/compound-mini", // Use a compound model for search
-      compound_custom: {
-        tools: {
-          enabled_tools: ["web_search"]
-        }
-      }
+      model: "compound-beta-mini", // ← single web search, 3x faster than compound-beta
+      temperature: 0.7,
       
     });
 
