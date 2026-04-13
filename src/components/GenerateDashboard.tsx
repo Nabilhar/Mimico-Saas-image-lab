@@ -4,9 +4,10 @@ import { useState, useEffect, useRef } from "react";
 import { VOICES } from "@/lib/constants";
 import { useUser } from "@clerk/nextjs";
 import { createEvents, EventAttributes } from 'ics';
-import PostActions from "./PostActions";
+import PostActions from "@/components/PostActions";
 import { Post } from "@/app/dashboard/page";
 import { SavedImage } from "@/components/SavedImage";
+import { toast } from "react-hot-toast";
 
 
 interface GenerateDashboardProps {
@@ -26,11 +27,11 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
 
 
   // Profile States
-  const [business_name, setbusiness_name] = useState("Our Local Business");
+  const [business_name, setbusiness_name] = useState("");
   const [location, setLocation] = useState("");
-  const [category, setCategory] = useState("Food & Beverage");
+  const [category, setCategory] = useState("");
   const [niche, setNiche] = useState("");
-  const [voice, setVoice] = useState("The Neighbor");
+  const [voice, setVoice] = useState("");
   const [postType, setPostType] = useState("5 Tips");
   const [promoType, setPromoType] = useState("discount");
   const [eventType, setEventType] = useState("event");
@@ -59,18 +60,44 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
     "Finalizing post..."
   ];
 
-  // Load Profile
-  useEffect(() => {
-    const saved = localStorage.getItem("mimico_business_profile");
-    if (saved) {
-      const data = JSON.parse(saved);
-      setbusiness_name(data.business_name || "");
-      setLocation(data.location || "");
-      setCategory(data.category || "Food & Beverage");
-      setNiche(data.niche || "");
-      setVoice(data.voice || "The Neighbor");
-    }
-  }, []);
+    // Master Initialization: Load Profile and Last Post from Supabase
+    useEffect(() => {
+      const fetchDashboardData = async () => {
+        if (!user?.id) return;
+
+        // 1. Pull the Business Profile
+        const { data: profile } = await supabase
+          .from('profiles') // ** IMPORTANT: Change this if your table name is different **
+          .select('business_name, location, category, niche, voice')
+          .eq('id', user.id)
+          .single();
+
+        if (profile) {
+          setbusiness_name(profile.business_name || "");
+          setLocation(profile.location || "");
+          setCategory(profile.category || "Food & Beverage");
+          setNiche(profile.niche || "");
+          setVoice(profile.voice || "The Neighbor");
+        }
+
+        // 2. Pull the Last Generated Post
+        const { data: lastPost } = await supabase
+          .from('community_posts') // ** IMPORTANT: Change this if your table name is different **
+          .select('id, content, image_url')
+          .eq('business_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (lastPost) {
+          setContent(lastPost.content);
+          setLastPostId(lastPost.id);
+          setCurrentImage(lastPost.image_url || null);
+        }
+      };
+
+      fetchDashboardData();
+    }, [user?.id, supabase]);
 
   // Loading Interval
   useEffect(() => {
@@ -94,57 +121,59 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
     else setTimeSlots(["09:00"]); 
   };
 
-  // --- LOCAL CALENDAR SYNC (ICS) ---
-  const handleSmartScheduleSubmit = async () => {
+    // --- LOCAL CALENDAR SYNC (ICS) ---
+    const [showCalendarModal, setShowCalendarModal] = useState(false);
 
-    const dateToUse = (strategy === "daily" || strategy === "2-day" || strategy === "3-day") 
-    ? new Date().toISOString().split('T')[0] 
-    : selectedDate;
-
-    const callendarEvents: EventAttributes[] = timeSlots.map((time) => {
-      const [hours, minutes] = time.split(':').map(Number);
-      const [year, month, day] = dateToUse.split('-').map(Number);
-
-      let recurrenceRule = '';
-    if (strategy === "daily" || strategy === "2-day" || strategy === "3-day") {
-      recurrenceRule = 'FREQ=DAILY;INTERVAL=1'; // Repeats every single day
-    }
-
-      return {
-        start: [year, month, day, hours, minutes],
-        duration: { minutes: 10 },
-        title: `🎨 Mimico Studio: Time to Create!`,
-        description: `Open your Mimico Studio dashboard to generate and share today's local post for ${business_name}.\n\nGo to: ${window.location.origin}/dashboard`,
-        location: `${location}`,
-        url: window.location.origin,
-        status: 'CONFIRMED',
-        busyStatus: 'FREE',
-        categories: ['Marketing (Mimico Studio)'],
-        ...(recurrenceRule && { recurrenceRule })        
-      };
-    });
-
-    createEvents(callendarEvents, (error, value) => {
-      if (error) {
-        console.error("❌ Calendar Error:", error);
-        return;
-      }
-      const blob = new Blob([value], { type: 'text/calendar;charset=utf-8' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `mimico-habit-schedule.ics`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      const msg = strategy === "next"
-      ? "📅 Reminder set for your selected date!" 
-      : "📅 Daily Habit Synced! Your calendar will now remind you every day.";
-    alert(msg);
-      setStrategy("none");
-    });
-  };
+    const handleSmartScheduleSubmit = async () => {
+      const dateToUse = (strategy === "daily" || strategy === "2-day" || strategy === "3-day")
+        ? new Date().toISOString().split('T')[0]
+        : selectedDate;
+    
+      const calendarEvents: EventAttributes[] = timeSlots.map((time) => {
+        const [hours, minutes] = time.split(':').map(Number);
+        const [year, month, day] = dateToUse.split('-').map(Number);
+    
+        let recurrenceRule = '';
+        if (strategy === "daily" || strategy === "2-day" || strategy === "3-day") {
+          recurrenceRule = 'FREQ=DAILY;INTERVAL=1';
+        }
+    
+        return {
+          start: [year, month, day, hours, minutes],
+          duration: { minutes: 10 },
+          title: `🎨 Mimico Studio: Time to Create!`,
+          description: `Open your Mimico Studio dashboard to generate and share today's local post for ${business_name}.\n\nGo to: ${window.location.origin}/dashboard`,
+          location: `${location}`,
+          url: window.location.origin,
+          status: 'CONFIRMED',
+          busyStatus: 'FREE',
+          categories: ['Marketing (Mimico Studio)'],
+          ...(recurrenceRule && { recurrenceRule })
+        };
+      });
+    
+      createEvents(calendarEvents, (error, value) => {
+        if (error) {
+          console.error("❌ Calendar Error:", error);
+          return;
+        }
+    
+        // Trigger the download
+        const blob = new Blob([value], { type: 'text/calendar;charset=utf-8' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'mimico-habit-schedule.ics');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+    
+        // Show guidance modal instead of alert
+        setShowCalendarModal(true);
+        setStrategy("none");
+      });
+    };
 
   const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
@@ -156,6 +185,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
     setLastPostId(null);
     setCurrentImage(null);
     }
+
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
@@ -201,81 +231,119 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
           const generatedUuid = await onGenerateSuccess(cleanPost, "");
           if (generatedUuid) {
             setLastPostId(generatedUuid); // Now we have the auto-generated Supabase ID!
+
             console.log("✅ Post recorded in Supabase. ID:", generatedUuid);
-            } else {
-              console.error("❌ Failed to get UUID. Image generation will fail.");
 
-          }
-        }
-  
-        setLoading(false); 
-  
-      } catch (err: any) {
-        console.error("Generation Error:", err);
-        setContent(err.message || "The AI engine is temporarily unavailable.");
-      } finally {
-        setLoading(false);
-      }
-  }
-  
-    const handleGenerateImage = async () => {
-      // Guard: Don't run if we don't have the UUID from the DB yet
-      if (!lastPostId || !content) {
-        alert("Save the post first to generate an image.");
-        return;
-      }
-        setIsGeneratingImage(true);
-        try {
-          const response = await fetch('/api/generate-image', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            // while the user is reading the text.
+          fetch("/api/prepare-image-prompt", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ 
-              generatedPost: content, 
-              business_name, // Pull from your context/state
-              location,   // "Mimico, Toronto"
-              postId: lastPostId
+              postId: generatedUuid,
+              generatedPost: cleanPost,
+              business_name,
+              location,
+              niche 
             }),
+          }).catch(err => console.error("Background Architect failed:", err));
+        } else {
+          console.error("❌ Failed to get UUID. Image generation will fail.");
+        }
+      }
+    } catch (err: any) {
+      setContent(err.message || "Engine unavailable.");
+    } finally {
+        setLoading(false); 
+    }
+  } 
+  
+  const handleGenerateImage = async () => {
+    // 1. Initial Guards
+    if (!lastPostId || !content) {
+      toast.error("Save the post first to generate an image.");
+      return;
+    }
+  
+    if (userCredits < 2) {
+      toast.error("Not enough credits! You need 2 credits for image generation.");
+      return;
+    }
+  
+    setIsGeneratingImage(true);
+  
+    const pollInterval = 3000; // 3 seconds
+    let attempts = 0;
+    const maxAttempts = 20; // 60 seconds total wait
+  
+    const pollForImage = async () => {
+      try {
+        const res = await fetch('/api/generate-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            postId: lastPostId, 
+            business_name, 
+            location 
+          }),
+        });
+  
+        const data = await res.json();
+  
+        // CASE 1: Still Processing (Architect is searching/writing)
+        if (res.status === 202) {
+          if (attempts < maxAttempts) {
+            attempts++;
+            console.log(`Polling Architect... Attempt ${attempts}/${maxAttempts}`);
+            setTimeout(pollForImage, pollInterval);
+          } else {
+            toast.error("Architect is taking too long. Please try again.");
+            setIsGeneratingImage(false);
+          }
+        } 
+        
+        // CASE 2: Image Ready
+        else if (data.url) {
+          console.log("✅ Image received! Deducting credits and saving to DB...");
+  
+          // --- MERGED LOGIC: THE BOUNCER ---
+          // This deducts 2 credits AND saves the URL in one transaction
+          const { error: rpcError } = await supabase.rpc('save_image_and_deduct', {
+            target_post_id: lastPostId,
+            new_image_url: data.url,
+            clerk_user_id: user?.id
           });
-
-          if (!response.ok) {
-            const errorText = await response.text(); 
-            console.error("Image Generator Server crashed:", errorText);
-            throw new Error(`Image Server Error (${response.status}): ${errorText}`);
-          }
-
-          const data = await response.json();
-
-          if (data.url) {
-
-            console.log("Attempting Image Credit Deduction & URL Update...");
-
-            // CALL THE BOUNCER: This deducts 2 credits AND saves the URL
-            const { error: rpcError } = await supabase.rpc('save_image_and_deduct', {
-              target_post_id: lastPostId,
-              new_image_url: data.url,
-              clerk_user_id: user?.id
-            });
   
-            if (rpcError) {
-              console.error("❌ Bouncer rejected image save:", rpcError);
-              throw new Error(rpcError.message);
-            }
-  
-            // Success State
-            console.log("✅ 2 Credits Deducted and Database Updated");
-            setCurrentImage(data.url);
-            
-            // This triggers the parent to refresh the credit count display
-            if (onImageUpdated) await onImageUpdated();
-
+          if (rpcError) {
+            console.error("❌ Bouncer rejected image save:", rpcError);
+            toast.error(`Database Error: ${rpcError.message}`);
+            setIsGeneratingImage(false);
+            return;
           }
-        } catch (err) {
-          console.error("Lab Error:", err);
-          alert("Image generation failed. Check terminal.");
-        } finally {
+  
+          // Final UI Success Updates
+          setCurrentImage(data.url);
+          toast.success("Image generated and saved! 🎨");
+          setIsGeneratingImage(false);
+          
+          // Refresh the credit display in the header
+          if (onImageUpdated) await onImageUpdated();
+        } 
+        
+        // CASE 3: Architect Error (Gemma/Gemini failed)
+        else if (data.status === 'ERROR' || res.status >= 400) {
+          toast.error(data.message || "Architect encountered an error.");
           setIsGeneratingImage(false);
         }
-      };
+  
+      } catch (err) {
+        console.error("Polling failed:", err);
+        setIsGeneratingImage(false);
+        toast.error("Network error while generating image.");
+      }
+    };
+  
+    pollForImage();
+  };
   
   return (
     <div className="mx-auto max-w-2xl space-y-6 pb-24">
@@ -426,6 +494,97 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
             </div>
           )}
 
+            {showCalendarModal && (
+              <div
+                className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-4 pb-6 sm:pb-0"
+                onClick={(e) => { if (e.target === e.currentTarget) setShowCalendarModal(false); }}
+              >
+                <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden">
+
+                  {/* Header */}
+                  <div className="px-5 pt-5 pb-4 border-b border-slate-100">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-cyan-600">Habit synced</p>
+                    <p className="text-base font-bold text-slate-900 mt-0.5">
+                      {strategy === "next" ? "Your reminder is ready" : "Your daily habit is set"}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      A calendar file was just downloaded to your device. Here's how to add it:
+                    </p>
+                  </div>
+
+                  {/* iOS Instructions */}
+                  <div className="px-5 py-4 border-b border-slate-100">
+                    <p className="text-xs font-bold text-slate-700 mb-2">
+                      iPhone / iPad
+                    </p>
+                    <div className="space-y-1.5">
+                      {[
+                        "Open the Files app on your iPhone",
+                        'Find "mimico-habit-schedule.ics" in Downloads',
+                        "Tap the file — it opens Calendar automatically",
+                        'Tap "Add All Events" to confirm'
+                      ].map((step, i) => (
+                        <div key={i} className="flex items-start gap-2">
+                          <span className="w-4 h-4 rounded-full bg-cyan-100 text-cyan-700 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                            {i + 1}
+                          </span>
+                          <span className="text-xs text-slate-500">{step}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Android Instructions */}
+                  <div className="px-5 py-4 border-b border-slate-100">
+                    <p className="text-xs font-bold text-slate-700 mb-2">
+                      Android
+                    </p>
+                    <div className="space-y-1.5">
+                      {[
+                        "Pull down your notification bar",
+                        'Tap the downloaded "mimico-habit-schedule.ics"',
+                        "Choose Google Calendar or your calendar app",
+                        'Tap "Import" to add the events'
+                      ].map((step, i) => (
+                        <div key={i} className="flex items-start gap-2">
+                          <span className="w-4 h-4 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                            {i + 1}
+                          </span>
+                          <span className="text-xs text-slate-500">{step}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Desktop shortcut */}
+                  <div className="px-5 py-3 border-b border-slate-100 bg-slate-50">
+                    <p className="text-xs text-slate-400">
+                      <span className="font-semibold text-slate-600">On desktop:</span> Double-click the downloaded file — it opens directly in your calendar app.
+                    </p>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="px-5 py-4 flex gap-2">
+                    <button
+                      onClick={() => setShowCalendarModal(false)}
+                      className="flex-1 py-2.5 rounded-xl bg-cyan-700 text-white text-sm font-bold hover:bg-cyan-800 transition-colors"
+                    >
+                      Got it
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowCalendarModal(false);
+                        handleSmartScheduleSubmit(); // re-download if needed
+                      }}
+                      className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 text-sm font-semibold hover:bg-slate-200 transition-colors"
+                    >
+                      Re-download
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+            )}
 
             <button 
               onClick={handleSmartScheduleSubmit}
@@ -495,9 +654,15 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
                   <p className="text-[10px] text-slate-500 font-medium tracking-tight mt-0.5">Just now • {location} 🌐</p>
                 </div>
               </div>
-              <PostActions content={content} onDelete={onDelete} />
-            </div>
 
+              <PostActions
+                    content={content}
+                    imageUrl={currentImage || undefined}
+                    onDelete={onDelete}
+                    showCopy={true}
+                  />
+              </div>
+              
             {/* 2. Caption Area (Before the Image) */}
             <div className="px-5 py-4 pb-2">
               <p className="text-slate-800 whitespace-pre-wrap text-[15px] leading-relaxed font-normal">
@@ -595,5 +760,5 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
 
       </div>  
  
-  ); 
-};
+    ); 
+  }

@@ -10,18 +10,8 @@ import { createClient } from '@supabase/supabase-js';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
-const tools = [
-  {
-    googleSearch: {}, // Use 'googleSearch' for the latest 2026 models
-  },
-] as any;
+const tools = [ {googleSearch: {},},] as any;
 
-const gemmaModel = genAI.getGenerativeModel({ 
-  model: "gemma-4-26b-a4b-it", 
-  tools: tools // <--- INTEGRATING THE RESEARCH TOOL
-}, { apiVersion: 'v1beta' });
-
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY! });
 const hf = new InferenceClient(process.env.HF_TOKEN!);
 
 const supabase = createClient(
@@ -29,12 +19,12 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Toggle between GEMINI and GROQ for the Architect (text) step
-// Set to "GROQ" when Gemini hits 429
-const ARCHITECT_MODE: "GEMINI" | "GROQ" | "GEMMA" = "GEMMA";
 
 const textModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }, { apiVersion: 'v1beta' });
 const imageModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash-image" }, { apiVersion: 'v1beta' });
+
+// Helper to wait if the background job is still running
+const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
 // ─────────────────────────────────────────────
 // HELPER: Upload a blob to Supabase Storage
@@ -77,106 +67,46 @@ function buildPollinationsUrl(visualDescription: string): string {
   return `https://image.pollinations.ai/prompt/${encodeURIComponent(clean)}?width=1024&height=1024&nologo=true&seed=${seed}&model=flux`;
 }
 
-// ─────────────────────────────────────────────
-// MAIN HANDLER
-// ─────────────────────────────────────────────
 export async function POST(req: Request) {
   try {
-    const { generatedPost, business_name, location, niche } = await req.json();
-    const currentTime = new Date().toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit', 
-      hour12: true 
-    });
-    const currentMonth = new Date().toLocaleString('default', { month: 'long' });
+    // We now just need the ID to find the cached prompt
+    const { postId, business_name, location } = await req.json();
 
-    // ── STEP A: ARCHITECT (text → visual description) ─────────
-    const architectPrompt = `
-        You are a prompt engineer for AI image generation, specializing in hyper-local 
-        commercial and lifestyle photography.
-
-        STEP 1 — RESEARCH (use Google Search):
-        Search for "${business_name}" at "${location}".
-        Find and note:
-        - Does this business have a patio, terrace, or outdoor seating?
-        - Is there a water view, park, or landmark visible from the business?
-        - What is the interior style — lighting, colours, materials, vibe?
-        - What is their signature food, drink, or product?
-        - Any distinctive visual details (signage, decor, uniforms, packaging)?
-
-        If you cannot find specific results, use your knowledge of ${location} 
-        and the neighbourhood context instead.
-
-        STEP 2 — ANALYZE THE POST:
-        Social media post to match:
-        "${generatedPost}"
-
-        Business: ${business_name} — ${niche}
-        Location: ${location}
-        Season / Time: ${currentMonth}, ${currentTime}
-
-        STEP 3 — ENGINEER THE IMAGE PROMPT:
-        Using what you found in Step 1 and the post mood from Step 2, write 
-        a 3-5 sentence image generation prompt for FLUX.1-schnell.
-
-        Structure it in this order:
-        1. SUBJECT: The hero of the image — food, drink, storefront, product, 
-          or scene. Use real details from your research (e.g. "a ceramic bowl 
-          of poutine on a weathered wood table"). Never a person's face.
-        2. SETTING: Reference the real physical space of this business — 
-          patio with lake view, brick interior, waterfront neighbourhood, etc.
-          Use what you found in Step 1.
-        3. LIGHTING: Exact light quality for ${currentMonth} at ${currentTime} 
-          in ${location} — golden hour, overcast spring light, warm indoor lamp, etc.
-        4. MOOD: The emotion the viewer should feel, extracted from the post's tone.
-        5. TECHNICAL: End every prompt with exactly this — 
-          "Shot on Sony A7, f/1.8, shallow depth of field, 1:1 square crop, 
-          no text, no watermark, no people, no faces"
-
-        RULES:
-        - Use concrete visual details from your research — not generic guesses
-        - Never say "beautiful", "stunning", "amazing" — describe what you SEE
-        - If the business has a patio with a lake view, put that in the setting
-        - The image should feel like the owner took it on their best day
-        - Output ONLY the final image prompt. No labels, no explanation, 
-          no "Here is the prompt:", no preamble. Just the prompt text itself.
-    `;
-
-    let visualDescription = "";
-
-    if (ARCHITECT_MODE === "GEMINI") {
-      const result = await textModel.generateContent(architectPrompt);
-      visualDescription = result.response.text();
-    } else if (ARCHITECT_MODE === "GROQ") {
-      const result = await groq.chat.completions.create({
-        messages: [{ role: "user", content: architectPrompt }],
-        model: "llama-3.1-8b-instant",
-      });
-      visualDescription = result.choices[0]?.message?.content || "";
-    } else if (ARCHITECT_MODE === "GEMMA") {
-      console.log("M8V Architect: Requesting Gemma 4 via Google AI SDK...");
-      // Routing to Gemma 4 via Hugging Face Inference
-      const result = await gemmaModel.generateContent(architectPrompt);
-
-      const response = result.response;
-
-    // Log what Gemma actually searched for
-    const groundingMeta = (response as any).candidates?.[0]
-      ?.groundingMetadata?.webSearchQueries;
+    if (!postId) {
+      return NextResponse.json({ error: "Missing post ID" }, { status: 400 });
+    }
+ 
+    const { data: post, error: dbError } = await supabase
+        .from('community_posts')
+        .select('image_prompt')
+        .eq('id', postId)
+        .single();
       
-    if (groundingMeta) {
-      console.log("--- GEMMA SEARCHED FOR ---");
-      console.log(groundingMeta);
+        if (dbError || !post) {
+          console.error("Supabase Fetch Error:", dbError?.message);
+          return NextResponse.json({ error: "Post not found in community_table" }, { status: 404 });
+        }
 
+        // 2. EVALUATE THE STATUS OF THE PROMPT
+        const postPrompt = post.image_prompt;
+
+        // Status: Still processing
+        if (!postPrompt) {
+          return NextResponse.json({ status: 'WAITING' }, { status: 202 });
+        }
+
+        // Status: Architect failed
+    if (postPrompt.startsWith("ERROR:")) {
+      return NextResponse.json({ 
+        status: 'ERROR', 
+        message: "Architect failed to build prompt" 
+      }, { status: 500 });
     }
 
-      visualDescription = result.response.text();
-    }
 
-    const cleanDescription = visualDescription.replace(/<[^>]*>/g, "").replace(/\s+/g, ' ').trim();
-    const finalImagePrompt = `Professional photography of ${cleanDescription}. For a local business named "${business_name}" in ${location}. Style: cinematic natural light, shallow depth of field, 4k, perfect for a 1:1 Instagram square post.`;
+    const finalDescription = postPrompt 
+    const cleanDescription = `Professional photography of ${finalDescription} for ${business_name} in ${location}.`;
 
-    console.log("Architect output:", cleanDescription);
 
     let hostedUrl: string | null = null;
     let finalProvider = "UNKNOWN";
@@ -210,7 +140,7 @@ export async function POST(req: Request) {
 
       try {
         console.log("Trying Pollinations download...");
-        const pollinationsUrl = buildPollinationsUrl(visualDescription);
+        const pollinationsUrl = buildPollinationsUrl(cleanDescription);
 
         const res = await fetch(pollinationsUrl, {
           headers: {
@@ -244,7 +174,7 @@ export async function POST(req: Request) {
         console.log("Trying Hugging Face SDK...");
         const response: any = await hf.textToImage({
           model: "black-forest-labs/FLUX.1-schnell",
-          inputs: finalImagePrompt,
+          inputs: cleanDescription,
           parameters: {
             num_inference_steps: 4,
           },
@@ -274,10 +204,10 @@ export async function POST(req: Request) {
     // Image loads in browser but won't persist reliably in library
     if (!hostedUrl) {
       console.error("❌ All hosted providers failed. Returning Pollinations URL directly.");
-      const pollinationsUrl = buildPollinationsUrl(visualDescription);
+      const pollinationsUrl = buildPollinationsUrl(cleanDescription);
       return NextResponse.json({
         url: pollinationsUrl,
-        debugPrompt: visualDescription,
+        debugPrompt: cleanDescription,
         providerUsed: 'POLLINATIONS_UNHOSTED',
         hosted: false,
       });
@@ -286,7 +216,7 @@ export async function POST(req: Request) {
     // ── SUCCESS ────────────────────────────────────────────────
     return NextResponse.json({
       url: hostedUrl,
-      debugPrompt: visualDescription,
+      debugPrompt: cleanDescription,
       providerUsed: finalProvider,
       hosted: true,
     });

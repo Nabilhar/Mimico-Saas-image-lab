@@ -14,7 +14,7 @@ export default function Home() {
             <div className="relative z-10">
               <p className="text-sm font-medium uppercase tracking-wide text-cyan-800">Mimico · Toronto</p>
               <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
-                Social posts that sound like your neighbourhood.
+                Social Media posts that sound like your neighbourhood.
               </h1>
               <p className="mt-6 max-w-xl text-lg text-slate-600">
                 AI-powered captions for local businesses along the lakefront and Queensway. 

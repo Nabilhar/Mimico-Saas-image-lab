@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google"; // Add this for a modern look
+import { Inter } from "next/font/google";
 import { ClerkProvider } from '@clerk/nextjs';
 import "./globals.css";
+import { Toaster } from "react-hot-toast";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -15,8 +16,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <ClerkProvider>
       <html lang="en">
-        {/* We add the font class here so it applies to every page */}
-        <body className={inter.className}>{children}</body>
+        <body className={inter.className}>
+          {children}
+          
+          {/* This is the "container" that allows your toasts to pop up */}
+          <Toaster position="bottom-center" /> 
+        </body>
       </html>
     </ClerkProvider>
   );

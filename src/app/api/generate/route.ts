@@ -184,9 +184,15 @@ function buildPrompt(
     });
 
     return `
+
+                  FIRST INSTRUCTION — READ BEFORE ANYTHING ELSE:
+                  The previous 3 posts all opened with a variation of "the bike-to-work buzz." 
+                  This theme is now retired. Do not use it. Do not reference bikes, commuting, 
+                  or cycling as your opening angle in this post.
+
     CRITICAL OUTPUT RULE: You must output ONLY the following, in this exact order:
         1. One <research> tag with keywords only
-        2. You MUST use the provided Google Search tool to find REAL, CURRENT landmarks and trends for ${location} before writing.
+        2. You MUST use the provided Search tool to find REAL, CURRENT weather and CURRENT landmarks and trends for ${location} before writing.
         3. The social media post body
         4. Hashtags
 
@@ -199,8 +205,15 @@ function buildPrompt(
     Write as someone who genuinely lives and works in this community, not as a marketer.
     One rule: even though you write from your own perspective, every sentence must still serve the reader — not just talk about yourself.
     
-    RECENT POST HISTORY — avoid repeating these opening lines, hooks, or stories:
+      OPENING LINE — HARD RULE:
+    The following openings were used in the last 3 posts. 
+    You are FORBIDDEN from starting with any of these themes, phrases, or angles:
     ${recentHistory || "No previous posts."}
+
+    Do not reframe or rephrase these — start from a completely different observation, 
+    moment, or angle. If the previous posts mentioned bikes, start with something 
+    you see inside the shop. If they mentioned the weather, start with a customer 
+    interaction. If they mentioned the street, start with a smell or sound instead.
     
     TASK:
     1. Open with a <research> tag containing: neighbourhood name + up to 3 landmark names + up to 2 current local trends. Keywords only, no sentences, max 20 words total.
@@ -238,7 +251,7 @@ function buildPrompt(
     - Do NOT output word counts, commentary, or self-evaluation
     
     BANNED PHRASES:
-    "I'm always", "After a day", "Juggling", "Finding a", "a stone's throw", "pour our hearts", "passionate about", "quality service", "reach out", "don't hesitate", "we pride ourselves"
+    "the bike-to-work buzz." , "I'm always", "After a day", "Juggling", "Finding a", "a stone's throw", "pour our hearts", "passionate about", "quality service", "reach out", "don't hesitate", "we pride ourselves"
 
     CRITICAL CTA LOGIC:
     - You are a ${niche}. Your invitation must be physically possible for this business.
@@ -281,7 +294,11 @@ export async function POST(req: Request) {
       console.log("--- M8V MEMORY CHECK ---");
       if ( history && history.length > 0) {
         console.log(`Found ${history.length} previous posts.`);
-        history.slice(0, 3).forEach((p: any, i: number) => console.log(`Post ${i + 1}: ${p.content.substring(0, 50)}...`));
+        history.slice(0, 5).forEach((p: any, i: number) => {
+          const firstSentence = (p.content || "").split(/[.!?]/)[0].trim();
+          console.log(`Post ${i + 1} opening: "${firstSentence}"`);
+        });
+
       } else {
         console.log("NO HISTORY FOUND. Generating from scratch.");
       }
@@ -289,8 +306,11 @@ export async function POST(req: Request) {
 
     const recentHistory = history?.length
     ? history
-        .slice(0, 3) // Just take the last 3 for the AI context
-        .map((p: any, i: number) => `- Post ${i + 1}: "${(p.content || "").slice(0, 200)}..."`)
+        .slice(0, 5) // Just take the last 5 for the AI context
+        .map((p: any, i: number) => {
+          const firstSentence = (p.content || "").split(/[.!?]/)[0].trim();
+          return `- Post ${i + 1} opening: "${firstSentence}"`;
+        })
         .join("\n")
     : "No previous posts found.";
 
@@ -326,11 +346,13 @@ export async function POST(req: Request) {
     }
     // ─────────────────────────────────────────────────────
 
-    const tools = [
-      {
-        googleSearch: {}, // Use 'googleSearch' for the latest 2026 models
-      },
-    ] as any;
+    const tools = [{ googleSearch: {},},] as any;
+
+    const currentTime = new Date().toLocaleTimeString('en-US', { 
+      hour: 'numeric', 
+      minute: '2-digit', 
+      hour12: true 
+    });
 
 // 1. READ THE HIDDEN SWITCH (Check your .env.local for AI_PROVIDER)
 const provider = process.env.AI_PROVIDER || "gemini"; 
@@ -340,18 +362,19 @@ try {
   if (provider === "groq") {
     console.log("--- M8V ENGINE: ROUTING TO GROQ (LLAMA 3) ---");
     const chatCompletion = await groq.chat.completions.create({
-      messages: [
-        { 
+      messages: [{ 
           role: "system", 
           // FIX: No more hardcoded Mimico. We tell it exactly where it is.
-          content: `You are a local marketing expert for ${location}. 
-          You know the streets, the local landmarks, and the specific vibe of ${location} perfectly. 
-          Write in a way that feels authentic to a business owner living in this specific area.` 
+          content: `You are a helpful assistant. Follow the user's instructions precisely and output only what is requested. Do not add explanations, preambles, or commentary.` 
         },
-        { role: "user", content: finalPrompt }
-      ],
-      model: "llama-3.3-70b-versatile",
-      temperature: 0.7,
+        { role: "user", content: finalPrompt }],
+      model: "groq/compound-mini", // Use a compound model for search
+      compound_custom: {
+        tools: {
+          enabled_tools: ["web_search"]
+        }
+      }
+      
     });
 
     rawResponse = chatCompletion.choices[0]?.message?.content || "";
@@ -369,7 +392,7 @@ try {
       contents: [{ 
         role: "user", 
         parts: [{ 
-          text: `Use your <research> thinking mode to check for current ${location} news or events before writing: \n\n ${finalPrompt}` 
+          text: `Use your <research> thinking mode to check for current ${location} news or events including the current weather at ${currentTime} before writing: \n\n ${finalPrompt}` 
         }] 
       }],
       generationConfig: {
