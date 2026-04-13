@@ -242,6 +242,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
               postId: generatedUuid,
               generatedPost: cleanPost,
               business_name,
+              business_id: user?.id,
               location,
               niche 
             }),
@@ -346,8 +347,14 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
   };
   
   return (
-    <div className="mx-auto max-w-2xl space-y-6 pb-24">
-      <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+
+/* 1. OUTER CONTAINER: Full width on mobile, max 5xl on desktop */
+  <div className="mx-auto max-w-5xl w-full space-y-6 pb-24 px-4 sm:px-6">
+    
+    {/* 2. INPUT AREA: Centered and narrow (2xl) so it doesn't look stretched on wide screens */}
+    <div className="max-w-2xl mx-auto w-full">
+       <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+          {/* ... all your input fields and buttons ... */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-slate-900 tracking-tight">Mimico Content AI</h2>
           <span className="text-[10px] font-black text-cyan-600 bg-cyan-50 px-2 py-1 rounded uppercase tracking-widest">AI Engine</span>
@@ -633,6 +640,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
         </div>
       </div>
     </div>
+  </div>
 
 {/* RESULT SECTION - Facebook Style Preview */}
       {content && (

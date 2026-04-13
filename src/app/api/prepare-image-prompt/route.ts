@@ -32,7 +32,7 @@ const textModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }, { apiV
 
 export async function POST(req: Request) {
 
-  const { postId, generatedPost, business_name, location, niche } = await req.json();
+  const { postId, generatedPost, business_name, business_id, location, niche } = await req.json();
     try {
       if (!postId) throw new Error("No Post ID provided for architect.");
 
@@ -40,15 +40,50 @@ export async function POST(req: Request) {
         hour: 'numeric', minute: '2-digit', hour12: true });
 
       const currentMonth = new Date().toLocaleString('default', { month: 'long' });
+
+          // ── FETCH RECENT IMAGE PROMPTS ─────────────────────────
+    const { data: recentPrompts } = await supabase
+    .from("community_posts")
+    .select("image_prompt")
+    .eq("business_id", business_id)
+    .neq("image_prompt", "EMPTY")
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  const recentImageHistory = recentPrompts?.length
+    ? recentPrompts
+        .map((p, i) => {
+          // Extract the first visual sentence — the subject line
+          const firstSentence = (p.image_prompt || "").split(/[.]/)[0].trim();
+          return `- Prompt ${i + 1}: "${firstSentence}"`;
+        })
+        .join("\n")
+    : null;
+
+  console.log("--- RECENT IMAGE PROMPTS ---");
+  console.log(recentImageHistory || "No previous image prompts found.");
+  console.log("----------------------------");
   
       // ── STEP A: ARCHITECT (text → visual description) ─────────
       const architectPrompt = `
           You are a prompt engineer for AI image generation, specializing in hyper-local 
           commercial and lifestyle photography.
-  
+
+              RECENT IMAGE PROMPTS — FORBIDDEN TERRITORY:
+          ${recentImageHistory ? `These image prompts were already generated for this business. 
+          You are FORBIDDEN from repeating these subjects, settings, or visual angles:
+          ${recentImageHistory}
+          
+          Start from a completely different visual element:
+          - If recent prompts showed food/drink → focus on the space, window, or street outside
+          - If recent prompts showed the exterior → go inside, show texture, materials, details
+          - If recent prompts showed the waterfront → show the warmth of the interior instead`
+          : "No previous image prompts. Full creative freedom."}
+        
           STEP 1 — RESEARCH (use Google Search):
           Search for "${business_name}" at "${location}".
           Find and note:
+          - What does the Storefront look like?
           - Does this business have a patio, terrace, or outdoor seating?
           - Is there a water view, park, or landmark visible from the business?
           - What is the interior style — lighting, colours, materials, vibe?
@@ -76,6 +111,10 @@ export async function POST(req: Request) {
           1. SUBJECT: The hero of the image — food, drink, storefront, product, 
             or scene. Use real details from your research (e.g. "a ceramic bowl 
             of poutine on a weathered wood table"). Never a person's face.
+            if including a storefront, you MUST specify NO TEXT (name, phone, etc.).
+            Instruct the model to use an extreme close-up on architectural details,
+            a sharp side-profile angle, or a focus on the doorway greenery to naturally
+            obscure or omit the main signage."
           2. SETTING: Reference the real physical space of this business — 
             patio with lake view, brick interior, waterfront neighbourhood, etc.
             Use what you found in Step 1.
