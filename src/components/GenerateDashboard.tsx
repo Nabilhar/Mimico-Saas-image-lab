@@ -349,13 +349,13 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
   return (
 
 /* 1. OUTER CONTAINER: Full width on mobile, max 5xl on desktop */
-  <div className="mx-auto max-w-5xl w-full space-y-6 pb-24 px-4 sm:px-6">
+  <div className="w-full max-w-5xl mx-auto space-y-6">
     
     {/* 2. INPUT AREA: Centered and narrow (2xl) so it doesn't look stretched on wide screens */}
     <div className="max-w-2xl mx-auto w-full">
-       <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+       <div className="bg-white p-6 sm:rounded-3xl sm:border border-slate-100 sm:shadow-sm">
           {/* ... all your input fields and buttons ... */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="hidden sm:flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-slate-900 tracking-tight">Mimico Content AI</h2>
           <span className="text-[10px] font-black text-cyan-600 bg-cyan-50 px-2 py-1 rounded uppercase tracking-widest">AI Engine</span>
         </div>
@@ -644,35 +644,43 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
 
 {/* RESULT SECTION - Facebook Style Preview */}
       {content && (
-        <div className="mt-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <h2 className="text-[10px] font-black uppercase text-slate-400 mb-3 ml-1 tracking-widest">
+        <div className="w-full max-w-3xl mx-auto space-y-4 mt-10">
+          <h2 className="text-[10px] font-black uppercase text-slate-400 ml-4 sm:ml-1 tracking-widest">
             New Post Preview
           </h2>
           
-          <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
+          <div className="bg-white border-y border-x-0 sm:border-x sm:rounded-3xl shadow-none sm:shadow-sm overflow-hidden">
             
-            {/* 1. Mock Header (Standard Social Layout) */}
-            <div className="p-4 flex items-center justify-between border-b border-slate-50">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-cyan-800 flex items-center justify-center text-white font-bold text-lg shadow-inner">
-                  {business_name.charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <p className="font-bold text-slate-900 text-sm leading-tight">{business_name}</p>
-                  <p className="text-[10px] text-slate-500 font-medium tracking-tight mt-0.5">Just now • {location} 🌐</p>
-                </div>
+          {/* 1. Mock Header - Stacked on Mobile, Side-by-Side on PC */}
+          <div className="p-4 border-b border-slate-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            
+            {/* Left/Top Side: Avatar & Business Info */}
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-cyan-800 flex items-center justify-center text-white font-bold text-lg shadow-inner shrink-0">
+                {business_name.charAt(0).toUpperCase()}
               </div>
+              <div>
+                <p className="font-bold text-slate-900 text-sm leading-tight">{business_name}</p>
+                <p className="text-[10px] text-slate-500 font-medium tracking-tight mt-0.5">
+                  Just now • {location} 🌐
+                </p>
+              </div>
+            </div>
 
+            {/* Right/Bottom Side: Actions */}
+            {/* On mobile, this will naturally drop 'underneath' because of flex-col */}
+            <div className="flex items-center sm:justify-end">
               <PostActions
-                    content={content}
-                    imageUrl={currentImage || undefined}
-                    onDelete={onDelete}
-                    showCopy={true}
-                  />
-              </div>
+                content={content}
+                imageUrl={currentImage || undefined}
+                onDelete={onDelete}
+                showCopy={true}
+              />
+            </div>
+          </div>
               
             {/* 2. Caption Area (Before the Image) */}
-            <div className="px-5 py-4 pb-2">
+            <div className="p-5 text-slate-700 leading-relaxed">
               <p className="text-slate-800 whitespace-pre-wrap text-[15px] leading-relaxed font-normal">
                 {content.split('\n').map((line, i) => (
                   <span key={i}>
@@ -684,12 +692,12 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
             </div>
 
             {/* 3. Creative Canvas (The Improved "Ugly Box") */}
-            <div className="aspect-square w-full relative group overflow-hidden bg-slate-50 border-y border-slate-100">
+            <div className="w-full aspect-square bg-slate-100 border-t border-slate-50">
               {currentImage ? (
                 <img 
                   src={currentImage} 
                   alt="Generated visual"
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  className="w-full h-full object-cover"
                 />
               ) : (
                 <div className="absolute inset-0 flex flex-col items-center justify-center p-8 transition-all">

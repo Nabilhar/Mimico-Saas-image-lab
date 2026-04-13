@@ -7,13 +7,13 @@ export default function Home() {
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
-        <div className="grid auto-rows-[minmax(140px,auto)] gap-4 sm:gap-5 lg:grid-cols-12">
+      <main className="w-full mx-auto max-w-6xl px-0 sm:px-6 py-8 sm:py-16">
+        <div className="grid auto-rows-auto gap-0 sm:gap-5 lg:grid-cols-12">
           {/* Hero Section */}
-          <section className="bento-card relative overflow-hidden lg:col-span-12 lg:min-h-[320px]">
+          <section className="relative overflow-hidden lg:col-span-12 lg:min-h-[320px] bg-slate-50 border-y sm:border sm:rounded-3xl px-6 py-12 sm:px-12">
             <div className="relative z-10">
-              <p className="text-sm font-medium uppercase tracking-wide text-cyan-800">Mimico · Toronto</p>
-              <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
+              <p className="text-xs font-black uppercase tracking-widest text-cyan-800">Mimico · Toronto</p>
+              <h1 className="mt-4 max-w-3xl text-4xl font-bold tracking-tight text-slate-900 sm:text-6xl">
                 Social Media posts that sound like your neighbourhood.
               </h1>
               <p className="mt-6 max-w-xl text-lg text-slate-600">
@@ -38,15 +38,15 @@ export default function Home() {
           </section>
 
           {/* Bento Feature Cards */}
-          <div className="bento-card lg:col-span-4">
+          <div className="p-6 border-b sm:border sm:rounded-2xl lg:col-span-4 bg-white">
             <h2 className="font-semibold text-slate-900">Local Context</h2>
             <p className="mt-2 text-sm text-slate-600">Preset niches for Mimico realtors, dentists, and cafes.</p>
           </div>
-          <div className="bento-card lg:col-span-4">
+          <div className="p-6 border-b sm:border sm:rounded-2xl lg:col-span-4 bg-white">
             <h2 className="font-semibold text-slate-900">Proven Frameworks</h2>
             <p className="mt-2 text-sm text-slate-600">Uses PAS, AIDA, and BAB structures to drive engagement.</p>
           </div>
-          <div className="bento-card lg:col-span-4">
+          <div className="p-6 border-b sm:border sm:rounded-2xl lg:col-span-4 bg-white">
             <h2 className="font-semibold text-slate-900">Safe & Secure</h2>
             <p className="mt-2 text-sm text-slate-600">Your data stays local; your API keys stay protected.</p>
           </div>

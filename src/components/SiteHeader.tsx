@@ -6,13 +6,13 @@ export function SiteHeader() {
     <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/80 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
         <Link href="/" className="flex items-baseline gap-2">
-          <span className="text-lg font-semibold tracking-tight text-slate-900">
+          <span className="text-lg font-bold tracking-tight text-slate-900">
             Harbourline Studio
           </span>
           <span className="hidden text-sm text-slate-500 sm:inline">Mimico · Toronto</span>
         </Link>
         
-        <nav className="flex items-center gap-6 text-sm font-medium text-slate-600">
+        <nav className="hidden sm:flex items-center gap-6 text-sm font-medium text-slate-600">
           <Link href="/" className="transition hover:text-cyan-800">
             Home
           </Link>
@@ -24,6 +24,7 @@ export function SiteHeader() {
             Dashboard
           </Link>
         </Show>
+        </nav>
 
           {/* Logic for the User Avatar / Sign In button */}
           {/* --- CASE 1: USER IS LOGGED OUT --- */}
@@ -48,7 +49,6 @@ export function SiteHeader() {
                 <UserButton />
               </div>
             </Show>
-        </nav>
       </div>
     </header>
   );

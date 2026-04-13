@@ -129,10 +129,10 @@ export default function DashboardPage() {
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto max-w-6xl px-4 py-8">
-        <header className="mb-8 flex justify-between items-center">
+      <main className="mx-auto max-w-6xl px-0 sm:px-6 py-8">
+        <header className="mb-8 flex justify-between items-center px-4 sm:px-0">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Content Studio</h1>
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Content Studio</h1>
             <p className="text-slate-500">
               Managing drafts for <span className="text-cyan-800 font-semibold">{businessData?.business_name || "Your Business"}</span>
             </p>
@@ -161,7 +161,7 @@ export default function DashboardPage() {
 
         <div className="space-y-8">
           {activeTab === "generate" ? (
-            <section className="bento-card border-cyan-100 bg-white shadow-sm p-6 rounded-2xl">
+            <section className="bg-transparent sm:bg-white p-0 sm:p-6 sm:rounded-2xl sm:border sm:border-cyan-100 sm:shadow-sm">
               {businessData ? (
                 <GenerateDashboard 
                   supabase={supabase}
@@ -173,7 +173,7 @@ export default function DashboardPage() {
                   onImageUpdated={loadBusinessData}
                 />
               ) : (
-                <div className="p-10 text-center border-2 border-dashed rounded-xl">
+                <div className="p-10 text-center border-2 border-dashed rounded-xl mx-4 sm:mx-0">
                   <p className="text-slate-500">Loading your Mimico profile...</p>
                 </div> 
               )}
@@ -185,44 +185,47 @@ export default function DashboardPage() {
       // ─────────────────────────────────────────────────────────────────
 
       ) : (
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 sm:gap-6">
           {posts.length > 0 ? (
             posts.map(post => (
               <div
                 key={post.id}
-                className="flex flex-col bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden"
+                className="flex flex-col bg-white sm:rounded-2xl border-y border-x-0 sm:border-x border-slate-100 shadow-sm overflow-hidden"
               >
                 {/* ── FACEBOOK-STYLE HEADER ───────────────── */}
-                <div className="flex items-center gap-3 px-4 pt-4 pb-3">
-                  {/* Avatar circle with business initial */}
-                  <div className="w-9 h-9 rounded-full bg-cyan-700 flex items-center justify-center shrink-0">
-                    <span className="text-white text-sm font-bold">
-                      {businessData?.business_name?.charAt(0).toUpperCase() || 'M'}
-                    </span>
+                <div className="p-4 flex items-center gap-3">
+                  {/* Avatar circle */}
+                  <div className="w-10 h-10 rounded-full bg-cyan-800 flex items-center justify-center text-white font-bold text-lg shrink-0">
+                    {businessData?.business_name?.[0]?.toUpperCase() || 'Q'}
                   </div>
-                  <div className="flex flex-col min-w-0">
-                    <span className="text-sm font-bold text-slate-900 truncate">
+                
+                  {/* Container for Name and Location/Date row */}
+                  <div className="flex flex-col flex-1 min-w-0">
+                    <span className="font-bold text-slate-900 text-sm leading-tight truncate">
                       {businessData?.business_name || 'Your Business'}
                     </span>
 
-                    {businessData?.location && (
-                    <span className="text-[11px] text-slate-500 font-medium truncate">
-                      {businessData.location.split(',')[0]}
-                    </span>
-                  )}
-                  </div>
-                  {/* Date/time*/}
-                  <span className="ml-auto text-[9px] font-black text-cyan-600 bg-cyan-50 px-2 py-1 rounded uppercase tracking-widest shrink-0">
-                  {new Date(post.created_at).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        hour12: true,
-                      })}
-                  </span>
+                    {/* Row for Location and Date */}
+                    <div className="flex items-center justify-between gap-2 mt-1">
+                      {businessData?.location && (
+                        <span className="text-[10px] text-slate-500 font-medium truncate">
+                          {businessData.location.split(',')[0]}
+                        </span>
+                      )}
+                    
+                      <span className="shrink-0 text-[10px] font-black text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded uppercase tracking-widest">
+                        {post?.created_at ? new Date(post.created_at).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true,
+                        }) : 'Just now'}
+                      </span>
+                    </div>
+                  </div> {/* <── THIS WAS THE MISSING CLOSING TAG */}
                 </div>
-
+            
                 {/* ── CAPTION (above image, like Facebook) ── */}
                 <div className="px-4 pb-3">
                   <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap line-clamp-4">
@@ -270,7 +273,7 @@ export default function DashboardPage() {
               </div>
             ))
           ) : (
-            <div className="col-span-full py-16 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+            <div className="col-span-full mx-4 py-16 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
               <p className="text-slate-400 italic text-sm">No saved drafts yet.</p>
               <p className="text-slate-300 text-xs mt-1">Generate your first post to see it here.</p>
             </div>

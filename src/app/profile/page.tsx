@@ -131,12 +131,12 @@ export default function ProfilePage() {
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
-        <div className="bento-card bg-white shadow-xl border-slate-200">
+      <main className="mx-auto max-w-3xl px-0 sm:px-6 py-6 sm:py-16">
+        <div className="bg-white shadow-none sm:shadow-xl border-y sm:border border-slate-200 sm:rounded-3xl p-6 sm:p-10">
           <header className="mb-8 border-b border-slate-100 pb-6">
-            <p className="text-sm font-medium uppercase tracking-wide text-cyan-800">Step 1: Setup</p>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Your Business Profile</h1>
-            <p className="text-slate-600 mt-2">Tell the Mimico AI about your business to generate more accurate, local content.</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-cyan-800 bg-cyan-50 px-2 py-1 rounded inline-block mb-2">Step 1: Setup</p>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">Your Business Profile</h1>
+            <p className="text-slate-500 text-sm mt-2">Tell the Mimico AI about your business to generate more accurate, local content.</p>
           </header>
           
           <form onSubmit={handleSave} className="space-y-6">
@@ -225,7 +225,7 @@ export default function ProfilePage() {
             <button 
               type="submit"
               disabled={loading}
-              className={`w-full font-bold py-4 rounded-xl transition shadow-lg ${
+              className={`w-full font-bold py-5 rounded-2xl transition shadow-lg ${
                 loading ? 'bg-slate-400 cursor-wait' : 'bg-cyan-800 text-white hover:bg-cyan-900 active:transform active:scale-95'
               }`}
             >
