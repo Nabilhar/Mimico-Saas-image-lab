@@ -88,6 +88,8 @@ export default function ProfilePage() {
       // We define the object HERE so both Supabase and LocalStorage can use it
       const profileData = {
         id: user.id,
+        first_name: user.firstName,
+        last_name: user.lastName,
         business_name :business_name,
         location: location,
         category: category,
