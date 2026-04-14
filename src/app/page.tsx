@@ -17,7 +17,7 @@ export default function Home() {
                 Social Media posts that sound like your neighbourhood.
               </h1>
               <p className="mt-6 max-w-xl text-lg text-slate-600">
-                AI-powered captions for local businesses along the lakefront and Queensway. 
+                AI-powered captions for local businesses tailored to your local neighborhood. 
                 Optimized for trust, not generic bots.
               </p>
               <div className="mt-10 flex items-center gap-4">
