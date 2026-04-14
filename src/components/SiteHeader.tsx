@@ -13,17 +13,18 @@ export function SiteHeader() {
         </Link>
         
         <nav className="hidden sm:flex items-center gap-6 text-sm font-medium text-slate-600">
-          <Link href="/" className="transition hover:text-cyan-800">
-            Home
-          </Link>
-                <Show when="signed-in">
-          <Link href="/profile" className="transition hover:text-cyan-800">
-            Business Profile
-          </Link>
-          <Link href="/dashboard" className="transition hover:text-cyan-800">
-            Dashboard
-          </Link>
-        </Show>
+          <Show when="signed-in">
+              <Link href="/" className="transition hover:text-cyan-800">
+                Home
+              </Link>
+          
+              <Link href="/profile" className="transition hover:text-cyan-800">
+                Business Profile
+              </Link>
+              <Link href="/dashboard" className="transition hover:text-cyan-800">
+                Dashboard
+              </Link>
+          </Show>
         </nav>
 
           {/* Logic for the User Avatar / Sign In button */}

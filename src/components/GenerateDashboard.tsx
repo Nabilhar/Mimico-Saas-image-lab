@@ -726,32 +726,37 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
               ) : (
 
                 /* --- IDLE STATE (Inside the Creative Canvas) --- */
-              <button 
-                onClick={handleGenerateImage}
-                // UPDATE: Disable if no Post ID OR if credits are less than 2
-                disabled={!lastPostId || userCredits < 2} 
-                className={`flex flex-col items-center text-center group/btn active:scale-95 transition-all ${
-                  userCredits < 2 ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-              >
-                <div className={`w-16 h-16 rounded-2xl bg-white shadow-sm border flex items-center justify-center mb-4 transition-all ${
-                  userCredits < 2 
-                    ? 'border-slate-100' 
-                    : 'border-slate-200 group-hover/btn:border-cyan-300 group-hover/btn:shadow-md'
-                }`}>
-                  <svg className={`w-8 h-8 ${userCredits < 2 ? 'text-slate-200' : 'text-slate-400 group-hover/btn:text-cyan-600'} transition-colors`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                
-                <span className={`text-sm font-bold ${userCredits < 2 ? 'text-slate-400' : 'text-slate-900 group-hover/btn:text-cyan-700'}`}>
-                  {userCredits < 2 ? "Fill up credits" : "Generate Matching Image"}
-                </span>
-                
-                <p className="text-[10px] text-slate-400 mt-1 uppercase font-black tracking-widest">
-                  {userCredits < 2 ? "Requires 2 Credits" : "Costs 2 Credits"}
-                </p>
-              </button>
+                <button 
+                  onClick={handleGenerateImage}
+                  // COMBINED LOGIC: Disable if loading, if no ID exists yet, OR if they are broke
+                  disabled={loading || isGeneratingImage || !lastPostId || userCredits < 2} 
+                  className={`flex flex-col items-center text-center group/btn active:scale-95 transition-all ${
+                    (userCredits < 2 || loading || isGeneratingImage || !lastPostId) ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                >
+                  <div className={`w-16 h-16 rounded-2xl bg-white shadow-sm border flex items-center justify-center mb-4 transition-all ${
+                    userCredits < 2 
+                      ? 'border-slate-100' 
+                      : 'border-slate-200 group-hover/btn:border-cyan-300 group-hover/btn:shadow-md'
+                  }`}>
+                    {/* Show a spinner if loading, otherwise show the icon */}
+                    {(loading || isGeneratingImage) ? (
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-cyan-600"></div>
+                    ) : (
+                      <svg className={`w-8 h-8 ${userCredits < 2 ? 'text-slate-200' : 'text-slate-400 group-hover/btn:text-cyan-600'} transition-colors`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    )}
+                  </div>
+                  
+                  <span className={`text-sm font-bold ${userCredits < 2 ? 'text-slate-400' : 'text-slate-900 group-hover/btn:text-cyan-700'}`}>
+                    {isGeneratingImage ? "Designing..." : userCredits < 2 ? "Fill up credits" : "Generate Matching Image"}
+                  </span>
+                  
+                  <p className="text-[10px] text-slate-400 mt-1 uppercase font-black tracking-widest">
+                    {userCredits < 2 ? "Requires 2 Credits" : "Costs 2 Credits"}
+                  </p>
+                </button>
               )}
             </div>
           )}
