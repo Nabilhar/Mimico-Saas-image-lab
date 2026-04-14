@@ -17,8 +17,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <ClerkProvider>
       <html lang="en">
-        <body className={inter.className}>
-        <main className="min-h-screen pb-24 sm:pb-10">
+      <body className={`${inter.className} antialiased overflow-x-hidden`}>
+        <main className="min-h-screen pb-24 sm:pb-10 w-full relative">
             {children}
           </main>
           <MobileNav />
