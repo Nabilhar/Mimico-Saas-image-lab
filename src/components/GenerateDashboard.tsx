@@ -503,10 +503,10 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
 
                   {showCalendarModal && (
                     <div
-                      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-4 pb-28 sm:pb-0"
+                      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-4"
                       onClick={(e) => { if (e.target === e.currentTarget) setShowCalendarModal(false); }}
                     >
-                      <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden">
+                      <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden mb-28 sm:mb-0">
 
                         {/* Header */}
                         <div className="px-5 pt-5 pb-4 border-b border-slate-100">
