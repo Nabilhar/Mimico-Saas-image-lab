@@ -125,8 +125,12 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
     const [showCalendarModal, setShowCalendarModal] = useState(false);
 
     const handleSmartScheduleSubmit = async () => {
+
+      const today = new Date();
+      const localDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
       const dateToUse = (strategy === "daily" || strategy === "2-day" || strategy === "3-day")
-        ? new Date().toISOString().split('T')[0]
+        ? localDate
         : selectedDate;
     
       const calendarEvents: EventAttributes[] = timeSlots.map((time) => {
@@ -147,7 +151,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
           url: window.location.origin,
           status: 'CONFIRMED',
           busyStatus: 'FREE',
-          categories: ['Marketing (Mimico Studio)'],
+          categories: ['Marketing (Harbourline Studio)'],
           ...(recurrenceRule && { recurrenceRule })
         };
       });
@@ -171,7 +175,6 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
     
         // Show guidance modal instead of alert
         setShowCalendarModal(true);
-        setStrategy("none");
       });
     };
 
@@ -457,7 +460,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
               <div className="p-4 bg-white rounded-3xl border border-slate-100 shadow-sm space-y-3">
                 <div className="flex items-center justify-between border-b border-slate-50 pb-2">
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm italic">Post Strategy & Habit Builder</h3>
+                    <h3 className="font-bold text-slate-900 text-sm italic">Time-to-Post-Alerts</h3>
                     <p className="text-[9px] text-slate-400 uppercase font-black tracking-widest mt-1">Local Calendar Reminders</p>
                   </div>
                   <span className="text-xl">📅</span>
@@ -573,7 +576,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
                         {/* Actions */}
                         <div className="px-5 py-4 flex gap-2">
                           <button
-                            onClick={() => setShowCalendarModal(false)}
+                            onClick={() => {setShowCalendarModal(false);setStrategy("none");}}
                             className="flex-1 py-2.5 rounded-xl bg-cyan-700 text-white text-sm font-bold hover:bg-cyan-800 transition-colors"
                           >
                             Got it

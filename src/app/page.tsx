@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CheckCircle, Zap, MapPin, Users, TrendingUp, Clock } from "lucide-react";
+import { CheckCircle, Zap, MapPin, Users, History, Watch, Timer, Radio, Clock, } from "lucide-react";
 import toast from "react-hot-toast";
 
 /**
@@ -28,7 +28,7 @@ import toast from "react-hot-toast";
 export default function Home() {
   const [email, setEmail] = useState("");
   const [businessName, setBusinessName] = useState("");
-  const [city, setCity] = useState("");
+  const [address, setAddress] = useState("");
   const [waitlistPosition, setWaitlistPosition] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -41,7 +41,7 @@ export default function Home() {
 
   const handleWaitlistSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !businessName || !city) {
+    if (!email || !businessName || !address) {
       toast.error("Please fill in all fields");
       return;
     }
@@ -54,7 +54,7 @@ export default function Home() {
         body: JSON.stringify({
           email,
           business_name: businessName,
-          neighborhood: city,
+          address: address,
         }),
       });
 
@@ -69,7 +69,7 @@ export default function Home() {
       toast.success(`Welcome! You're #${data.position} on the waitlist.`);
       setEmail("");
       setBusinessName("");
-      setCity("");
+      setAddress("");
     } catch (error) {
       console.error("Waitlist signup error:", error);
       toast.error("Something went wrong. Please try again.");
@@ -90,18 +90,28 @@ export default function Home() {
                 <span className="text-xs font-semibold text-cyan-800">FOR TORONTO SMALL BUSINESSES</span>
               </div>
               <h1 className="text-4xl md:text-5xl font-bold leading-tight mb-6 text-slate-900">
-                Social media posts that sound like your neighbourhood.
+                Your neighbours should be hearing from you—right now.
               </h1>
               <p className="text-lg text-slate-600 mb-8 max-w-2xl">
-                AI-generated social media posts tailored to your local community. Optimized for trust, not generic bots. Get 15 free credits to try it out.
+              You're running a business—you don't have time to be a content creator too.
+              Harbourline Studio creates posts at the moment you share them, not weeks in advance. <br />
+              Using real-time local context like weather,
+              neighbourhood events, and what's happening around your business. <br />
+              Get 15 free credits to try it out — No Credit Card Required.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex flex-col sm:flex-row gap-4 items-start">
                 <Show when="signed-out">
+                 <div className="flex flex-col gap-2 w-full sm:w-auto">
                   <SignUpButton mode="modal" fallbackRedirectUrl="/dashboard">
                     <button className="rounded-lg bg-cyan-800 hover:bg-cyan-900 px-8 py-3 text-lg font-semibold text-white shadow-lg transition">
                       Claim Your Free 15 Credits
                     </button>
                   </SignUpButton>
+                  <span className="text-sm text-slate-500 font-medium px-1">
+                    * No Credit Card Required
+                  </span>
+                </div>
+                  
                 </Show>
                 <Show when="signed-in">
                   <Link href="/dashboard" className="rounded-lg bg-cyan-800 hover:bg-cyan-900 px-8 py-3 text-lg font-semibold text-white shadow-lg transition text-center">
@@ -120,42 +130,45 @@ export default function Home() {
         <section className="bg-white py-16 md:py-24 border-b">
           <div className="mx-auto max-w-6xl px-6 sm:px-6">
             <div className="mb-12">
-              <h2 className="text-3xl font-bold mb-4 text-slate-900">Why Mimico is Different</h2>
+              <h2 className="text-3xl font-bold mb-4 text-slate-900">Why Harbourline Studio is Different</h2>
               <p className="text-slate-600 max-w-2xl">
-                We built the only content engine designed specifically for local businesses. Here is what sets us apart.
+                We built the only content AI engine designed specifically for local businesses.<br />
+                Here is what sets us apart.
               </p>
             </div>
             <div className="grid md:grid-cols-3 gap-8">
               <Card className="border-slate-200">
                 <CardHeader>
-                  <MapPin className="w-8 h-8 text-cyan-800 mb-2" />
+                  <Watch className="w-8 h-8 text-cyan-800 mb-2 animate-bounce" />
+                  <CardTitle>In the Now</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-slate-600">
+                  Every post is generated at the time you share it—based on real-time local signals like weather, events, and neighbourhood activity.
+                  No bulk scheduling. No stale content.
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="border-slate-200">
+                <CardHeader>
+                  <MapPin className="w-8 h-8 text-cyan-800 mb-2 animate-bounce" />
                   <CardTitle>Local Context</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-slate-600">
-                    Over 100 preset niches. Posts reflect neighborhood trends, local events, and community insights—not generic templates.
+                  Your posts reference real places and context your customers recognize—so your customers feel like
+                  it's coming from someone who's actually there.
                   </p>
                 </CardContent>
               </Card>
               <Card className="border-slate-200">
                 <CardHeader>
-                  <Users className="w-8 h-8 text-cyan-800 mb-2" />
+                  <Radio className="w-8 h-8 text-cyan-800 mb-2 animate-ping" />
                   <CardTitle>Your Voice</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-slate-600">
-                    Choose your brand voice. Posts use "I" and "we"—it sounds like you, not a bot.
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="border-slate-200">
-                <CardHeader>
-                  <TrendingUp className="w-8 h-8 text-cyan-800 mb-2" />
-                  <CardTitle>Proven Frameworks</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-slate-600">
-                    Uses PAS, AIDA, and BAB structures. Every post is designed to drive engagement and build trust.
+                  Set your tone once. Harbourline Studio writes like you—so every post sounds consistent, without you writing anything.
                   </p>
                 </CardContent>
               </Card>
@@ -182,10 +195,11 @@ export default function Home() {
                   <h3 className="text-xl font-semibold text-slate-900">Choose Your Niche</h3>
                 </div>
                 <p className="text-slate-600 mb-3 flex-grow">
-                  Select your industry (e.g., Real Estate, Cafe, Salon). We already know what your customers care about.
+                  Select your industry (e.g., Real Estate, Café, Salon). We immediately understand your customers, tone, and what matters in your neighbourhood.
                 </p>
                 <div className="pt-3 border-t border-slate-200">
-                  <p className="text-sm font-semibold text-cyan-800">✓ We know your audience</p>
+                  <p className="text-sm font-semibold text-cyan-800">✓ Built specifically for local businesses<br /> 
+                  ✓ Preset Niches</p>
                 </div>
               </div>
 
@@ -195,13 +209,14 @@ export default function Home() {
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-cyan-800 text-white font-bold text-lg">
                     2
                   </div>
-                  <h3 className="text-xl font-semibold text-slate-900">Add Local Context</h3>
+                  <h3 className="text-xl font-semibold text-slate-900">Add Real-Time Local Context</h3>
                 </div>
                 <p className="text-slate-600 mb-3 flex-grow">
-                  Share your business name, address, and local events or promotions. Your posts will sound like a neighbor, not a bot.
+                Every post is generated using live local signals—weather, landmarks, neighbourhood events, seasonal context, and time of day—so your content reflects what's happening right now.
                 </p>
                 <div className="pt-3 border-t border-slate-200">
-                  <p className="text-sm font-semibold text-cyan-800">✓ Authentic voice</p>
+                  <p className="text-sm font-semibold text-cyan-800">✓ Always context-aware<br /> 
+                  ✓ Always current</p>
                 </div>
               </div>
 
@@ -211,13 +226,14 @@ export default function Home() {
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-cyan-800 text-white font-bold text-lg">
                     3
                   </div>
-                  <h3 className="text-xl font-semibold text-slate-900">Generate & Post</h3>
+                  <h3 className="text-xl font-semibold text-slate-900">Generate & Share Instantly</h3>
                 </div>
                 <p className="text-slate-600 mb-3 flex-grow">
-                  Get a high-conversion post using proven frameworks (PAS/AIDA). Professional marketing in 30 seconds.
+                Create a post for this exact moment and share it in seconds with your prefered social media platform. No templates. No batching. No pre-written content.
                 </p>
                 <div className="pt-3 border-t border-slate-200">
-                  <p className="text-sm font-semibold text-cyan-800">✓ Ready to post</p>
+                  <p className="text-sm font-semibold text-cyan-800">✓ Ready in 30 seconds<br /> 
+                  ✓ Built for real-time posting</p>
                 </div>
               </div>
             </div>
@@ -226,12 +242,17 @@ export default function Home() {
             <div className="bg-white rounded-lg border border-slate-200 p-6 md:p-8">
               <div className="flex items-start gap-4">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-cyan-100 flex-shrink-0">
-                  <Clock className="h-5 w-5 text-cyan-800" />
+                  <Watch className="h-5 w-5 text-cyan-800" />
                 </div>
                 <div>
-                  <h4 className="text-lg font-semibold text-slate-900 mb-2">Consistency on Autopilot</h4>
+                  <h4 className="text-lg font-semibold text-slate-900 mb-2">Time-to-Post-Alerts (Timing Reminders)</h4>
                   <p className="text-slate-600">
-                    Set local calendar reminders (daily, multiple times, or custom) so you never miss peak posting times in Toronto. Get notified when it's time to generate and share a post.
+                    We notify you when it's time to post—based on your custom schedule.<br />
+                    Tap the alert, generate a fresh post  and share it while it still matters..<br />
+                    <br />
+                    ✓ No content stored in advance<br />
+                    ✓ No forgotten posting days<br />
+                    ✓ Always create posts in the moment<br />
                   </p>
                 </div>
               </div>
@@ -454,6 +475,79 @@ We are in the office if you want to sit down and look at the actual numbers.
           </div>
         </section>
 
+                {/* CTA Section */}
+                <section id="cta" className="bg-slate-50 py-16 md:py-24 border-b">
+          <div className="mx-auto max-w-6xl px-6 sm:px-6">
+            <div className="max-w-2xl">
+              <h2 className="text-3xl font-bold mb-4 text-slate-900">Join the Beta Waitlist</h2>
+              <p className="text-slate-600 mb-8">
+                Be among the first to access Mimico when we launch. Secure your early adopter discount and get direct access to our team for feedback and support.
+              </p>
+              <form onSubmit={handleWaitlistSignup} className="space-y-4 bg-white p-6 rounded-lg border border-slate-200">
+                <div>
+                  <Label htmlFor="business-name" className="text-sm font-medium text-slate-900">
+                    Business Name
+                  </Label>
+                  <Input
+                    id="business-name"
+                    placeholder="e.g., By The Lake Pizza"
+                    value={businessName}
+                    onChange={(e) => setBusinessName(e.target.value)}
+                    className="mt-2 border-slate-300"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="address" className="text-sm font-medium text-slate-900">
+                    Business Address (including Postal Code)
+                  </Label>
+                  <Input
+                    id="address"
+                    placeholder="e.g., 2415 Lake Shore Blvd W, Toronto, M8V 1E5"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    className="mt-2 border-slate-300"
+                    required
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1 ml-1">
+                    We use your exact location to find nearby landmarks and events.
+                  </p>
+                </div>
+                <div>
+                  <Label htmlFor="email" className="text-sm font-medium text-slate-900">
+                    Email Address
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="you@business.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="mt-2 border-slate-300"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full bg-cyan-800 hover:bg-cyan-900 text-white"
+                >
+                  {isSubmitting ? "Joining..." : "Join the Waitlist"}
+                </Button>
+              </form>
+              {waitlistPosition && (
+                <div className="mt-6 p-4 bg-green-50 rounded-lg flex items-start gap-3 border border-green-200">
+                  <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-slate-900">You're on the beta waitlist!</p>
+                    <p className="text-sm text-slate-600">
+                      You are #{waitlistPosition} in line. We will email you when beta access is ready with your early adopter discount.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
         {/* Pricing Section */}
         <section id="pricing" className="bg-white py-16 md:py-24 border-b">
           <div className="mx-auto max-w-6xl px-6 sm:px-6">
@@ -461,6 +555,7 @@ We are in the office if you want to sit down and look at the actual numbers.
               <h2 className="text-3xl font-bold mb-4 text-slate-900">Simple, Transparent Pricing</h2>
               <p className="text-slate-600 max-w-2xl">
                 Pay only for what you use. No subscriptions, no minimums.
+                Beta pricing coming soon — join the waitlist to lock in your early rate.
               </p>
             </div>
             <div className="grid md:grid-cols-2 gap-8 max-w-2xl">
@@ -551,88 +646,6 @@ We are in the office if you want to sit down and look at the actual numbers.
             </div>
           </div>
         </section>
-
-        {/* CTA Section */}
-        <section id="cta" className="bg-slate-50 py-16 md:py-24 border-b">
-          <div className="mx-auto max-w-6xl px-6 sm:px-6">
-            <div className="max-w-2xl">
-              <h2 className="text-3xl font-bold mb-4 text-slate-900">Join the Beta Waitlist</h2>
-              <p className="text-slate-600 mb-8">
-                Be among the first to access Mimico when we launch. Secure your early adopter discount and get direct access to our team for feedback and support.
-              </p>
-              <form onSubmit={handleWaitlistSignup} className="space-y-4 bg-white p-6 rounded-lg border border-slate-200">
-                <div>
-                  <Label htmlFor="business-name" className="text-sm font-medium text-slate-900">
-                    Business Name
-                  </Label>
-                  <Input
-                    id="business-name"
-                    placeholder="e.g., The Dog Salon"
-                    value={businessName}
-                    onChange={(e) => setBusinessName(e.target.value)}
-                    className="mt-2 border-slate-300"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="city" className="text-sm font-medium text-slate-900">
-                    Your Neighborhood
-                  </Label>
-                  <Select value={city} onValueChange={setCity}>
-                    <SelectTrigger id="city" className="mt-2 border-slate-300">
-                      <SelectValue placeholder="Select your neighborhood" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="kensington">Kensington Market</SelectItem>
-                      <SelectItem value="queen-west">Queen West</SelectItem>
-                      <SelectItem value="ossington">Ossington</SelectItem>
-                      <SelectItem value="liberty-village">Liberty Village</SelectItem>
-                      <SelectItem value="distillery">Distillery District</SelectItem>
-                      <SelectItem value="leslieville">Leslieville</SelectItem>
-                      <SelectItem value="yorkville">Yorkville</SelectItem>
-                      <SelectItem value="financial-district">Financial District</SelectItem>
-                      <SelectItem value="parkdale">Parkdale</SelectItem>
-                      <SelectItem value="king-west">King West</SelectItem>
-                      <SelectItem value="bloor-west">Bloor West Village</SelectItem>
-                      <SelectItem value="other">Other Toronto Neighborhood</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="email" className="text-sm font-medium text-slate-900">
-                    Email Address
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@business.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="mt-2 border-slate-300"
-                  />
-                </div>
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full bg-cyan-800 hover:bg-cyan-900 text-white"
-                >
-                  {isSubmitting ? "Joining..." : "Join the Waitlist"}
-                </Button>
-              </form>
-              {waitlistPosition && (
-                <div className="mt-6 p-4 bg-green-50 rounded-lg flex items-start gap-3 border border-green-200">
-                  <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-slate-900">You're on the beta waitlist!</p>
-                    <p className="text-sm text-slate-600">
-                      You are #{waitlistPosition} in line. We will email you when beta access is ready with your early adopter discount.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-
 
       </main>
     </>
