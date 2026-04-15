@@ -93,13 +93,13 @@ export default function Home() {
                 Social media posts that sound like your neighbourhood.
               </h1>
               <p className="text-lg text-slate-600 mb-8 max-w-2xl">
-                AI-generated social media posts tailored to your local community. Optimized for trust, not generic bots. Get 10-15 free credits to try it out.
+                AI-generated social media posts tailored to your local community. Optimized for trust, not generic bots. Get 15 free credits to try it out.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Show when="signed-out">
                   <SignUpButton mode="modal" fallbackRedirectUrl="/dashboard">
                     <button className="rounded-lg bg-cyan-800 hover:bg-cyan-900 px-8 py-3 text-lg font-semibold text-white shadow-lg transition">
-                      Claim Your Free Credits
+                      Claim Your Free 15 Credits
                     </button>
                   </SignUpButton>
                 </Show>

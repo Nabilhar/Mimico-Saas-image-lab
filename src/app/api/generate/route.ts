@@ -294,7 +294,7 @@ export async function POST(req: Request) {
       console.log("--- M8V MEMORY CHECK ---");
       if ( history && history.length > 0) {
         console.log(`Found ${history.length} previous posts.`);
-        history.slice(0, 2).forEach((p: any, i: number) => {
+        history.slice(0, 3).forEach((p: any, i: number) => {
           const firstSentence = (p.content || "").split(/[.!?]/)[0].trim();
           console.log(`Post ${i + 1} opening: "${firstSentence}"`);
         });
@@ -306,7 +306,7 @@ export async function POST(req: Request) {
 
     const recentHistory = history?.length
     ? history
-        .slice(0, 2) // Just take the last 5 for the AI context
+        .slice(0, 3) // Just take the last 5 for the AI context
         .map((p: any, i: number) => {
           const firstSentence = (p.content || "").split(/[.!?]/)[0].trim();
           return `- Post ${i + 1} opening: "${firstSentence}"`;
