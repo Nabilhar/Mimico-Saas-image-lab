@@ -213,10 +213,11 @@ export default function Home() {
                 </div>
                 <p className="text-slate-600 mb-3 flex-grow">
                 Every post is generated using live local signals—weather, landmarks, neighbourhood events, seasonal context, and time of day—so your content reflects what's happening right now.
+                You can also include Promotions/Offers, and the AI naturally weaves them into posts in a way that feels organic.
                 </p>
                 <div className="pt-3 border-t border-slate-200">
                   <p className="text-sm font-semibold text-cyan-800">✓ Always context-aware<br /> 
-                  ✓ Always current</p>
+                  ✓ Naturally includes your offers when relevan</p>
                 </div>
               </div>
 

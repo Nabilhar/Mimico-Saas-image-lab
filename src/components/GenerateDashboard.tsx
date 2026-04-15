@@ -51,6 +51,9 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [timeSlots, setTimeSlots] = useState<string[]>(["09:00"]);
 
+  // --- LOCAL CALENDAR SYNC (ICS) ---
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
+
   const loadingPhases = [
     "Locating address...",
     "Identifying local landmarks...",
@@ -113,6 +116,16 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
     return () => clearInterval(interval);
   }, [loading]);
 
+  // THE SCROLL LOCK EFFECT HERE:
+  useEffect(() => {
+    if (showCalendarModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    // Cleanup function to ensure scroll is restored if component unmounts
+    return () => { document.body.style.overflow = 'unset'; };
+  }, [showCalendarModal]);
 
   const handleStrategyChange = (val: string) => {
     setStrategy(val);
@@ -121,8 +134,6 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
     else setTimeSlots(["09:00"]); 
   };
 
-    // --- LOCAL CALENDAR SYNC (ICS) ---
-    const [showCalendarModal, setShowCalendarModal] = useState(false);
 
     const handleSmartScheduleSubmit = async () => {
 
@@ -504,96 +515,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
                     </div>
                   )}
 
-                  {showCalendarModal && (
-                    <div
-                      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-4"
-                      onClick={(e) => { if (e.target === e.currentTarget) setShowCalendarModal(false); }}
-                    >
-                      <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden mb-28 sm:mb-0">
 
-                        {/* Header */}
-                        <div className="px-5 pt-5 pb-4 border-b border-slate-100">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-cyan-600">Habit synced</p>
-                          <p className="text-base font-bold text-slate-900 mt-0.5">
-                            {strategy === "next" ? "Your reminder is ready" : "Your daily habit is set"}
-                          </p>
-                          <p className="text-xs text-slate-400 mt-1">
-                            A calendar file was just downloaded to your device. Here's how to add it:
-                          </p>
-                        </div>
-
-                      {/* iOS Instructions */}
-                      <div className="px-5 py-4 border-b border-slate-100">
-                        <p className="text-xs font-bold text-slate-700 mb-2">
-                          iPhone / iPad
-                        </p>
-                        <div className="space-y-1.5">
-                          {[
-                            "Open the Files app on your iPhone",
-                            'Find "mimico-habit-schedule.ics" in Downloads',
-                            "Tap the file — it opens Calendar automatically",
-                            'Tap "Add All Events" to confirm'
-                          ].map((step, i) => (
-                            <div key={i} className="flex items-start gap-2">
-                              <span className="w-4 h-4 rounded-full bg-cyan-100 text-cyan-700 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
-                                {i + 1}
-                              </span>
-                              <span className="text-xs text-slate-500">{step}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                        {/* Android Instructions */}
-                        <div className="px-5 py-4 border-b border-slate-100">
-                          <p className="text-xs font-bold text-slate-700 mb-2">
-                            Android
-                          </p>
-                          <div className="space-y-1.5">
-                            {[
-                              "Pull down your notification bar",
-                              'Tap the downloaded "mimico-habit-schedule.ics"',
-                              "Choose Google Calendar or your calendar app",
-                              'Tap "Import" to add the events'
-                            ].map((step, i) => (
-                              <div key={i} className="flex items-start gap-2">
-                                <span className="w-4 h-4 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
-                                  {i + 1}
-                                </span>
-                                <span className="text-xs text-slate-500">{step}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Desktop shortcut */}
-                        <div className="px-5 py-3 border-b border-slate-100 bg-slate-50">
-                          <p className="text-xs text-slate-400">
-                            <span className="font-semibold text-slate-600">On desktop:</span> Double-click the downloaded file — it opens directly in your calendar app.
-                          </p>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="px-5 py-4 flex gap-2">
-                          <button
-                            onClick={() => {setShowCalendarModal(false);setStrategy("none");}}
-                            className="flex-1 py-2.5 rounded-xl bg-cyan-700 text-white text-sm font-bold hover:bg-cyan-800 transition-colors"
-                          >
-                            Got it
-                          </button>
-                          <button
-                            onClick={() => {
-                              setShowCalendarModal(false);
-                              handleSmartScheduleSubmit(); // re-download if needed
-                            }}
-                            className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 text-sm font-semibold hover:bg-slate-200 transition-colors"
-                          >
-                            Re-download
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
 
                   <button 
                     onClick={handleSmartScheduleSubmit}
@@ -609,6 +531,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
             </div>
         </div>
       </div>
+
       {/* BUTTON SECTION */}
       <div className="max-w-2xl mx-auto w-full px-4 sm:px-0">
         <button 
@@ -781,6 +704,97 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
       </div>
     </div>
   )}
+
+{showCalendarModal && (
+  <div
+    className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-4"
+    onClick={(e) => { if (e.target === e.currentTarget) setShowCalendarModal(false); }}
+  >
+    <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden mb-28 sm:mb-0">
+
+      {/* Header */}
+      <div className="px-5 pt-5 pb-4 border-b border-slate-100">
+        <p className="text-[10px] font-black uppercase tracking-widest text-cyan-600">Habit synced</p>
+        <p className="text-base font-bold text-slate-900 mt-0.5">
+          {strategy === "next" ? "Your reminder is ready" : "Your daily habit is set"}
+        </p>
+        <p className="text-xs text-slate-400 mt-1">
+          A calendar file was just downloaded to your device. Here's how to add it:
+        </p>
+      </div>
+
+    {/* iOS Instructions */}
+    <div className="px-5 py-4 border-b border-slate-100">
+      <p className="text-xs font-bold text-slate-700 mb-2">
+        iPhone / iPad
+      </p>
+      <div className="space-y-1.5">
+        {[
+          "Open the Files app on your iPhone",
+          'Find "mimico-habit-schedule.ics" in Downloads',
+          "Tap the file — it opens Calendar automatically",
+          'Tap "Add All Events" to confirm'
+        ].map((step, i) => (
+          <div key={i} className="flex items-start gap-2">
+            <span className="w-4 h-4 rounded-full bg-cyan-100 text-cyan-700 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+              {i + 1}
+            </span>
+            <span className="text-xs text-slate-500">{step}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+
+      {/* Android Instructions */}
+      <div className="px-5 py-4 border-b border-slate-100">
+        <p className="text-xs font-bold text-slate-700 mb-2">
+          Android
+        </p>
+        <div className="space-y-1.5">
+          {[
+            "Pull down your notification bar",
+            'Tap the downloaded "mimico-habit-schedule.ics"',
+            "Choose Google Calendar or your calendar app",
+            'Tap "Import" to add the events'
+          ].map((step, i) => (
+            <div key={i} className="flex items-start gap-2">
+              <span className="w-4 h-4 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                {i + 1}
+              </span>
+              <span className="text-xs text-slate-500">{step}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Desktop shortcut */}
+      <div className="px-5 py-3 border-b border-slate-100 bg-slate-50">
+        <p className="text-xs text-slate-400">
+          <span className="font-semibold text-slate-600">On desktop:</span> Double-click the downloaded file — it opens directly in your calendar app.
+        </p>
+      </div>
+
+      {/* Actions */}
+      <div className="px-5 py-4 flex gap-2">
+        <button
+          onClick={() => {setShowCalendarModal(false);setStrategy("none");}}
+          className="flex-1 py-2.5 rounded-xl bg-cyan-700 text-white text-sm font-bold hover:bg-cyan-800 transition-colors"
+        >
+          Got it
+        </button>
+        <button
+          onClick={() => {
+            setShowCalendarModal(false);
+            handleSmartScheduleSubmit(); // re-download if needed
+          }}
+          className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 text-sm font-semibold hover:bg-slate-200 transition-colors"
+        >
+          Re-download
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
 </div>  
 
