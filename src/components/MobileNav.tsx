@@ -2,10 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import { Home, UserCircle, LayoutDashboard } from "lucide-react"; // Or your preferred icon set
+
 
 export function MobileNav() {
   const pathname = usePathname();
+  const { user, isLoaded } = useUser();
+
+if (!isLoaded || (pathname === "/" && !user)) {
+  return null;
+}
 
   return (
     <div className="sm:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-[400px]">
