@@ -178,7 +178,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.setAttribute('download', 'mimico-habit-schedule.ics');
+        link.setAttribute('download', 'Harbourline-post-alert.ics');
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -731,7 +731,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
       <div className="space-y-1.5">
         {[
           "Open the Files app on your iPhone",
-          'Find "mimico-habit-schedule.ics" in Downloads',
+          'Find "Harbourline-post-alert.ics" in Downloads',
           "Tap the file — it opens Calendar automatically",
           'Tap "Add All Events" to confirm'
         ].map((step, i) => (
@@ -753,7 +753,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
         <div className="space-y-1.5">
           {[
             "Pull down your notification bar",
-            'Tap the downloaded "mimico-habit-schedule.ics"',
+            'Tap the downloaded "Harbourline-post-alert.ics"',
             "Choose Google Calendar or your calendar app",
             'Tap "Import" to add the events'
           ].map((step, i) => (

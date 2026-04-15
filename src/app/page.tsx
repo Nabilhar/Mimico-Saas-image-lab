@@ -195,7 +195,7 @@ export default function Home() {
                   <h3 className="text-xl font-semibold text-slate-900">Choose Your Niche</h3>
                 </div>
                 <p className="text-slate-600 mb-3 flex-grow">
-                  Select your industry (e.g., Real Estate, Café, Salon). We immediately understand your customers, tone, and what matters in your neighbourhood.
+                  Select your industry (e.g.,Restaurant, Real Estate, Chiropractor,Dentist, Café, Salon). We immediately understand your customers, tone, and what matters in your neighbourhood.
                 </p>
                 <div className="pt-3 border-t border-slate-200">
                   <p className="text-sm font-semibold text-cyan-800">✓ Built specifically for local businesses<br /> 
@@ -213,11 +213,11 @@ export default function Home() {
                 </div>
                 <p className="text-slate-600 mb-3 flex-grow">
                 Every post is generated using live local signals—weather, landmarks, neighbourhood events, seasonal context, and time of day—so your content reflects what's happening right now.
-                You can also include Promotions/Offers, and the AI naturally weaves them into posts in a way that feels organic.
+                You can also include Promotions/Offers, and the AI naturally weaves them into the post in a way that feels organic.
                 </p>
                 <div className="pt-3 border-t border-slate-200">
                   <p className="text-sm font-semibold text-cyan-800">✓ Always context-aware<br /> 
-                  ✓ Naturally includes your offers when relevan</p>
+                  ✓ Naturally includes your offers when relevant</p>
                 </div>
               </div>
 
@@ -267,7 +267,7 @@ export default function Home() {
             <div className="mb-12">
               <h2 className="text-3xl font-bold mb-4 text-slate-900">See It In Action</h2>
               <p className="text-slate-600 max-w-2xl">
-                Here is what Mimico generates for different business types in Toronto.
+                Here is what Mimico generated for different business types in Toronto.
               </p>
             </div>
             <Tabs defaultValue="restaurant" className="w-full">
@@ -555,7 +555,7 @@ We are in the office if you want to sit down and look at the actual numbers.
             <div className="mb-12">
               <h2 className="text-3xl font-bold mb-4 text-slate-900">Simple, Transparent Pricing</h2>
               <p className="text-slate-600 max-w-2xl">
-                Pay only for what you use. No subscriptions, no minimums.
+                Pay only for what you use. No subscriptions, no minimums.<br /> 
                 Beta pricing coming soon — join the waitlist to lock in your early rate.
               </p>
             </div>
