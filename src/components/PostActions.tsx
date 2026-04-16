@@ -156,7 +156,7 @@ export default function PostActions({ content, imageUrl, onDelete, showCopy = fa
 
       {showModal && (
         <div
-          className="fixed inset-0 z-[40] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-4"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-4"
           onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}
         >
           <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden mb-28 sm:mb-0">
