@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Copy, Check, Share2, Trash2, X, Image } from 'lucide-react';
 
 interface PostActionsProps {
@@ -15,6 +15,21 @@ export default function PostActions({ content, imageUrl, onDelete, showCopy = fa
   const [imageCopied, setImageCopied] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [modalStep, setModalStep] = useState<'ready' | 'done'>('ready');
+
+  useEffect(() => {
+    if (showModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+
+    // This is the cleanup function
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
+    };
+  }, [showModal]);
+
 
   const handleCopyText = async () => {
     try {
@@ -141,7 +156,7 @@ export default function PostActions({ content, imageUrl, onDelete, showCopy = fa
 
       {showModal && (
         <div
-          className="fixed inset-x-0 top-0 h-[calc(100dvh)] z-[100] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-4"
+          className="fixed inset-0 z-[40] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-4"
           onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}
         >
           <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden mb-28 sm:mb-0">
