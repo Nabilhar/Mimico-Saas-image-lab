@@ -139,7 +139,7 @@ export default function Home() {
             <div className="grid md:grid-cols-3 gap-8">
               <Card className="border-slate-200">
                 <CardHeader>
-                  <Watch className="w-8 h-8 text-cyan-800 mb-2 animate-bounce" />
+                  <Watch className="w-8 h-8 text-cyan-800 mb-2" />
                   <CardTitle>In the Now</CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -151,7 +151,7 @@ export default function Home() {
               </Card>
               <Card className="border-slate-200">
                 <CardHeader>
-                  <MapPin className="w-8 h-8 text-cyan-800 mb-2 animate-bounce" />
+                  <MapPin className="w-8 h-8 text-cyan-800 mb-2" />
                   <CardTitle>Local Context</CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -601,7 +601,7 @@ We are in the office if you want to sit down and look at the actual numbers.
         </section>
 
         {/* Early Adopter Tiers */}
-        <section className="bg-white py-16 md:py-24 border-b">
+        <section className="bg-slate-50 py-16 md:py-24 border-b">
           <div className="mx-auto max-w-6xl px-6 sm:px-6">
             <div className="mb-12">
               <h2 className="text-3xl font-bold mb-4 text-slate-900">Early Adopter Perks</h2>
