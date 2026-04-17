@@ -6,7 +6,9 @@ import {
 import { NextResponse } from "next/server";
 import Groq from "groq-sdk"; // <-- NEW
 import { createClient } from '@supabase/supabase-js';
-import { getFramework } from "@/lib/frameworks";
+import { getFramework, BUSINESS_ARCHETYPES } from "@/lib/frameworks";
+import { getBrandIdentity, discoverAndSaveBrandIdentity } from "@/lib/brandDiscovery";
+import { ColorTheme, BusinessVisuals } from '@/lib/constants';
 
 // 1. Initialize Groq (The New Engine)
 const groq = new Groq({
@@ -29,22 +31,6 @@ const supabase = createClient(
 //   "The Hustler" voice → always PAS  (urgency is its natural mode)
 // ─────────────────────────────────────────────
 
-const BUSINESS_ARCHETYPES: Record<string, string> = {
-  "Health & Wellness":       "pain-driven",
-  "Home Services":           "pain-driven",
-  "Automotive":              "pain-driven",
-  "Trades & Industrial":     "pain-driven",
-  "Food & Beverage":         "lifestyle",
-  "Beauty & Personal Care":  "lifestyle",
-  "Fitness & Recreation":    "lifestyle",
-  "Retail":                  "lifestyle",
-  "Pets":                    "lifestyle",
-  "Events & Hospitality":    "lifestyle",
-  "Professional Services":   "considered-purchase",
-  "Real Estate & Property":  "considered-purchase",
-  "Education & Childcare":   "considered-purchase",
-  "Technology":              "considered-purchase",
-};
 
 // ─────────────────────────────────────────────
 // 2. FRAMEWORK PROMPT DEFINITIONS
@@ -54,17 +40,17 @@ const BUSINESS_ARCHETYPES: Record<string, string> = {
 // ─────────────────────────────────────────────
 
 const FRAMEWORK_PROMPTS: Record<string, string> = {
-  PAS: `Use the PAS structure — do not label the sections in the post:
+  PAS: `Use the PAS structure (Problem-Agitate-Solve) — do not label the sections in the post:
 - Open with one sharp sentence naming a pain the reader already feels. Make it specific to someone near this location. No generic openers like "Are you tired of..."
 - Follow with one sentence only on the real cost of ignoring that problem — financial, physical, or emotional. Make the reader feel the consequence.
 - Close by introducing the business as the natural fix. Weave in the local landmark naturally. End with one clear, low-friction CTA.`,
 
-  BAB: `Use the BAB structure — do not label the sections in the post:
+  BAB: `Use the BAB structure (Before-After-Bridge) — do not label the sections in the post:
 - Open with one relatable sentence placing the reader in their ordinary, imperfect reality. Familiar and grounded — not dramatic.
 - Follow with one sensory, specific sentence showing life after engaging with this business — what they see, feel, or can actually do. Not a vague "you'll feel better."
 - Close with 2-3 sentences bridging those two states through the business. Weave the local landmark in naturally as proof of community presence. End with one warm, low-pressure CTA.`,
 
-  AIDA: `Use the AIDA structure — do not label the sections in the post:
+  AIDA: `Use the AIDA structure (Attention-Interest-Desire-Action) — do not label the sections in the post:
 - Open with one bold, local hook — a surprising neighbourhood fact, a specific location reference, or a strong claim. If it wouldn't stop a scroll, it is not strong enough.
 - Follow with 1-2 sentences on why this matters right now in this community — seasonal, local, timely.
 - Build want through a specific result, proof point, or local credential. Reference the landmark here to anchor credibility.
@@ -166,7 +152,10 @@ function buildPrompt(
   recentHistory: string | null, 
   promoType: string,
   eventType: string,
-  customDetails: string  
+  customDetails: string,
+  colorTheme: ColorTheme | null,
+  businessVisuals: BusinessVisuals | null
+
 ): string {
 
 
@@ -182,6 +171,34 @@ function buildPrompt(
       minute: '2-digit', 
       hour12: true 
     });
+
+      // --- THE MOOD ANCHOR & SEMANTIC NUANCE ---
+    const moodInstruction = colorTheme?.description 
+        ? `BRAND MOOD & COLOR PSYCHOLOGY:
+        The brand's visual identity is defined by: "${colorTheme.description}".
+        CRITICAL: Use this palette to guide your vocabulary. If the palette is sophisticated/dark, use elegant and authoritative language. If the palette is bright/vibrant, use energetic and punchy language. Let the "vibe" of the colors shape your word choice.`
+        : `BRAND MOOD:
+        The brand is currently in a neutral/natural phase. Use welcoming, authentic, and community-focused language that feels organic and unpretentious.`;
+
+    const visualDetails = businessVisuals 
+          ? `BRAND VISUAL DETAILS:
+        - Logo: ${businessVisuals.logoColors}
+        - Storefront: ${businessVisuals.storefrontColors}
+        - Interior: ${businessVisuals.interiorColors}`
+          : "";
+
+
+    // --- SAFE ACCESS / FALLBACK LOGIC ---
+    // This prevents the "Type null is not assignable to string" error
+    // and prevents the AI from seeing "[object Object]"
+    const colorDesc = colorTheme?.description || "natural, authentic tones";
+    const primaryCol = colorTheme?.primary || "neutral";
+    const secondaryCol = colorTheme?.secondary || "neutral";
+    const accentCol = colorTheme?.accent || "neutral";
+
+    const logoCol = businessVisuals?.logoColors || "Not provided";
+    const storefrontCol = businessVisuals?.storefrontColors || "Not provided";
+    const interiorCol = businessVisuals?.interiorColors || "Not provided";
 
     return `
 
@@ -200,6 +217,16 @@ function buildPrompt(
         If you need to think, do it silently before writing. Your visible output starts with <research>.
 
     You are a Marketing Master. Put yourself in the shoes of the owner of "${business_name}", a local ${niche} at ${location}.
+
+    BRAND VISUAL IDENTITY:
+    - Brand Color Palette: ${colorDesc}
+    - Primary Color: ${primaryCol}
+    - Secondary Color: ${secondaryCol}
+    - Accent Color: ${accentCol}
+    - Logo Colors: ${logoCol}
+    - Storefront Colors: ${storefrontCol}
+    - Interior Colors: ${interiorCol}
+
     You are writing this post yourself at time :${currentTime} / season : ${month} — in your own voice, from your own experience on the ground.
     You know your neighbours, your street, and your regulars by name.
     Write as someone who genuinely lives and works in this community, not as a marketer.
@@ -221,6 +248,10 @@ function buildPrompt(
     
     2. Immediately after the closing </research> tag, write the social media post. Nothing between the tag and the post.
     
+    ${moodInstruction}
+
+    ${visualDetails}
+
     SEASONALITY:
     It is currently ${month}. Let the season shape the mood — weather, what locals are doing, what feels timely right now.
     
@@ -289,7 +320,11 @@ export async function POST(req: Request) {
 
     } = body;
 
-      // --- ADD THIS DEBUG BLOCK ---
+    if (!business_id) {
+      console.error("CRITICAL ERROR: No business_id provided in request body.");
+      return NextResponse.json({ error: "Missing business identity context." }, { status: 400 });
+    }
+
       // --- ADD THIS DEBUG BLOCK ---
       console.log("--- M8V MEMORY CHECK ---");
       if ( history && history.length > 0) {
@@ -303,6 +338,19 @@ export async function POST(req: Request) {
         console.log("NO HISTORY FOUND. Generating from scratch.");
       }
       console.log("-----------------------");
+
+        // --- PHASE 1: THE FAST PATH ---
+    // Get existing brand identity from DB (Fast, no search)
+    const brandIdentity = await getBrandIdentity(business_id);
+
+    // --- PHASE 2: THE BACKGROUND PATH ---
+    // If identity is missing, trigger the researcher in the background.
+    // NOTICE: We do NOT 'await' this. It runs in parallel.
+    if (!brandIdentity.color_theme || !brandIdentity.business_visuals) {
+      console.log("--- MISSING BRAND DATA: Triggering background research ---");
+      discoverAndSaveBrandIdentity(business_id, business_name, location)
+        .catch(err => console.error("Background Discovery Error:", err));
+    }
 
     const recentHistory = history?.length
     ? history
@@ -333,7 +381,9 @@ export async function POST(req: Request) {
       recentHistory,
       promoType || "",    // Argument 9
       eventType || "",    // Argument 10
-      customDetails || "" // Argument 11
+      customDetails || "", // Argument 11
+      brandIdentity.color_theme,
+      brandIdentity.business_visuals
     );
 
     // ── MOCK MODE (delete before going to production) ─────
@@ -459,43 +509,43 @@ try {
 }
 
 // 2. SMART CLEANUP (Handles the <research> tags for BOTH models)
-let content = rawResponse
+// 2. SMART CLEANUP (Handles the <research> tags for BOTH models)
+let content = rawResponse;
 
 // 3. THE CLEANUP PIPELINE
-// Step A: Remove everything from the start of the response 
-// up to the LAST research or thinking tag.
+
+// Step A: Remove the "Thinking" or "Research" blocks
+// This looks for <research>...</research> OR anything inside backticks `...`
 if (content.includes("</research>")) {
   content = content.split("</research>").pop()?.trim() || content;
 } else if (content.includes("`")) {
-  // If it used backticks for thinking, take the part AFTER the last backtick
+  // If it uses backticks for thinking, take the part AFTER the last backtick
   const parts = content.split("`").filter(p => p.trim().length > 10);
   content = parts[parts.length - 1].trim(); 
+} else if (content.includes("<|think|>")) {
+  // Handle specific model thinking tags
+  content = content.split("<|think|>").pop()?.trim() || content;
 }
 
 // Step B: Nuclear Scrub
-// This removes any stray tags that might be left (like <research> without a close)
+// This removes any stray tags, citations, or metadata
 content = content
-  .replace(/<[^>]*>/g, "") // Removes <research>, <|think|>, etc.
-  .replace(/\[\d+\]/g, "") // Removes [1], [2] citations
+  .replace(/<[^>]*>/g, "")      // Removes any remaining <tag> markers
+  .replace(/\[\d+\]/g, "")      // Removes citations like [1], [2], [3]
+  .replace(/Word Count:\s*\d+/gi, "") // Removes "Word Count: 150"
+  .replace(/Keywords?:\s*[\s\S]*?(\n|$)/gi, "") // Removes "Keywords: ..."
   .trim();
 
-// 4. Final Fallback
-// If the content still looks like a log (contains "Word Count" or "Keywords"), 
-// we take the last paragraph only.
-if (content.includes("Word Count:") || content.includes("Keyword:")) {
-  const paragraphs = content.split("\n\n");
-  content = paragraphs[paragraphs.length - 1].trim();
-}
-
+// Step C: Formatting Polish
 content = content
-  .replace(/([.!?])\s+(?=[1-5]\.)/g, "$1\n\n") // Gap before bullets
-  .replace(/(\d\.)\s+/g, "$1 ")                // Ensure space after number
-  .replace(/\n(?=[1-5]\.)/g, "\n")             // Single line for bullets
-  .replace(/(#\w+)/g, "\n\n$1")                // Push first hashtag to new line
-  .replace(/(#\w+)\s+(?=#\w+)/g, "$1 ");       // Keep hashtags together on that new line
+  .replace(/([.!?])\s+(?=[1-5]\.)/g, "$1\n\n") // Ensures a gap before numbered lists
+  .replace(/(\d\.)\s+/g, "$1 ")                // Ensures space after numbers (e.g., "1. Tip" vs "1.Tip")
+  .replace(/\n(?=[1-5]\.)/g, "\n")             // Keeps lists compact
+  .replace(/(#\w+)/g, "\n\n$1")                // Pushes hashtags to their own line
+  .replace(/(#\w+)\s+(?=#\w+)/g, "$1 ");       // Keeps hashtags together on one line
 
-// Final check to make sure we don't have triple breaks
-content = content.replace(/\n{3,}/g, "\n\n");
+// Step D: Final Cleanup of Triple Newlines
+content = content.replace(/\n{3,}/g, "\n\n").trim();
 
 console.log("--- GENERATION SUCCESSFUL ---");
 return NextResponse.json({ content, framework });

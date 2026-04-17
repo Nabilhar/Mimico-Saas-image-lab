@@ -19,3 +19,21 @@ export const CATEGORIES = Object.keys(NICHE_DATA);
 export const VOICES = ["The Expert", "The Neighbor", "The Hustler", "The Minimalist"] as const;
 export const POST_TYPES = ["5 Tips", "Promotion / offer", "Local event / news", "Myth-busting", "Behind the scenes"] as const;
 
+export interface ColorTheme {
+  primary: string;      // e.g., "#D4A574" or "Terracotta"
+  secondary: string;    // e.g., "#FFFFFF" or "Cream"
+  accent: string;       // e.g., "#2C3E50" or "Charcoal"
+  description: string;  // e.g., "A warm, earthy palette of terracotta, cream, and charcoal"
+}
+
+export interface BusinessVisuals {
+  logoColors: string;
+  storefrontColors: string;
+  interiorColors: string;
+}
+
+export interface BusinessIdentity {
+  color_theme: ColorTheme | null;
+  business_visuals: BusinessVisuals | null;
+}
+
