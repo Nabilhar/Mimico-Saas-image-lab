@@ -1,13 +1,13 @@
 // MAIN HANDLER
 // ─────────────────────────────────────────────
-// app/api/generate-image/route.ts
-// Image Chain: Gemini → Pollinations (hosted) → HuggingFace SDK → Pollinations (URL fallback)
+// app/api/prepare-image-prompt/route.ts
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import Groq from "groq-sdk";
 import { NextResponse } from "next/server";
 import { createClient } from '@supabase/supabase-js';
 import { getBrandIdentity } from "@/lib/brandDiscovery";
+import { FRAMEWORK_POST_TYPE_COMBINATIONS, getSeason, SEASONALITY_CONTEXT, SEASONAL_NICHE_CONTEXT } from "@/lib/frameworks";
 import { ColorTheme, BusinessVisuals } from '@/lib/constants';
 
 
@@ -33,26 +33,45 @@ const textModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }, { apiV
 
 
 export async function POST(req: Request) {
-  let postId = "";
-  let generatedPost = "";
-  let business_name = "";
-  let business_id = "";
-  let location = "";
-  let niche = "";
-
+      let postId: string | null = null;
+      let generatedPost= "";
+      let business_name= "";
+      let business_id= "";
+      let location= "";
+      let niche= "";
+      let voice= "";
+      let framework= "";
+      let postType= "";
+      let currentMonth= "";
+  
   try {
+    // 2. EXPANDED DESTRUCTURING
     const body = await req.json();
-    postId = body.postId;
-    generatedPost = body.generatedPost;
-    business_name = body.business_name;
-    business_id = body.business_id;
-    location = body.location;
-    niche = body.niche;
-
+      postId= body.postId;
+      generatedPost= body.generatedPost;
+      business_name= body.business_name; 
+      business_id= body.business_id;
+      location= body.location;
+      niche= body.niche;
+      voice= body.voice;
+      framework= body.framework;
+      postType= body.postType;
+      currentMonth= body.currentMonth;
+  
     if (!postId || !business_id) {
-      return NextResponse.json({ error: "Missing Post ID or Business ID" }, { status: 400 });
+      return NextResponse.json({ error: "Missing ID" }, { status: 400 });
     }
 
+    // 2. FETCH BRAND IDENTITY (The "Fast Path")
+    const brandIdentity = await getBrandIdentity(business_id);
+
+        // 4. CALCULATE STRATEGY & SEASON
+    const season = getSeason(currentMonth);
+    const combinationKey = `${body.framework}_${body.postType}`;
+    const visualStrategy = (FRAMEWORK_POST_TYPE_COMBINATIONS as any)[combinationKey] || "Create a compelling visual for this post type.";
+    const seasonInfo = SEASONALITY_CONTEXT[season as keyof typeof SEASONALITY_CONTEXT];
+    const seasonalNicheContext = SEASONAL_NICHE_CONTEXT[season]?.[niche] || 
+      `Create a visual that captures the essence of ${niche} in ${season}.`;
 
           // ── FETCH RECENT IMAGE PROMPTS ─────────────────────────
     const { data: recentPrompts } = await supabase
@@ -77,94 +96,67 @@ export async function POST(req: Request) {
     console.log(recentImageHistory || "No previous image prompts found.");
     console.log("----------------------------");
 
-      // 2. FETCH BRAND IDENTITY (The "Fast Path")
-      const brandIdentity = await getBrandIdentity(business_id);
-        
       const currentTime = new Date().toLocaleTimeString('en-US', { 
         hour: 'numeric', minute: '2-digit', hour12: true });
 
-      const currentMonth = new Date().toLocaleString('default', { month: 'long' });
+
   
       // ── STEP A: ARCHITECT (text → visual description) ─────────
       const architectPrompt = `
-        You are a prompt engineer for AI image generation, specializing in hyper-local commercial and lifestyle photography.
-        RECENT IMAGE PROMPTS — FORBIDDEN TERRITORY:
-        ${recentImageHistory ? `These image prompts were already generated for this business.
-        You are FORBIDDEN from repeating these subjects, settings, or visual angles:
+        [SYSTEM]: Expert AI Image Prompt Engineer. Specialization: Hyper-local commercial/lifestyle photography for FLUX.1-schnell.
+        [CRITICAL_ACTION]: You MUST use the Google Search tool to find the actual storefront and interior of "${business_name}" in "${location}" before engineering the prompt.
+
+        [FORBIDDEN_VISUALS]:
+        ${recentImageHistory ? `STRICTLY FORBIDDEN (Already used):
         ${recentImageHistory}
-        Start from a completely different visual element:
+        RULE: Choose a completely different subject, setting, or angle. 
+        - If recent = Food/Drink $\rightarrow$ use Space/Exterior/Details.
+        - If recent = Exterior $\rightarrow$ use Interior/Texture/Materials.
+        - If recent = Waterfront $\rightarrow$ use Interior warmth/Close-ups.` : "No history. Full creative freedom."}
 
-        If recent prompts showed food/drink → focus on the space, window, or street outside
-        If recent prompts showed the exterior → go inside, show texture, materials, details
-        If recent prompts showed the waterfront → show the warmth of the interior instead`
+        [RESEARCH_GOALS]:
+        Use Google Search for "${business_name}" at "${location}". Identify:
+        1. Storefront appearance & signage.
+        2. Outdoor features (patio, terrace, seating).
+        3. Local landmarks/views visible from the business.
+        4. Interior style (lighting, materials, color palette, vibe).
+        5. Signature products/offerings.
+        6. Unique branding details (uniforms, packaging, decor).
+        (Fallback: If no specific data found, use ${location} neighborhood context).
 
-        : "No previous image prompts. Full creative freedom."}
-
-        STEP 1 — RESEARCH (use Google Search):Search for "${business_name}" at "${location}".
-        Find and note:
-
-        What does the storefront look like?
-        Does this business have a patio, terrace, or outdoor seating?
-        Is there a water view, park, or landmark visible from the business?
-        What is the interior style — lighting, colours, materials, vibe?
-        What is their signature food, drink, or product?
-        Any distinctive visual details (signage, decor, uniforms, packaging)?
-
-        If you cannot find specific results, use your knowledge of ${location} and the neighbourhood context instead.
-
-        STEP 2 — ANALYZE THE POST:
-        Social media post to match:
-        "${generatedPost}"
-        Business: ${business_name} — ${niche}
+        [ANALYSIS]:
+        Post Content: "${generatedPost}"
+        Business: ${business_name} (${niche})
         Location: ${location}
-        Season / Time: ${currentMonth}, ${currentTime}
+        Visual Strategy: ${visualStrategy}
 
-        // --- BRANDING INJECTION (The Mood Anchor) ---
-        ${brandIdentity.color_theme ? `BRAND MOOD & COLOR PSYCHOLOGY:
-        The brand's visual identity is defined by: "${brandIdentity.color_theme.description}".
-        CRITICAL: Use this palette to guide your vocabulary. If the palette is sophisticated/dark, use elegant and authoritative language. If it is bright/vibrant, use energetic and punchy language. Let the "vibe" of the colors shape your word choice.` : ""}
+        [SEASONAL_CONTEXT]:
+        Season: ${season} | Time: ${currentMonth}, ${currentTime}
+        - Elements: ${seasonInfo?.visual_elements}
+        - Time of Day: ${seasonInfo?.time_of_day_guidance}
+        - Niche Insight: ${seasonalNicheContext}
 
-        ${brandIdentity.business_visuals ? `BRAND VISUAL DETAILS:
-        - Logo: ${brandIdentity.business_visuals.logoColors}
-        - Storefront: ${brandIdentity.business_visuals.storefrontColors}
-        - Interior: ${brandIdentity.business_visuals.interiorColors}` : ""}
+        [BRAND_IDENTITY]:
+        Mood: ${brandIdentity.color_theme?.description || "Derive from research/niche"}
+        Details: Logo(${brandIdentity.business_visuals?.logoColors || "N/A"}), Store(${brandIdentity.business_visuals?.storefrontColors || "N/A"}), Interior(${brandIdentity.business_visuals?.interiorColors || "N/A"})
+        RULE: Integrate brand colors naturally. If "Derive from research" is listed, use your search findings to determine the visual vibe. Match vocabulary to mood (e.g., Sophisticated = Elegant; Vibrant = Energetic).
 
-        STEP 3 — ENGINEER THE IMAGE PROMPT:
-        Using what you found in Step 1 and the post mood from Step 2, write a 5 sentence image generation prompt for FLUX.1-schnell.
-        Structure it in this order:
-        1. COMPOSITION: Internalize one composition type that differs from any recent prompts — do not declare it in the output, only apply it:
+        [ENGINEERING_SPEC]:
+        Write a 5-sentence prompt for FLUX.1-schnell following this sequence:
+        1. COMPOSITION: Select one (Wide environmental / Medium scene / Detail close-up). Do not label it; just apply it.
+        2. SUBJECT: The hero element. Use researched details. No legible faces.
+        3. SIGNAGE STRATEGY: If business name is present, use: Shallow depth of field (bokeh), Angle displacement (partial frame), or Foreground occlusion (organic block).
+        4. SETTING: Real physical space of the business in ${location}.
+        5. LIGHTING: Use ${seasonInfo?.lighting_mood} to define the exact light quality for ${currentMonth} at ${currentTime} in ${location}.
+        6. MOOD: Extract emotion from the post tone.
+        7. PEOPLE: Candid, secondary, never dominating. No front-facing/legible faces.
+        8. IMPERFECTION: Include one subtle, realistic detail (e.g., condensation ring, scuff on brick, steam curl) to remove "AI sheen."
+        9. TECHNICAL: End exactly with: "Shot on Sony A7, f/1.8, shallow depth of field, 1:1 square crop, no watermark, no legible text."
 
-        Wide environmental (full space, context, atmosphere)
-        Medium scene (table-level, counter, patio)
-        Detail close-up (texture, ingredient, material)
-
-        2. SUBJECT: The hero of the image — food, drink, storefront, product, or scene. Use real details from your research (e.g. "a ceramic bowl of poutine on a weathered wood table"). No legible faces.
-        If the scene includes signage or business name, handle it through one of these strategies — vary based on what hasn't appeared recently:
-
-        (a) Wide angle with shallow depth of field — sign present but softly bokeh'd in background
-        (b) Angle displacement — shoot from side or below so signage falls partially out of frame
-        (c) Foreground occlusion — a plant, glass, or object partially blocks the sign organically
-
-        Never default to extreme close-up solely to avoid text.
-        If people are included, they are secondary to the environment — they animate the space but never dominate the frame. Their presence should feel like a candid moment, not a staged shot.
-        3. SETTING: Reference the real physical space of this business — patio with lake view, brick interior, waterfront neighbourhood, etc. Use what you found in Step 1.
-        4. LIGHTING: Exact light quality for ${currentMonth} at ${currentTime} in ${location} — golden hour, overcast spring light, warm indoor lamp, etc.
-        5. MOOD: The emotion the viewer should feel, extracted from the post's tone.
-        6. PEOPLE: No front-facing figures, no legible faces. People are allowed and encouraged when natural to the scene — shown from behind, side, above, or as partial figures (hands, torso, silhouette). Figures should appear candid and in motion, never posed or stock-photo.
-        7. TECHNICAL: End every prompt with exactly this —
-        "Shot on Sony A7, f/1.8, shallow depth of field, 1:1 square crop, no watermark, no legible text."
-        8. IMPERFECTION: Include one small, realistic imperfection natural to the business type — examples: a condensation ring on a wooden table, a scuff on a worn brick wall, a stray leaf on a patio stone, steam caught mid-curl above a cup, a slightly uneven stack of plates. This detail should feel incidental, never the focus. Its purpose is to strip the "AI-perfect" sheen and make the image feel like a real moment that was caught, not constructed.
-        RULES:
-
-        STRICT RULES:
-        1. INTEGRATE COLORS: Use the brand colors naturally (e.g., "navy-blue napkins").
-        2. MATCH THE MOOD: Ensure the atmosphere (lighting/vibe) matches the brand description.
-        3. COMPOSITION: Choose a varied angle (Wide, Medium, or Detail).
-        4. LOCALITY: Reference the ${location} context.
-        5. TECHNICAL: End with "Shot on Sony A7, f/1.8, shallow depth of field, 1:1 square crop, no watermark, no legible text."
-        6. OUTPUT ONLY THE FINAL PROMPT. No labels, no preamble.
-
-        CRITICAL: Always start the final image prompt with "*Final H Generation*".
+        [OUTPUT_RULES]:
+        - NO labels, NO preamble, NO commentary.
+        - OUTPUT ONLY the final prompt.
+        - CRITICAL: Always start the final image prompt with "*Final H Generation*".
       `;
   
       let visualDescription = "";

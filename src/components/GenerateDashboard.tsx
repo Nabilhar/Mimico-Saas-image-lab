@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"; 
 import { VOICES } from "@/lib/constants";
+import { getFramework } from "@/lib/frameworks";
 import { useUser } from "@clerk/nextjs";
 import { createEvents, EventAttributes } from 'ics';
 import PostActions from "@/components/PostActions";
@@ -201,6 +202,9 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
     }
 
     try {
+
+      const framework  = getFramework(category, postType, voice);
+
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -216,7 +220,9 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
            eventType,    // "news", "event", "update"
            customDetails, // The raw text from the box
            business_id: user?.id,
-           history: history
+           history: history,
+           framework: framework ,
+           currentMonth: new Date().toLocaleString("en", { month: "long" })
         }),
       });
 
@@ -258,7 +264,11 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
               business_name,
               business_id: user?.id,
               location,
-              niche 
+              niche,
+              voice,          // Added
+              framework: framework ,    // Added
+              postType,
+              currentMonth: new Date().toLocaleString("en", { month: "long" }),
             }),
           }).catch(err => console.error("Background Architect failed:", err));
         } else {

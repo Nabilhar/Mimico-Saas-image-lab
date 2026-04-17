@@ -1,3 +1,5 @@
+// generate/route
+
 import { 
   GoogleGenerativeAI, 
   HarmCategory, 
@@ -6,7 +8,8 @@ import {
 import { NextResponse } from "next/server";
 import Groq from "groq-sdk"; // <-- NEW
 import { createClient } from '@supabase/supabase-js';
-import { getFramework, BUSINESS_ARCHETYPES } from "@/lib/frameworks";
+import { getFramework, BUSINESS_ARCHETYPES,getFrameworkTipsStructure  } from "@/lib/frameworks";
+import { SEASONALITY_CONTEXT, SEASONAL_NICHE_NARRATIVE, getSeason } from "@/lib/frameworks";
 import { getBrandIdentity, discoverAndSaveBrandIdentity } from "@/lib/brandDiscovery";
 import { ColorTheme, BusinessVisuals } from '@/lib/constants';
 
@@ -135,6 +138,7 @@ Rules:
       `;
   }
 };
+
 // ─────────────────────────────────────────────
 // 4. PROMPT BUILDER
 // Owner-perspective persona + <research> tags + seasonality
@@ -166,26 +170,19 @@ function buildPrompt(
     ? rawInstruction(postType === "Promotion / offer" ? promoType : eventType, customDetails, location)
     : rawInstruction;
 
-    const currentTime = new Date().toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit', 
-      hour12: true 
-    });
+  const currentTime = new Date().toLocaleTimeString('en-US', { 
+    hour: 'numeric', 
+    minute: '2-digit', 
+    hour12: true 
+  });
 
-      // --- THE MOOD ANCHOR & SEMANTIC NUANCE ---
-    const moodInstruction = colorTheme?.description 
-        ? `BRAND MOOD & COLOR PSYCHOLOGY:
-        The brand's visual identity is defined by: "${colorTheme.description}".
-        CRITICAL: Use this palette to guide your vocabulary. If the palette is sophisticated/dark, use elegant and authoritative language. If the palette is bright/vibrant, use energetic and punchy language. Let the "vibe" of the colors shape your word choice.`
-        : `BRAND MOOD:
-        The brand is currently in a neutral/natural phase. Use welcoming, authentic, and community-focused language that feels organic and unpretentious.`;
-
-    const visualDetails = businessVisuals 
-          ? `BRAND VISUAL DETAILS:
-        - Logo: ${businessVisuals.logoColors}
-        - Storefront: ${businessVisuals.storefrontColors}
-        - Interior: ${businessVisuals.interiorColors}`
-          : "";
+// Handle the "New User" scenario: If no colors exist, tell the AI to derive them from research.
+  const visualIdentity = `
+  [VISUALS]:
+  Palette: ${colorTheme?.primary || "Auto-detect"}, ${colorTheme?.secondary || "Auto-detect"}, ${colorTheme?.accent || "Auto-detect"}
+  Mood: ${colorTheme?.description || "Derive from research/niche"}
+  Details: Logo(${businessVisuals?.logoColors || "N/A"}), Store(${businessVisuals?.storefrontColors || "N/A"}), Interior(${businessVisuals?.interiorColors || "N/A"})
+  RULE: Match vocabulary to this palette. If "Auto-detect" is listed, use your <research> findings to determine the brand's visual vibe and match your language to it.`;
 
 
     // --- SAFE ACCESS / FALLBACK LOGIC ---
@@ -200,97 +197,50 @@ function buildPrompt(
     const storefrontCol = businessVisuals?.storefrontColors || "Not provided";
     const interiorCol = businessVisuals?.interiorColors || "Not provided";
 
+    const season = getSeason(month); // Ensure you have a getSeason helper
+    const seasonalNicheGuidance = SEASONAL_NICHE_NARRATIVE[season]?.[niche] || "";
+  
+
     return `
 
-                  FIRST INSTRUCTION — READ BEFORE ANYTHING ELSE:
-                  The previous 3 posts all opened with a variation of "the bike-to-work buzz." 
-                  This theme is now retired. Do not use it. Do not reference bikes, commuting, 
-                  or cycling as your opening angle in this post.
+[SYSTEM]: Marketing Master. Persona: Owner of "${business_name}" (${niche}) in ${location}.
+[TONE]: ${VOICE_PROMPTS[voice] || "Warm, community-first."}
+[CONTEXT]: Time: ${currentTime} | Month: ${month} | Season: ${season}
+[SEASONAL_GUIDE]: ${seasonalNicheGuidance}
+${visualIdentity}
 
-    CRITICAL OUTPUT RULE: You must output ONLY the following, in this exact order:
-        1. One <research> tag with keywords only
-        2. You MUST use the provided Search tool to find REAL, CURRENT weather and CURRENT landmarks and trends for ${location} before writing.
-        3. The social media post body
-        4. Hashtags
+[ANTI_PATTERNS]:
+- DO NOT use these opening themes/phrases: ${recentHistory || "None"}
+- BANNED: "bike-to-work buzz", "I'm always", "After a day", "Juggling", "Finding a", "stone's throw", "pour our hearts", "passionate about", "quality service", "reach out", "don't hesitate", "pride ourselves", "No cap", "Slay", "It's giving", "That's a wrap", "Are you tired of", "Don't miss out", "Limited time offer"
 
-        Do NOT output any reasoning, analysis, word counts, self-checks, or commentary. 
-        If you need to think, do it silently before writing. Your visible output starts with <research>.
+[TASK]:
+1. <research>Neighborhood Name: Landmark 1, Landmark 2, Local Trend 1, Local Trend 2</research> (Max 20 words)
+2. Social Media Post
+3. 3-4 Hashtags (Neighborhood, Niche, Broad)
 
-    You are a Marketing Master. Put yourself in the shoes of the owner of "${business_name}", a local ${niche} at ${location}.
+[POST_SPECIFICS]:
+Type: ${postType}
+Framework: ${framework} (${FRAMEWORK_PROMPTS[framework] || FRAMEWORK_PROMPTS["PAS"]})
+Instruction: ${postSpecificInstructions}
+${postType === "5 Tips" ? `Structure: ${getFrameworkTipsStructure(framework as any)}` : ""}
 
-    BRAND VISUAL IDENTITY:
-    - Brand Color Palette: ${colorDesc}
-    - Primary Color: ${primaryCol}
-    - Secondary Color: ${secondaryCol}
-    - Accent Color: ${accentCol}
-    - Logo Colors: ${logoCol}
-    - Storefront Colors: ${storefrontCol}
-    - Interior Colors: ${interiorCol}
+[CONSTRAINTS]:
+- Length: 130-180 words.
+- POV: 1st Person ("I"/"We").
+- Hook: First sentence must include a natural local keyword/trend.
+- Formatting: Short paragraphs, double spacing between them.
+- CTA: Low-pressure, physically possible for a ${niche}. No "Book now" or "Link in bio" unless naturally woven.
+- No labels (e.g., no "Problem:", "Tip 1:").
+- No commentary, word counts, or self-evaluation.
+- Max 3 emojis.
 
-    You are writing this post yourself at time :${currentTime} / season : ${month} — in your own voice, from your own experience on the ground.
-    You know your neighbours, your street, and your regulars by name.
-    Write as someone who genuinely lives and works in this community, not as a marketer.
-    One rule: even though you write from your own perspective, every sentence must still serve the reader — not just talk about yourself.
-    
-      OPENING LINE — HARD RULE:
-    The following openings were used in the last 3 posts. 
-    You are FORBIDDEN from starting with any of these themes, phrases, or angles:
-    ${recentHistory || "No previous posts."}
+[OUTPUT_ORDER]: 
+1. <research> tag (contain keywords only)
+2. The signal: [FINAL_POST_START]
+3. The social media post body
+4. Hashtags
+(Do not include any other symbols, arrows, or labels)
 
-    Do not reframe or rephrase these — start from a completely different observation, 
-    moment, or angle. If the previous posts mentioned bikes, start with something 
-    you see inside the shop. If they mentioned the weather, start with a customer 
-    interaction. If they mentioned the street, start with a smell or sound instead.
-    
-    TASK:
-    1. Open with a <research> tag containing: neighbourhood name + up to 3 landmark names + up to 2 current local trends. Keywords only, no sentences, max 20 words total.
-       Format exactly like this: <research>Neighborhood Name: Landmark 1, Landmark 2, Local Trend 1, Local Trend 2</research>
-    
-    2. Immediately after the closing </research> tag, write the social media post. Nothing between the tag and the post.
-    
-    ${moodInstruction}
-
-    ${visualDetails}
-
-    SEASONALITY:
-    It is currently ${month}. Let the season shape the mood — weather, what locals are doing, what feels timely right now.
-    
-    POST TYPE:
-    ${postSpecificInstructions}
-    
-    BRAND VOICE — ${voice}:
-    ${VOICE_PROMPTS[voice] || "Warm, conversational, and community-first."}
-    
-    FRAMEWORK — apply ${framework} exactly:
-    ${FRAMEWORK_PROMPTS[framework] || FRAMEWORK_PROMPTS["PAS"]}
-
-
-    
-    POST RULES:
-    - 130-180 words in the post body (the <research> block does not count)
-    - Write in first person ("I" or "We")
-    - First sentence must contain a natural-language search keyword (e.g. "local trend 1 in the neighborhood") — as a statement, not a hashtag
-    - Short paragraphs, one blank line between each
-    - The call to action must feel like the natural next thought in the story, not a closing instruction
-      Wrong: ["Book your table tonight — link in bio."]
-      Right: [A natural, low-pressure invitation that fits a ${niche}. e.g., "The chair is open if you need a refresh," or "We'll be here with the kettle on if you want to talk shop."]
-    - NO PARROTING: Do not use any phrases found in the "Right/Wrong" examples of this prompt. Those are for structural guidance only. Use your own words to achieve the same feeling.
-    - End with 3-4 hashtags on their own line: neighbourhood first, then niche, then broad
-    - Max 3 emojis, only if they add meaning
-    - Never stop mid-sentence. If you near your output limit, close the sentence and jump to hashtags.
-    - Do NOT label sections ("Before:", "Problem:", "Attention:" etc.)
-    - Do NOT output word counts, commentary, or self-evaluation
-    
-    BANNED PHRASES:
-    "the bike-to-work buzz." , "I'm always", "After a day", "Juggling", "Finding a", "a stone's throw", "pour our hearts", "passionate about", "quality service", "reach out", "don't hesitate", "we pride ourselves"
-
-    CRITICAL CTA LOGIC:
-    - You are a ${niche}. Your invitation must be physically possible for this business.
-    - NO RESTAURANT TALK: Do not mention tables, reservations, menus, or dining unless you are a food business.
-    - If a Barbershop: Invite them to stop by for a refresh, a fresh cut, or to grab a chair.
-    - If a Plumber: Reference getting things flowing or a quick house call.
-    - If a Florist: Reference grabbing a bouquet or adding some color to the room.
-    - THE FINAL WORD: Use the unique voice of a local owner, not the example text from the prompt.
 `;}
 
 // ─────────────────────────────────────────────
@@ -456,13 +406,13 @@ try {
 
     // 2. LOGGING LOGIC (For your terminal eyes only)
     if (rawResponse.includes("<research>")) {
-      console.log("\x1b[32m%s\x1b[0m", "--- [M8V RESEARCH LOG] ---");
+      console.log("\x1b[32m%s\x1b[0m", "--- [MIMICO RESEARCH LOG] ---");
       const researchMatch = rawResponse.match(/<research>([\s\S]*?)<\/research>/);
       console.log(researchMatch ? researchMatch[1].trim() : "Research tags found but content empty.");
     }
 
     if (rawResponse.includes("`")) {
-      console.log("\x1b[36m%s\x1b[0m", "--- [M8V THINKING LOG] ---");
+      console.log("\x1b[36m%s\x1b[0m", "--- [MIMICO THINKING LOG] ---");
       // Grabs the content inside the backticks/thinking block
       const thinkingMatch = rawResponse.match(/`([\s\S]*?)`/); 
       console.log(thinkingMatch ? thinkingMatch[1].trim() : "Thinking block found but empty.");
@@ -470,7 +420,7 @@ try {
   }
   
   else {
-    console.log("--- M8V ENGINE: ROUTING TO GOOGLE GEMINI ---");
+    console.log("--- MIMICO ENGINE: ROUTING TO GOOGLE GEMINI ---");
     // We'll keep the v1 stable config here
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }, { apiVersion: 'v1beta' });
     const result = await model.generateContent({
@@ -512,21 +462,21 @@ try {
 // 2. SMART CLEANUP (Handles the <research> tags for BOTH models)
 let content = rawResponse;
 
-// 3. THE CLEANUP PIPELINE
+const signal = "[FINAL_POST_START]";
 
-// Step A: Remove the "Thinking" or "Research" blocks
-// This looks for <research>...</research> OR anything inside backticks `...`
-if (content.includes("</research>")) {
-  content = content.split("</research>").pop()?.trim() || content;
-} else if (content.includes("`")) {
-  // If it uses backticks for thinking, take the part AFTER the last backtick
-  const parts = content.split("`").filter(p => p.trim().length > 10);
-  content = parts[parts.length - 1].trim(); 
-} else if (content.includes("<|think|>")) {
-  // Handle specific model thinking tags
-  content = content.split("<|think|>").pop()?.trim() || content;
+if (content.includes(signal)) {
+  // Find the last occurrence of the signal to skip all "thinking" versions
+  const lastSignalIndex = content.lastIndexOf(signal);
+  content = content.substring(lastSignalIndex + signal.length).trim();
+} else {
+  // FALLBACK: If the AI missed the signal, use the old split method
+  if (content.includes("</research>")) {
+    content = content.split("</research>").pop()?.trim() || content;
+  } else if (content.includes("`")) {
+    const parts = content.split("`").filter(p => p.trim().length > 10);
+    content = parts[parts.length - 1].trim();
+  }
 }
-
 // Step B: Nuclear Scrub
 // This removes any stray tags, citations, or metadata
 content = content
