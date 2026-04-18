@@ -55,7 +55,7 @@ export default function PostActions({ content, imageUrl, onDelete, showCopy = fa
       console.warn("Clipboard fallback to download:", err);
       const link = document.createElement('a');
       link.href = imageUrl;
-      link.download = `mimico-post-${Date.now()}.png`;
+      link.download = `shoreline-post-${Date.now()}.png`;
       link.click();
       setImageCopied(true);
       setTimeout(() => setImageCopied(false), 2000);
@@ -66,7 +66,7 @@ export default function PostActions({ content, imageUrl, onDelete, showCopy = fa
     if (!imageUrl) return;
     const link = document.createElement('a');
     link.href = imageUrl;
-    link.download = `mimico-post-${Date.now()}.png`;
+    link.download = `shoreline-post-${Date.now()}.png`;
     link.target = '_blank';
     document.body.appendChild(link);
     link.click();
@@ -77,7 +77,7 @@ export default function PostActions({ content, imageUrl, onDelete, showCopy = fa
     if (!imageUrl) {
       if (navigator.share) {
         try {
-          await navigator.share({ title: 'Mimico Social Content', text: content });
+          await navigator.share({ title: 'Shoreline Social Content', text: content });
         } catch {
           await navigator.clipboard.writeText(content);
         }

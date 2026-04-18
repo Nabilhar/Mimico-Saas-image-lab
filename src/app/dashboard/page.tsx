@@ -120,7 +120,7 @@ export default function DashboardPage() {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-slate-50">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-cyan-600 border-t-transparent"></div>
-        <p className="mt-4 font-bold text-slate-600 uppercase tracking-widest text-[10px]">Mimico Studio Securing Session...</p>
+        <p className="mt-4 font-bold text-slate-600 uppercase tracking-widest text-[10px]">Shoreline Studio Securing Session...</p>
       </div>
     );
   }
@@ -174,7 +174,7 @@ export default function DashboardPage() {
                 />
               ) : (
                 <div className="p-10 text-center border-2 border-dashed rounded-xl mx-4 sm:mx-0">
-                  <p className="text-slate-500">Loading your Mimico profile...</p>
+                  <p className="text-slate-500">Loading your Shoreline profile...</p>
                 </div> 
               )}
               {loading && <p className="text-xs text-cyan-600 animate-pulse mt-2">Updating...</p>}

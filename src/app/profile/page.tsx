@@ -53,7 +53,7 @@ export default function ProfilePage() {
 
         } else {
           // If no data in DB, check localStorage
-          const saved = localStorage.getItem("mimico_business_profile");
+          const saved = localStorage.getItem("shoreline_business_profile");
           if (saved) {
             const localData = JSON.parse(saved);
             setbusiness_name(localData.business_name || "");
@@ -106,9 +106,9 @@ export default function ProfilePage() {
       if (error) throw error;
   
       // Now this won't throw an error because profileData is defined above
-      localStorage.setItem("mimico_business_profile", JSON.stringify(profileData));
+      localStorage.setItem("shoreline_business_profile", JSON.stringify(profileData));
   
-      alert("SUCCESS! Mimico Profile Saved.");
+      alert("SUCCESS! Shoreline Profile Saved.");
       router.push("/dashboard");
   
     } catch (err: any) {
@@ -139,7 +139,7 @@ export default function ProfilePage() {
           <header className="mb-8 border-b border-slate-100 pb-6">
             <p className="text-[10px] font-black uppercase tracking-widest text-cyan-800 bg-cyan-50 px-2 py-1 rounded inline-block mb-2">Step 1: Setup</p>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">Your Business Profile</h1>
-            <p className="text-slate-500 text-sm mt-2">Tell the Mimico AI about your business to generate more accurate, local content.</p>
+            <p className="text-slate-500 text-sm mt-2">Tell the Shoreline AI about your business to generate more accurate, local content.</p>
           </header>
           
           <form onSubmit={handleSave} className="space-y-6">

@@ -4,13 +4,14 @@ import { ClerkProvider } from '@clerk/nextjs';
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import { MobileNav } from "@/components/MobileNav";
+import { Analytics } from '@vercel/analytics/react';
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Harbourline Studio — Social posts for Mimico businesses",
+  title: "Shoreline Studio — Social posts for Toronto businesses",
   description:
-    "AI-assisted social content for dentists, realtors, and cafés in Mimico, Toronto.",
+    "AI-assisted social content for dentists, realtors, and cafés in Toronto.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -38,6 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               },
             }}
           />
+          <Analytics /> 
         </body>
       </html>
     </ClerkProvider>

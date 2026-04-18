@@ -20,9 +20,9 @@ import { CheckCircle, Zap, MapPin, Users, History, Watch, Timer, Radio, Clock, }
 import toast from "react-hot-toast";
 
 /**
- * Landing Page for Mimico Content AI
+ * Landing Page for Shoreline Content AI
  * Integrated with Next.js, Clerk Auth, and Supabase
- * Design: Clean, professional, Mimico Blue primary (#2563eb)
+ * Design: Clean, professional, Shoreline Blue primary (#2563eb)
  */
 
 export default function Home() {
@@ -94,7 +94,7 @@ export default function Home() {
               </h1>
               <p className="text-lg text-slate-600 mb-8 max-w-2xl">
               You're running a business—you don't have time to be a content creator too.
-              Harbourline Studio creates posts at the moment you share them, not weeks in advance. <br />
+              Shoreline Studio creates posts at the moment you share them, not weeks in advance. <br />
               Using real-time local context like weather,
               neighbourhood events, and what's happening around your business. <br />
               Get 15 free credits to try it out — No Credit Card Required.
@@ -130,7 +130,7 @@ export default function Home() {
         <section className="bg-white py-16 md:py-24 border-b">
           <div className="mx-auto max-w-6xl px-6 sm:px-6">
             <div className="mb-12">
-              <h2 className="text-3xl font-bold mb-4 text-slate-900">Why Harbourline Studio is Different</h2>
+              <h2 className="text-3xl font-bold mb-4 text-slate-900">Why Shoreline Studio is Different</h2>
               <p className="text-slate-600 max-w-2xl">
                 We built the only content AI engine designed specifically for local businesses.<br />
                 Here is what sets us apart.
@@ -168,7 +168,7 @@ export default function Home() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-slate-600">
-                  Set your tone once. Harbourline Studio writes like you—so every post sounds consistent, without you writing anything.
+                  Set your tone once. Shoreline Studio writes like you—so every post sounds consistent, without you writing anything.
                   </p>
                 </CardContent>
               </Card>
@@ -267,7 +267,7 @@ export default function Home() {
             <div className="mb-12">
               <h2 className="text-3xl font-bold mb-4 text-slate-900">See It In Action</h2>
               <p className="text-slate-600 max-w-2xl">
-                Here is what Mimico generated for different business types in Toronto.
+                Here is what Shoreline Studio generated for different business types in Toronto.
               </p>
             </div>
             <Tabs defaultValue="restaurant" className="w-full">
@@ -323,7 +323,7 @@ If your evening is still wide open, we have a table with your name on it.
                   {/* ── IMAGE (Real AI Post Preview) ── */}
                   <div className="w-full aspect-square bg-slate-100 border-y border-slate-100 shrink-0">
                     <img 
-                      src="/images/mimico-dinner-preview.jpg" 
+                      src="/images/Shoreline-dinner-preview.jpg" 
                       alt="AI Post Preview" 
                       className="w-full h-full object-cover"
                     />
@@ -383,7 +383,7 @@ Since the evenings are getting longer and the patio at Danforth is calling, I fi
                   {/* ── IMAGE (Real AI Post Preview) ── */}
                   <div className="w-full aspect-square bg-slate-100 border-y border-slate-100 shrink-0">
                     <img 
-                      src="/images/mimico-barbershop-preview.jpg" 
+                      src="/images/Shoreline-barbershop-preview.jpg" 
                       alt="AI Post Preview" 
                       className="w-full h-full object-cover"
                     />
@@ -447,7 +447,7 @@ We are in the office if you want to sit down and look at the actual numbers.
                   {/* ── IMAGE (Real AI Post Preview) ── */}
                   <div className="w-full aspect-square bg-slate-100 border-y border-slate-100 shrink-0">
                     <img 
-                      src="/images/mimico-realtor-preview.jpg" 
+                      src="/images/Shoreline-realtor-preview.jpg" 
                       alt="AI Post Preview" 
                       className="w-full h-full object-cover"
                     />
@@ -482,7 +482,7 @@ We are in the office if you want to sit down and look at the actual numbers.
             <div className="max-w-2xl">
               <h2 className="text-3xl font-bold mb-4 text-slate-900">Join the Beta Waitlist</h2>
               <p className="text-slate-600 mb-8">
-                Be among the first to access Mimico when we launch. Secure your early adopter discount and get direct access to our team for feedback and support.
+                Be among the first to access Shoreline Studio when we launch. Secure your early adopter discount and get direct access to our team for feedback and support.
               </p>
               <form onSubmit={handleWaitlistSignup} className="space-y-4 bg-white p-6 rounded-lg border border-slate-200">
                 <div>

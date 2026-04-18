@@ -1,4 +1,4 @@
-export const HISTORY_STORAGE_KEY = "harbourline-post-history";
+export const HISTORY_STORAGE_KEY = "Shoreline-post-history";
 export const MAX_HISTORY_ITEMS = 50;
 
 export type HistoryEntry = {
@@ -24,11 +24,11 @@ function isHistoryEntry(x: unknown): x is HistoryEntry {
 
 export function loadHistory(): HistoryEntry[] {
   if (typeof window === "undefined") return [];
-  const saved = localStorage.getItem("mimico_post_history");
+  const saved = localStorage.getItem("shoreline_post_history");
   return saved ? JSON.parse(saved) : [];
 }
 
 export function persistHistory(history: HistoryEntry[]) {
   if (typeof window === "undefined") return;
-  localStorage.setItem("mimico_post_history", JSON.stringify(history));
+  localStorage.setItem("shoreline_post_history", JSON.stringify(history));
 }

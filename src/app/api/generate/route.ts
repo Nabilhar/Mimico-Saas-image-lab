@@ -364,7 +364,7 @@ try {
     const chatCompletion = await groq.chat.completions.create({
       messages: [{ 
           role: "system", 
-          // FIX: No more hardcoded Mimico. We tell it exactly where it is.
+          // FIX: No more hardcoded shoreline. We tell it exactly where it is.
           content: `You are a helpful assistant. Follow the user's instructions precisely and output only what is requested. Do not add explanations, preambles, or commentary.` 
         },
         { role: "user", content: finalPrompt }],
@@ -406,13 +406,13 @@ try {
 
     // 2. LOGGING LOGIC (For your terminal eyes only)
     if (rawResponse.includes("<research>")) {
-      console.log("\x1b[32m%s\x1b[0m", "--- [MIMICO RESEARCH LOG] ---");
+      console.log("\x1b[32m%s\x1b[0m", "--- [Shoreline RESEARCH LOG] ---");
       const researchMatch = rawResponse.match(/<research>([\s\S]*?)<\/research>/);
       console.log(researchMatch ? researchMatch[1].trim() : "Research tags found but content empty.");
     }
 
     if (rawResponse.includes("`")) {
-      console.log("\x1b[36m%s\x1b[0m", "--- [MIMICO THINKING LOG] ---");
+      console.log("\x1b[36m%s\x1b[0m", "--- [Shoreline THINKING LOG] ---");
       // Grabs the content inside the backticks/thinking block
       const thinkingMatch = rawResponse.match(/`([\s\S]*?)`/); 
       console.log(thinkingMatch ? thinkingMatch[1].trim() : "Thinking block found but empty.");
@@ -420,7 +420,7 @@ try {
   }
   
   else {
-    console.log("--- MIMICO ENGINE: ROUTING TO GOOGLE GEMINI ---");
+    console.log("--- Shoreline ENGINE: ROUTING TO GOOGLE GEMINI ---");
     // We'll keep the v1 stable config here
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }, { apiVersion: 'v1beta' });
     const result = await model.generateContent({

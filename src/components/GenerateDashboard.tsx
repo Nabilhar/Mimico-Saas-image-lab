@@ -157,13 +157,13 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
         return {
           start: [year, month, day, hours, minutes],
           duration: { minutes: 10 },
-          title: `🎨 Mimico Studio: Time to Create!`,
-          description: `Open your Mimico Studio dashboard to generate and share today's local post for ${business_name}.\n\nGo to: ${window.location.origin}/dashboard`,
+          title: `🎨 Shoreline Studio: Time to Create!`,
+          description: `Open your Shoreline Studio dashboard to generate and share today's local post for ${business_name}.\n\nGo to: ${window.location.origin}/dashboard`,
           location: `${location}`,
           url: window.location.origin,
           status: 'CONFIRMED',
           busyStatus: 'FREE',
-          categories: ['Marketing (Harbourline Studio)'],
+          categories: ['Marketing (Shoreline Studio)'],
           ...(recurrenceRule && { recurrenceRule })
         };
       });
@@ -179,7 +179,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.setAttribute('download', 'Harbourline-post-alert.ics');
+        link.setAttribute('download', 'Shoreline-post-alert.ics');
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -380,7 +380,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
        <div className="bg-white p-6 sm:rounded-3xl sm:border border-slate-100 sm:shadow-sm">
           {/* ... all your input fields and buttons ... */}
         <div className="hidden sm:flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Mimico Content AI</h2>
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Shoreline Content AI</h2>
           <span className="text-[10px] font-black text-cyan-600 bg-cyan-50 px-2 py-1 rounded uppercase tracking-widest">AI Engine</span>
         </div>
         
@@ -555,7 +555,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
           }`}
         >
           {loading 
-            ? "Analyzing Mimico Data..." 
+            ? "Analyzing Shoreline Data..." 
             : userCredits < 1 
               ? "Fill up credits" // UPDATE: Custom message
               : "Generate Local Post (1 Credit)"}
@@ -653,7 +653,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
                   </div>
                   
                   <h3 className="text-lg font-bold text-slate-800 animate-pulse">
-                    Painting your Mimico scene...
+                    Painting your Shoreline scene...
                   </h3>
                   <p className="text-[11px] text-slate-500 mt-2 max-w-[240px] font-medium leading-tight">
                     Applying local textures and lighting to match your brand voice.
@@ -741,7 +741,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
       <div className="space-y-1.5">
         {[
           "Open the Files app on your iPhone",
-          'Find "Harbourline-post-alert.ics" in Downloads',
+          'Find "Shoreline-post-alert.ics" in Downloads',
           "Tap the file — it opens Calendar automatically",
           'Tap "Add All Events" to confirm'
         ].map((step, i) => (
@@ -763,7 +763,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
         <div className="space-y-1.5">
           {[
             "Pull down your notification bar",
-            'Tap the downloaded "Harbourline-post-alert.ics"',
+            'Tap the downloaded "Shoreline-post-alert.ics"',
             "Choose Google Calendar or your calendar app",
             'Tap "Import" to add the events'
           ].map((step, i) => (
