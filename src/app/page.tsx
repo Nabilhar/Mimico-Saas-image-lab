@@ -92,13 +92,14 @@ export default function Home() {
               <h1 className="text-4xl md:text-5xl font-bold leading-tight mb-6 text-slate-900">
                 Your neighbours should be hearing from you—right now.
               </h1>
-              <p className="text-lg text-slate-600 mb-8 max-w-2xl">
-              You're running a business—you don't have time to be a content creator too.
-              Shoreline Studio creates posts at the moment you share them, not weeks in advance. <br />
-              Using real-time local context like weather,
-              neighbourhood events, and what's happening around your business. <br />
-              Get 15 free credits to try it out — No Credit Card Required.
-              </p>
+              <div className="text-lg text-slate-600 mb-8 max-w-2xl space-y-1">
+                <p>You're running a business—you don't have time to be a content creator too.</p>
+                <p>Shoreline Studio creates posts at the moment you share them, not weeks in advance.</p>
+                <p>Using real-time local context like weather,</p>
+                <p>neighbourhood events, and what's happening around your business.</p>
+                <p className="font-medium text-slate-700">Get 15 free credits to try it out — No Credit Card Required.</p>
+              </div>
+
               <div className="flex flex-col sm:flex-row gap-4 items-start">
                 <Show when="signed-out">
                  <div className="flex flex-col gap-2 w-full sm:w-auto">
@@ -131,10 +132,10 @@ export default function Home() {
           <div className="mx-auto max-w-6xl px-6 sm:px-6">
             <div className="mb-12">
               <h2 className="text-3xl font-bold mb-4 text-slate-900">Why Shoreline Studio is Different</h2>
-              <p className="text-slate-600 max-w-2xl">
-                We built the only content AI engine designed specifically for local businesses.<br />
-                Here is what sets us apart.
-              </p>
+              <div className="text-slate-600 max-w-2xl space-y-2">
+                <p>We built the only content AI engine designed specifically for local businesses.</p>
+                <p>Here is what sets us apart</p>
+              </div>
             </div>
             <div className="grid md:grid-cols-3 gap-8">
               <Card className="border-slate-200">
@@ -197,9 +198,9 @@ export default function Home() {
                 <p className="text-slate-600 mb-3 flex-grow">
                   Select your industry (e.g.,Restaurant, Real Estate, Chiropractor,Dentist, Café, Salon). We immediately understand your customers, tone, and what matters in your neighbourhood.
                 </p>
-                <div className="pt-3 border-t border-slate-200">
-                  <p className="text-sm font-semibold text-cyan-800">✓ Built specifically for local businesses<br /> 
-                  ✓ Preset Niches</p>
+                <div className="flex flex-col gap-1 text-sm font-semibold text-cyan-800">
+                  <span>✓ Built specifically for local businesses</span>
+                  <span>✓ Preset Niches</span>
                 </div>
               </div>
 
@@ -215,9 +216,9 @@ export default function Home() {
                 Every post is generated using live local signals—weather, landmarks, neighbourhood events, seasonal context, and time of day—so your content reflects what's happening right now.
                 You can also include Promotions/Offers, and the AI naturally weaves them into the post in a way that feels organic.
                 </p>
-                <div className="pt-3 border-t border-slate-200">
-                  <p className="text-sm font-semibold text-cyan-800">✓ Always context-aware<br /> 
-                  ✓ Naturally includes your offers when relevant</p>
+                <div className="flex flex-col gap-1 text-sm font-semibold text-cyan-800">
+                  <span>✓ Always context-aware</span>
+                  <span>✓ Naturally includes your offers when relevant</span>
                 </div>
               </div>
 
@@ -232,12 +233,13 @@ export default function Home() {
                 <p className="text-slate-600 mb-3 flex-grow">
                 Create a post for this exact moment and share it in seconds with your prefered social media platform. No templates. No batching. No pre-written content.
                 </p>
-                <div className="pt-3 border-t border-slate-200">
-                  <p className="text-sm font-semibold text-cyan-800">✓ Ready in 30 seconds<br /> 
-                  ✓ Built for real-time posting</p>
+                <div className="flex flex-col gap-1 text-sm font-semibold text-cyan-800">
+                  <span>✓ Ready in 30 seconds</span>
+                  <span>✓ Built for real-time posting</span>
                 </div>
               </div>
             </div>
+          </div>
 
             {/* Habit Builder Callout */}
             <div className="bg-white rounded-lg border border-slate-200 p-6 md:p-8">
@@ -247,19 +249,28 @@ export default function Home() {
                 </div>
                 <div>
                   <h4 className="text-lg font-semibold text-slate-900 mb-2">Time-to-Post-Alerts (Timing Reminders)</h4>
-                  <p className="text-slate-600">
-                    We notify you when it's time to post—based on your custom schedule.<br />
-                    Tap the alert, generate a fresh post  and share it while it still matters..<br />
-                    <br />
-                    ✓ No content stored in advance<br />
-                    ✓ No forgotten posting days<br />
-                    ✓ Always create posts in the moment<br />
-                  </p>
+                  
+                  <div>
+                    <div className="text-slate-600 mb-4 space-y-2">
+                      <p>We notify you when it's time to post—based on your custom schedule.</p>
+                      <p>Tap the alert, generate a fresh post and share it while it still matters.</p>
+                    </div>
+                    <div className="flex flex-col gap-2 text-sm font-semibold text-cyan-800">
+                      <div className="flex items-center gap-2">
+                        <span>✓</span> <span>No content stored in advance</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span>✓</span> <span>No forgotten posting days</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span>✓</span> <span>Always create posts in the moment</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
 
         {/* Examples Section */}
         <section id="examples" className="bg-white py-16 md:py-24 border-b">
@@ -554,50 +565,52 @@ We are in the office if you want to sit down and look at the actual numbers.
           <div className="mx-auto max-w-6xl px-6 sm:px-6">
             <div className="mb-12">
               <h2 className="text-3xl font-bold mb-4 text-slate-900">Simple, Transparent Pricing</h2>
-              <p className="text-slate-600 max-w-2xl">
-                Pay only for what you use. No subscriptions, no minimums.<br /> 
-                Beta pricing coming soon — join the waitlist to lock in your early rate.
-              </p>
-            </div>
-            <div className="grid md:grid-cols-2 gap-8 max-w-2xl">
-              <Card className="border-slate-200">
-                <CardHeader>
-                  <CardTitle>Text Post</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-3xl font-bold mb-2">1 <span className="text-lg text-slate-600">credit</span></p>
-                  <p className="text-slate-600 text-sm mb-4">
-                    5 tips, myth-busting, community spotlights, and more.
-                  </p>
-                  <p className="text-xs text-slate-500">Caption + hashtags</p>
-                </CardContent>
-              </Card>
-              <Card className="border-slate-200">
-                <CardHeader>
-                  <CardTitle>AI Image</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-3xl font-bold mb-2">2 <span className="text-lg text-slate-600">credits</span></p>
-                  <p className="text-slate-600 text-sm mb-4">
-                    Custom AI-generated image to match your post.
-                  </p>
-                  <p className="text-xs text-slate-500">Image only</p>
-                </CardContent>
-              </Card>
-              <Card className="border-slate-200 md:col-span-2">
-                <CardHeader>
-                  <CardTitle>Text + AI Image</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-3xl font-bold mb-2">3 <span className="text-lg text-slate-600">credits</span></p>
-                  <p className="text-slate-600 text-sm mb-4">
-                    Complete package: post + custom AI-generated image.
-                  </p>
-                  <p className="text-xs text-slate-500">Most popular • Caption + hashtags + image</p>
-                </CardContent>
-              </Card>
+              <div className="text-slate-600 max-w-2xl space-y-2">
+                <p>Pay only for what you use. No subscriptions, no minimums.</p>
+                <p>Beta pricing coming soon — join the waitlist to lock in your early rate.</p>
             </div>
           </div>
+
+          <div className="grid md:grid-cols-2 gap-8 max-w-2xl">
+            <Card className="border-slate-200">
+              <CardHeader>
+                <CardTitle>Text Post</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold mb-2">1 <span className="text-lg text-slate-600">credit</span></p>
+                <p className="text-slate-600 text-sm mb-4">
+                  5 tips, myth-busting, community spotlights, and more.
+                </p>
+                <p className="text-xs text-slate-500">Caption + hashtags</p>
+              </CardContent>
+            </Card>
+            <Card className="border-slate-200">
+              <CardHeader>
+                <CardTitle>AI Image</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold mb-2">2 <span className="text-lg text-slate-600">credits</span></p>
+                <p className="text-slate-600 text-sm mb-4">
+                  Custom AI-generated image to match your post.
+                </p>
+                <p className="text-xs text-slate-500">Image only</p>
+              </CardContent>
+            </Card>
+            <Card className="border-slate-200 md:col-span-2">
+              <CardHeader>
+                <CardTitle>Text + AI Image</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold mb-2">3 <span className="text-lg text-slate-600">credits</span></p>
+                <p className="text-slate-600 text-sm mb-4">
+                  Complete package: post + custom AI-generated image.
+                </p>
+                <p className="text-xs text-slate-500">Most popular • Caption + hashtags + image</p>
+              </CardContent>
+            </Card>
+          </div>
+          </div>
+
         </section>
 
         {/* Early Adopter Tiers */}

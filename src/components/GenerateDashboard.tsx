@@ -618,12 +618,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
         {/* 2. Caption Area (Before the Image) */}
         <div className="p-5 text-slate-700 leading-relaxed">
           <p className="text-slate-800 whitespace-pre-wrap text-[15px] leading-relaxed font-normal">
-            {content.split('\n').map((line, i) => (
-              <span key={i}>
-                {line}
-                <br />
-              </span>
-            ))}
+            {content}
           </p>
         </div>
 

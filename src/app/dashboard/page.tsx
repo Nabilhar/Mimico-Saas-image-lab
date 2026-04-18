@@ -136,6 +136,9 @@ export default function DashboardPage() {
             <p className="text-slate-500">
               Managing drafts for <span className="text-cyan-800 font-semibold">{businessData?.business_name || "Your Business"}</span>
             </p>
+            <p className="text-slate-400 text-xs">
+              Located at: <span className="text-cyan-700 font-medium">{businessData?.location || "Your location"}</span>
+            </p>
             <div className="mt-2 flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg w-fit">
               
               <div 
