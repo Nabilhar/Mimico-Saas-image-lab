@@ -139,6 +139,66 @@ Rules:
   }
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPER: THE PROVIDER CALLER
+// This encapsulates the actual API calls so the router can call them in a loop
+// ─────────────────────────────────────────────────────────────────────────────
+async function callAIProvider(provider: string, finalPrompt: string, currentTime: string, location: string) {
+  if (provider === "groq") {
+    console.log("--- M8V ENGINE: ROUTING TO GROQ (LLAMA 3) ---");
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [
+        { role: "system", content: `You are a helpful assistant. Follow the user's instructions precisely and output only what is requested.` },
+        { role: "user", content: finalPrompt }
+      ],
+      model: "compound-beta-mini",
+      temperature: 0.7,
+    });
+    return chatCompletion.choices[0]?.message?.content || "";
+  } 
+  
+  if (provider === "gemma") {
+    console.log("--- M8V ENGINE: ROUTING TO GEMMA 4 (26B MoE) ---");
+    const tools = [{ googleSearch: {} }] as any;
+    const model = genAI.getGenerativeModel({ 
+      model: "gemma-4-26b-a4b-it", 
+      tools: tools 
+    }, { apiVersion: 'v1beta' });
+
+    const result = await model.generateContent({
+      contents: [{ 
+        role: "user", 
+        parts: [{ text: `Use your <research> thinking mode to check for current ${location} news or events including the current weather at ${currentTime} before writing: \n\n ${finalPrompt}` }] 
+      }],
+      generationConfig: {
+        temperature: 1.0,
+        maxOutputTokens: 6000,
+        thinkingConfig: { includeThoughts: true, thinkingLevel: "medium" }, // Optimized to medium for speed
+      } as any,
+    });
+    return result.response.text();
+  } 
+  
+  if (provider === "gemini") {
+    console.log("--- M8V ENGINE: ROUTING TO GOOGLE GEMINI ---");
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }, { apiVersion: 'v1beta' });
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: finalPrompt }] }],
+      generationConfig: { temperature: 0.8, maxOutputTokens: 1000 },
+      safetySettings: [
+        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+      ],
+    });
+    return result.response.text();
+  }
+  
+  throw new Error(`Unsupported provider: ${provider}`);
+}
+
+
 // ─────────────────────────────────────────────
 // 4. PROMPT BUILDER
 // Owner-perspective persona + <research> tags + seasonality
@@ -266,7 +326,8 @@ export async function POST(req: Request) {
       promoType = "discount",    // <-- Make sure these are here
       eventType = "event",    // <-- Make sure these are here
       customDetails = "", // <-- Make sure these are here
-      history
+      history,
+      provider: requestedProvider
 
     } = body;
 
@@ -346,120 +407,56 @@ export async function POST(req: Request) {
     }
     // ─────────────────────────────────────────────────────
 
-    const tools = [{ googleSearch: {},},] as any;
-
     const currentTime = new Date().toLocaleTimeString('en-US', { 
       hour: 'numeric', 
       minute: '2-digit', 
       hour12: true 
     });
 
-// 1. READ THE HIDDEN SWITCH (Check your .env.local for AI_PROVIDER)
-const provider = process.env.AI_PROVIDER || "gemini"; 
-let rawResponse = "";
-
-try {
-  if (provider === "groq") {
-    console.log("--- M8V ENGINE: ROUTING TO GROQ (LLAMA 3) ---");
-    const chatCompletion = await groq.chat.completions.create({
-      messages: [{ 
-          role: "system", 
-          // FIX: No more hardcoded shoreline. We tell it exactly where it is.
-          content: `You are a helpful assistant. Follow the user's instructions precisely and output only what is requested. Do not add explanations, preambles, or commentary.` 
-        },
-        { role: "user", content: finalPrompt }],
-      model: "compound-beta-mini", // ← single web search, 3x faster than compound-beta
-      temperature: 0.7,
-      
-    });
-
-    rawResponse = chatCompletion.choices[0]?.message?.content || "";
-  } 
-  else if (provider === "gemma") {
-    console.log("--- M8V ENGINE: ROUTING TO GEMMA 4 (26B MoE) ---");
-    
-    // Using the 26B Mixture-of-Experts model for the best balance of speed and logic
-    const model = genAI.getGenerativeModel({ 
-      model: "gemma-4-26b-a4b-it", 
-      tools: tools // <--- INTEGRATING THE RESEARCH TOOL
-    }, { apiVersion: 'v1beta' });
-
-    const result = await model.generateContent({
-      contents: [{ 
-        role: "user", 
-        parts: [{ 
-          text: `Use your <research> thinking mode to check for current ${location} news or events including the current weather at ${currentTime} before writing: \n\n ${finalPrompt}` 
-        }] 
-      }],
-      generationConfig: {
-        temperature: 1.0, // Higher temp is better for the 'thinking' phase
-        maxOutputTokens: 6000,
-        thinkingConfig: {
-        includeThoughts: true,
-        thinkingLevel: "high" 
-        },
-      } as any,
-    });
-    
-    rawResponse = result.response.text();
-
-
-    // 2. LOGGING LOGIC (For your terminal eyes only)
-    if (rawResponse.includes("<research>")) {
-      console.log("\x1b[32m%s\x1b[0m", "--- [Shoreline RESEARCH LOG] ---");
-      const researchMatch = rawResponse.match(/<research>([\s\S]*?)<\/research>/);
-      console.log(researchMatch ? researchMatch[1].trim() : "Research tags found but content empty.");
-    }
-
-    if (rawResponse.includes("`")) {
-      console.log("\x1b[36m%s\x1b[0m", "--- [Shoreline THINKING LOG] ---");
-      // Grabs the content inside the backticks/thinking block
-      const thinkingMatch = rawResponse.match(/`([\s\S]*?)`/); 
-      console.log(thinkingMatch ? thinkingMatch[1].trim() : "Thinking block found but empty.");
-    }
-  }
   
-  else {
-    console.log("--- Shoreline ENGINE: ROUTING TO GOOGLE GEMINI ---");
-    // We'll keep the v1 stable config here
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }, { apiVersion: 'v1beta' });
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: finalPrompt }] }],
-      generationConfig: {
-        temperature: 0.8,
-        maxOutputTokens: 1000,
-      },
-      // ADD THEM BACK HERE:
-      safetySettings: [
-        { 
-          category: HarmCategory.HARM_CATEGORY_HARASSMENT, 
-          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE 
-        },
-        { 
-          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, 
-          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE 
-        },
-        { 
-          category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, 
-          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE 
-        },
-        { 
-          category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, 
-          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE 
-        },
-      ],
-    });
-    
-    rawResponse = result.response.text();
-  }
-} catch (apiError: any) {
-  // If the chosen API fails (like your 404 or a rate limit), we catch it here
-  console.error(`--- ${provider.toUpperCase()} API ERROR ---`, apiError.message);
-  throw apiError; // Send it to the main catch block below
-}
+    // ─────────────────────────────────────────────────────────────────────────────
+    // THE SMART ROUTER LOGIC
+    // ─────────────────────────────────────────────────────────────────────────────
+    const engineMode = process.env.AI_ENGINE_MODE || "FALLBACK"; 
+    let rawResponse = "";
 
+    if (engineMode === "TOGGLE") {
+      // DEVELOPMENT MODE: Use exactly what the user toggled in the UI
+      const providerToUse = requestedProvider || process.env.AI_PROVIDER || "gemini";
+      console.log(`--- M8V MODE: TOGGLE [Using ${providerToUse}] ---`);
+      rawResponse = await callAIProvider(providerToUse, finalPrompt, currentTime, location);
+    } else {
+      // LAB/PRODUCTION MODE: Robust Fallback Chain
+      console.log("--- M8V MODE: FALLBACK CHAIN ---");
+      const fallbackChain = ["groq", "gemini", "gemma"];
+      let success = false;
+
+      for (const provider of fallbackChain) {
+        try {
+          rawResponse = await callAIProvider(provider, finalPrompt, currentTime, location);
+          if (rawResponse) {
+            success = true;
+            break; // Stop the loop as soon as we get a successful response
+          }
+        } catch (e) {
+          console.warn(`Provider ${provider} failed. Moving to next in chain...`);
+        }
+      }
+
+      if (!success) throw new Error("All AI providers failed to generate content.");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // LOGGING & CLEANUP
+    // ─────────────────────────────────────────────────────────────────────────────
+if (rawResponse.includes("<research>")) {
+  console.log("\x1b[32m%s\x1b[0m", "--- [Shoreline RESEARCH LOG] ---");
+  const researchMatch = rawResponse.match(/<research>([\s\S]*?)<\/research>/);
+  console.log(researchMatch ? researchMatch[1].trim() : "Empty research.");
+}
 // 2. SMART CLEANUP (Handles the <research> tags for BOTH models)
 // 2. SMART CLEANUP (Handles the <research> tags for BOTH models)
+
 let content = rawResponse;
 
 const signal = "[FINAL_POST_START]";
