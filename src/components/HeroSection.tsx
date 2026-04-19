@@ -17,15 +17,19 @@ export function HeroSection() {
   };
 
   return (
-    <section 
-      className="relative overflow-hidden min-h-screen flex items-center"
-      style={{
-        backgroundImage: `url('https://d2xsxph8kpxj0f.cloudfront.net/310519663472552182/iH7rHfPDawhK5LC5ERFxuc/toronto-waterfront-hero-SyAYkYnyuvqKd3e2YEkXZo.webp')`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundAttachment: 'fixed'
-      }}
-    >
+    <section className="relative overflow-hidden min-h-screen flex items-center">
+      {/* Background image as <img> — fixes iOS Safari flickering caused by backgroundAttachment: fixed */}
+      <img
+        src="https://d2xsxph8kpxj0f.cloudfront.net/310519663472552182/iH7rHfPDawhK5LC5ERFxuc/toronto-waterfront-hero-SyAYkYnyuvqKd3e2YEkXZo.webp"
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 w-full h-full object-cover"
+        style={{
+          // On mobile, shift right so CN Tower (left-center of image) stays visible
+          objectPosition: "30% center",
+        }}
+      />
+ 
       {/* Dark overlay for text contrast */}
       <div className="absolute inset-0 bg-black/45" />
       
