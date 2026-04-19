@@ -17,7 +17,12 @@ const tools = [  { googleSearch: {},}, ] as any;
 
 const gemmaModel = genAI.getGenerativeModel({ 
   model: "gemma-4-26b-a4b-it", 
-  tools: tools // <--- INTEGRATING THE RESEARCH TOOL
+  tools: tools, // <--- INTEGRATING THE RESEARCH TOOL
+  generationConfig: {
+    temperature: 0.7,
+    maxOutputTokens: 2000, // The image prompt is only 5 sentences; don't let it ramble
+    topP: 0.95,
+  }
 }, { apiVersion: 'v1beta' });
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY! });

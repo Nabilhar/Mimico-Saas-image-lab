@@ -175,6 +175,7 @@ export async function POST(req: Request) {
         const response: any = await hf.textToImage({
           model: "black-forest-labs/FLUX.1-schnell",
           inputs: cleanDescription,
+          provider: "hf-inference",
           parameters: {
             num_inference_steps: 4,
           },

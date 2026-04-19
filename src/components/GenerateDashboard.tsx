@@ -91,7 +91,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
           .eq('business_id', user.id)
           .order('created_at', { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
 
         if (lastPost) {
           setContent(lastPost.content);
