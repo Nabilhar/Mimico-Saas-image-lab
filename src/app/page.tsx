@@ -20,6 +20,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CheckCircle, Zap, MapPin, Users, History, Watch, Timer, Radio, Clock, } from "lucide-react";
 import toast from "react-hot-toast";
+import { HeroSection } from "@/components/HeroSection";
+import { GallerySection } from "@/components/GallerySection";
 
 /**
  * Landing Page for Shoreline Content AI
@@ -85,49 +87,7 @@ export default function Home() {
       <SiteHeader />
       <main className="w-full">
         {/* Hero Section */}
-        <section className="relative overflow-hidden bg-white border-b">
-          <div className="mx-auto max-w-6xl px-6 sm:px-6 py-20 md:py-32">
-            <div className="max-w-3xl">
-              <div className="inline-block mb-4 px-3 py-1 bg-slate-50 rounded-full border border-blue-100">
-                <span className="text-xs font-semibold text-cyan-800">FOR TORONTO SMALL BUSINESSES</span>
-              </div>
-              <h1 className="text-4xl md:text-5xl font-bold leading-tight mb-6 text-slate-900">
-                Your neighbours should be hearing from you—right now.
-              </h1>
-              <div className="text-lg text-slate-600 mb-8 max-w-2xl space-y-1">
-                <p>You're running a business—you don't have time to be a content creator too.</p>
-                <p>Shoreline Studio creates posts at the moment you share them, not weeks in advance.</p>
-                <p>Using real-time local context like weather,</p>
-                <p>neighbourhood events, and what's happening around your business.</p>
-                <p className="font-medium text-slate-700">Get 15 free credits to try it out — No Credit Card Required.</p>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-4 items-start">
-                <Show when="signed-out">
-                 <div className="flex flex-col gap-2 w-full sm:w-auto">
-                  <SignUpButton mode="modal" fallbackRedirectUrl="/dashboard">
-                    <button className="rounded-lg bg-cyan-800 hover:bg-cyan-900 px-8 py-3 text-lg font-semibold text-white shadow-lg transition">
-                      Claim Your Free 15 Credits
-                    </button>
-                  </SignUpButton>
-                  <span className="text-sm text-slate-500 font-medium px-1">
-                    * No Credit Card Required
-                  </span>
-                </div>
-                  
-                </Show>
-                <Show when="signed-in">
-                  <Link href="/dashboard" className="rounded-lg bg-cyan-800 hover:bg-cyan-900 px-8 py-3 text-lg font-semibold text-white shadow-lg transition text-center">
-                    Open Your Dashboard
-                  </Link>
-                </Show>
-                <button onClick={scrollToExamples} className="rounded-lg border border-slate-300 hover:border-slate-400 px-8 py-3 text-lg font-semibold text-slate-900 transition">
-                  See Examples
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
+        <HeroSection />
 
         {/* Features Section */}
         <section className="bg-white py-16 md:py-24 border-b">
@@ -359,7 +319,7 @@ If your evening is still wide open, we have a table with your name on it.
                 </div>
                 
                 {/* Credit indicator to maintain the "value" message from the original landing page */}
-                <p className="text-center text-xs text-slate-400 mt-2">2 Credits • Ready to post</p>
+                <p className="text-center text-xs text-slate-400 mt-2">3 Credits • Ready to post</p>
               </TabsContent>
 
               <TabsContent value="salon" className="space-y-4">
@@ -419,7 +379,7 @@ Since the evenings are getting longer and the patio at Danforth is calling, I fi
                 </div>
                 
                 {/* Credit indicator to maintain the "value" message from the original landing page */}
-                <p className="text-center text-xs text-slate-400 mt-2">2 Credits • Ready to post</p>
+                <p className="text-center text-xs text-slate-400 mt-2">3 Credits • Ready to post</p>
               </TabsContent>
 
 
@@ -483,14 +443,17 @@ We are in the office if you want to sit down and look at the actual numbers.
                 </div>
                 
                 {/* Credit indicator to maintain the "value" message from the original landing page */}
-                <p className="text-center text-xs text-slate-400 mt-2">2 Credits • Ready to post</p>
+                <p className="text-center text-xs text-slate-400 mt-2">3 Credits • Ready to post</p>
               </TabsContent>
             </Tabs>
           </div>
         </section>
 
-                {/* CTA Section */}
-                <section id="cta" className="bg-slate-50 py-16 md:py-24 border-b">
+        {/* Gallery Section */}
+        <GallerySection />
+
+        {/* CTA Section */}
+        <section id="cta" className="bg-slate-50 py-16 md:py-24 border-b">
           <div className="mx-auto max-w-6xl px-6 sm:px-6">
             <div className="max-w-2xl">
               <h2 className="text-3xl font-bold mb-4 text-slate-900">Join the Beta Waitlist</h2>
