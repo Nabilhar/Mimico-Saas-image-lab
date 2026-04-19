@@ -2,7 +2,8 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
 let supabaseInstance: SupabaseClient | null = null;
 
-export const createClerksupabase = (getToken: () => Promise<string | null>) => {
+// We update the type of getToken to accept the Clerk options object
+export const createClerksupabase = (getToken: (options?: { template: string }) => Promise<string | null>) => {
   if (supabaseInstance) return supabaseInstance;
 
   supabaseInstance = createClient(
@@ -11,9 +12,14 @@ export const createClerksupabase = (getToken: () => Promise<string | null>) => {
     {
       global: {
         fetch: async (url, options = {}) => {
-          // By calling clToken here, we always get the LATEST token
-          // from the Clerk session, even if the client was created hours ago.
-          const clToken = await getToken();
+          // 1. Determine which template to use based on the environment variable
+          const env = process.env.NEXT_PUBLIC_APP_ENV || 'production';
+          const template = env === 'development' ? 'supabase-dev' : 'supabase-prod';
+
+          // 2. Pass the template name into getToken so Clerk gives us the correct "passport"
+          const clToken = await getToken({ template });
+          console.log('Token received:', clToken ? 'YES' : 'NULL'); 
+          
           const headers = new Headers(options.headers);
           if (clToken) {
             headers.set('Authorization', `Bearer ${clToken}`);

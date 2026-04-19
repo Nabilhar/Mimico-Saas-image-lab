@@ -17,8 +17,13 @@ export default function ProfilePage() {
   // Initialize the supabase client
 
   const supabase = useMemo(() => {
-    // We pass a stable reference to getToken
-    return createClerksupabase(() => getToken({ template: 'supabase' }));
+    // Updated - dynamic template based on environment
+    const template = process.env.NEXT_PUBLIC_APP_ENV === 'development' 
+    ? 'supabase-dev' 
+    : 'supabase-prod';
+
+    console.log('Using template:', template);
+    return createClerksupabase(() => getToken({ template}));
   }, []); // Empty dependency array!
 
   // STATES DEFINITIONS
@@ -42,6 +47,8 @@ export default function ProfilePage() {
           .eq('id', user.id)
           .maybeSingle();
     
+        console.log('Profile fetch:', { data, error });
+
         if (data) {
           // If we found data in Supabase, use it
           setbusiness_name(data.business_name || "");

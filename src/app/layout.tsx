@@ -16,10 +16,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider>
-      <html lang="en">
+    
+    <html lang="en">
       <body className={`${inter.className} antialiased overflow-x-hidden`}>
-        <main className="min-h-screen pb-24 sm:pb-10 w-full relative">
+      <ClerkProvider>
+          <main className="min-h-screen pb-24 sm:pb-10 w-full relative">
             {children}
           </main>
           <MobileNav />
@@ -40,8 +41,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             }}
           />
           <Analytics /> 
-        </body>
-      </html>
-    </ClerkProvider>
+        </ClerkProvider>
+      </body>
+    </html>
   );
 }

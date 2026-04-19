@@ -8,8 +8,6 @@ import { useRouter } from "next/navigation";
 import PostActions from "@/components/PostActions";
 import { SavedImage } from "@/components/SavedImage";
 
-  let supabaseClient: any;
-
 export interface Post { id: string; content: string; created_at: string; business_id: string; image_url?: string; }
 interface BusinessData { business_name: string; location: string; category: string; niche: string; voice: string; credits: number; history: Post[]; }
 
@@ -26,8 +24,11 @@ export default function DashboardPage() {
 
   // 1. Get Token
   const supabase = useMemo(() => {
-    // We pass a stable reference to getToken
-    return createClerksupabase(() => getToken({ template: 'supabase' }));
+    // Updated - dynamic template based on environment
+    const template = process.env.NEXT_PUBLIC_APP_ENV === 'development'
+    ? 'supabase-dev'
+    : 'supabase-prod';
+    return createClerksupabase(() => getToken({ template}));
   }, []); // Empty dependency array!
 
   // 3. Load Data

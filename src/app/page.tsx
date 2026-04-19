@@ -1,3 +1,5 @@
+
+// Landing Page
 "use client";
 
 import { Show, SignUpButton } from "@clerk/nextjs";
