@@ -25,10 +25,8 @@ export default function DashboardPage() {
   // 1. Get Token
   const supabase = useMemo(() => {
     // Updated - dynamic template based on environment
-    const template = process.env.NEXT_PUBLIC_APP_ENV === 'development'
-    ? 'supabase-dev'
-    : 'supabase-prod';
-    return createClerksupabase(() => getToken({ template}));
+
+    return createClerksupabase(() => getToken({ template: 'supabase-dev' }));
   }, []); // Empty dependency array!
 
   // 3. Load Data

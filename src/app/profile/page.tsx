@@ -18,12 +18,8 @@ export default function ProfilePage() {
 
   const supabase = useMemo(() => {
     // Updated - dynamic template based on environment
-    const template = process.env.NEXT_PUBLIC_APP_ENV === 'development' 
-    ? 'supabase-dev' 
-    : 'supabase-prod';
 
-    console.log('Using template:', template);
-    return createClerksupabase(() => getToken({ template}));
+    return createClerksupabase(() => getToken({ template: 'supabase-dev' }));
   }, []); // Empty dependency array!
 
   // STATES DEFINITIONS
