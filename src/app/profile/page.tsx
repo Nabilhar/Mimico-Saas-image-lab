@@ -16,10 +16,13 @@ export default function ProfilePage() {
 
   // Initialize the supabase client
 
+  // Updated - dynamic template based on environment
+  const template = process.env.NEXT_PUBLIC_APP_ENV === 'development'
+  ? 'supabase-dev'
+  : 'supabase-prod';
   const supabase = useMemo(() => {
-    // Updated - dynamic template based on environment
-
-    return createClerksupabase(() => getToken({ template: 'supabase-dev' }));
+    
+    return createClerksupabase(() => getToken({ template}));
   }, []); // Empty dependency array!
 
   // STATES DEFINITIONS
