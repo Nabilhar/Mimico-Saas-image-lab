@@ -11,10 +11,6 @@ import { SignUpButton, Show } from "@clerk/nextjs";
 import Link from "next/link";
 
 export function HeroSection() {
-  const scrollToExamples = () => {
-    const element = document.getElementById("examples");
-    element?.scrollIntoView({ behavior: "smooth" });
-  };
 
   return (
     <section className="relative overflow-hidden min-h-screen flex items-center">
@@ -47,8 +43,8 @@ export function HeroSection() {
           <div className="text-lg text-white/90 mb-8 max-w-2xl space-y-1">
             <p>You're running a business—you don't have time to be a content creator too.</p>
             <p>Shoreline Studio creates posts at the moment you share them, not weeks in advance.</p>
-            <p>Using real-time local context like weather,</p>
-            <p>neighbourhood events, and what's happening around your business.</p>
+            <p>Using real-time local context like landmarks, weather,
+               neighbourhood events, and what's happening around your business.</p>
             <p className="font-medium text-white">Get 15 free credits to try it out — No Credit Card Required.</p>
           </div>
 
@@ -72,12 +68,6 @@ export function HeroSection() {
               </Link>
             </Show>
             
-            <button 
-              onClick={scrollToExamples} 
-              className="rounded-lg border-2 border-white hover:bg-white/10 px-8 py-3 text-lg font-semibold text-white transition"
-            >
-              See Examples
-            </button>
           </div>
         </div>
       </div>

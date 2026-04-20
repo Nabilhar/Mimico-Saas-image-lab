@@ -89,6 +89,9 @@ export default function Home() {
         {/* Hero Section */}
         <HeroSection />
 
+        {/* Gallery Section */}
+        <GallerySection />
+
         {/* Features Section */}
         <section className="bg-white py-16 md:py-24 border-b">
           <div className="mx-auto max-w-6xl px-6 sm:px-6">
@@ -236,7 +239,7 @@ export default function Home() {
         </section>
 
         {/* Examples Section */}
-        <section id="examples" className="bg-white py-16 md:py-24 border-b">
+        {/* <section id="examples" className="bg-white py-16 md:py-24 border-b">
           <div className="mx-auto max-w-6xl px-6 sm:px-6">
             <div className="mb-12">
               <h2 className="text-3xl font-bold mb-4 text-slate-900">See It In Action</h2>
@@ -253,7 +256,7 @@ export default function Home() {
 
               <TabsContent value="restaurant" className="space-y-4">
                 <div className="flex flex-col bg-white sm:rounded-2xl border border-slate-100 shadow-sm overflow-hidden max-w-md mx-auto">
-                  {/* ── HEADER ── */}
+   
                   <div className="p-4 flex items-center gap-3 text-left">
                     <div className="w-10 h-10 rounded-full bg-cyan-800 flex items-center justify-center text-white font-bold text-lg shrink-0">
                       T
@@ -269,7 +272,7 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* ── CAPTION ── */}
+             
                   <div className="px-4 pb-3 text-left">
                     <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">
 {`When you're searching for the best dinner in Mimico, the options can be overwhelming.
@@ -294,7 +297,7 @@ If your evening is still wide open, we have a table with your name on it.
                     </p>
                   </div>
 
-                  {/* ── IMAGE (Real AI Post Preview) ── */}
+              
                   <div className="w-full aspect-square bg-slate-100 border-y border-slate-100 shrink-0">
                     <img 
                       src="/images/Shoreline-dinner-preview.jpg" 
@@ -303,7 +306,7 @@ If your evening is still wide open, we have a table with your name on it.
                     />
                   </div>
 
-                  {/* ── NON-CLICKABLE ACTIONS FOOTER ── */}
+                 
                   <div className="px-4 py-4 flex justify-between items-center bg-white">
                     <div className="flex gap-2">
                       <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-slate-100 bg-slate-50 text-slate-400 text-xs cursor-default">
@@ -319,13 +322,13 @@ If your evening is still wide open, we have a table with your name on it.
                   </div>
                 </div>
                 
-                {/* Credit indicator to maintain the "value" message from the original landing page */}
+              
                 <p className="text-center text-xs text-slate-400 mt-2">3 Credits • Ready to post</p>
               </TabsContent>
 
               <TabsContent value="salon" className="space-y-4">
                 <div className="flex flex-col bg-white sm:rounded-2xl border border-slate-100 shadow-sm overflow-hidden max-w-md mx-auto">
-                  {/* ── HEADER ── */}
+              
                   <div className="p-4 flex items-center gap-3 text-left">
                     <div className="w-10 h-10 rounded-full bg-cyan-800 flex items-center justify-center text-white font-bold text-lg shrink-0">
                       T
@@ -341,7 +344,7 @@ If your evening is still wide open, we have a table with your name on it.
                     </div>
                   </div>
 
-                  {/* ── CAPTION ── */}
+           
                   <div className="px-4 pb-3 text-left">
                     <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">
 {`I keep hearing more folks talking about the bike to work buzz on Queen Street, and the spring wind makes my hair a bit rebellious.  
@@ -354,7 +357,7 @@ Since the evenings are getting longer and the patio at Danforth is calling, I fi
                     </p>
                   </div>
 
-                  {/* ── IMAGE (Real AI Post Preview) ── */}
+              
                   <div className="w-full aspect-square bg-slate-100 border-y border-slate-100 shrink-0">
                     <img 
                       src="/images/Shoreline-barbershop-preview.jpg" 
@@ -363,7 +366,7 @@ Since the evenings are getting longer and the patio at Danforth is calling, I fi
                     />
                   </div>
 
-                  {/* ── NON-CLICKABLE ACTIONS FOOTER ── */}
+             
                   <div className="px-4 py-4 flex justify-between items-center bg-white">
                     <div className="flex gap-2">
                       <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-slate-100 bg-slate-50 text-slate-400 text-xs cursor-default">
@@ -379,7 +382,7 @@ Since the evenings are getting longer and the patio at Danforth is calling, I fi
                   </div>
                 </div>
                 
-                {/* Credit indicator to maintain the "value" message from the original landing page */}
+          
                 <p className="text-center text-xs text-slate-400 mt-2">3 Credits • Ready to post</p>
               </TabsContent>
 
@@ -387,7 +390,7 @@ Since the evenings are getting longer and the patio at Danforth is calling, I fi
 
               <TabsContent value="realtor" className="space-y-4">
                 <div className="flex flex-col bg-white sm:rounded-2xl border border-slate-100 shadow-sm overflow-hidden max-w-md mx-auto">
-                  {/* ── HEADER ── */}
+               
                   <div className="p-4 flex items-center gap-3 text-left">
                     <div className="w-10 h-10 rounded-full bg-cyan-800 flex items-center justify-center text-white font-bold text-lg shrink-0">
                       T
@@ -403,7 +406,7 @@ Since the evenings are getting longer and the patio at Danforth is calling, I fi
                     </div>
                   </div>
 
-                  {/* ── CAPTION ── */}
+            
                   <div className="px-4 pb-3 text-left">
                     <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">
 {`Watching prices climb while waiting for interest rate shifts in the Little Italy real estate market creates a nagging sense of missed opportunity that is difficult to shake.
@@ -418,7 +421,7 @@ We are in the office if you want to sit down and look at the actual numbers.
                     </p>
                   </div>
 
-                  {/* ── IMAGE (Real AI Post Preview) ── */}
+          
                   <div className="w-full aspect-square bg-slate-100 border-y border-slate-100 shrink-0">
                     <img 
                       src="/images/Shoreline-realtor-preview.jpg" 
@@ -427,7 +430,7 @@ We are in the office if you want to sit down and look at the actual numbers.
                     />
                   </div>
 
-                  {/* ── NON-CLICKABLE ACTIONS FOOTER ── */}
+          
                   <div className="px-4 py-4 flex justify-between items-center bg-white">
                     <div className="flex gap-2">
                       <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-slate-100 bg-slate-50 text-slate-400 text-xs cursor-default">
@@ -443,15 +446,111 @@ We are in the office if you want to sit down and look at the actual numbers.
                   </div>
                 </div>
                 
-                {/* Credit indicator to maintain the "value" message from the original landing page */}
                 <p className="text-center text-xs text-slate-400 mt-2">3 Credits • Ready to post</p>
               </TabsContent>
             </Tabs>
           </div>
+        </section> */}
+
+        {/* Early Adopter Tiers */}
+        <section className="bg-slate-50 py-16 md:py-24 border-b">
+          <div className="mx-auto max-w-6xl px-6 sm:px-6">
+            <div className="mb-12">
+              <h2 className="text-3xl font-bold mb-4 text-slate-900">Early Adopter Perks</h2>
+              <p className="text-slate-600 max-w-2xl">
+                Join our beta launch and lock your exclusive discounts on your first year of credits.
+              </p>
+            </div>
+            <div className="grid md:grid-cols-2 gap-8 max-w-3xl">
+              <Card className="border-2 border-blue-600 bg-slate-50">
+                <CardHeader>
+                  <div className="flex items-center justify-between mb-2">
+                    <CardTitle>First 50 Signups</CardTitle>
+                    <Zap className="w-5 h-5 text-cyan-800" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold mb-2">50% <span className="text-lg text-slate-600">off</span></p>
+                  <p className="text-slate-600 text-sm">
+                    Get 50% off credit prices for your entire first year.
+                  </p>
+                  <div className="mt-4 pt-4 border-t border-blue-200">
+                    <p className="text-xs text-slate-600">Spots filled: <strong>12 / 50</strong></p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-slate-200">
+                <CardHeader>
+                  <div className="flex items-center justify-between mb-2">
+                    <CardTitle>Next 50 Signups</CardTitle>
+                    <Clock className="w-5 h-5 text-slate-600" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold mb-2">25% <span className="text-lg text-slate-600">off</span></p>
+                  <p className="text-slate-600 text-sm">
+                    Get 25% off credit prices for your entire first year.
+                  </p>
+                  <div className="mt-4 pt-4 border-t border-slate-200">
+                    <p className="text-xs text-slate-600">Spots filled: <strong>0 / 50</strong></p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </section>
 
-        {/* Gallery Section */}
-        <GallerySection />
+        {/* Pricing Section */}
+        <section id="pricing" className="bg-white py-16 md:py-24 border-b">
+          <div className="mx-auto max-w-6xl px-6 sm:px-6">
+            <div className="mb-12">
+              <h2 className="text-3xl font-bold mb-4 text-slate-900">Simple, Transparent Pricing</h2>
+              <div className="text-slate-600 max-w-2xl space-y-2">
+                <p>Pay only for what you use. No subscriptions, no minimums.</p>
+                <p>Beta pricing coming soon — join the waitlist to lock in your early rate.</p>
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8 max-w-2xl">
+            <Card className="border-slate-200">
+              <CardHeader>
+                <CardTitle>Text Post</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold mb-2">1 <span className="text-lg text-slate-600">credit</span></p>
+                <p className="text-slate-600 text-sm mb-4">
+                  5 tips, myth-busting, community spotlights, and more.
+                </p>
+                <p className="text-xs text-slate-500">Caption + hashtags</p>
+              </CardContent>
+            </Card>
+            <Card className="border-slate-200">
+              <CardHeader>
+                <CardTitle>AI Image</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold mb-2">2 <span className="text-lg text-slate-600">credits</span></p>
+                <p className="text-slate-600 text-sm mb-4">
+                  Custom AI-generated image to match your post.
+                </p>
+                <p className="text-xs text-slate-500">Image only</p>
+              </CardContent>
+            </Card>
+            <Card className="border-slate-200 md:col-span-2">
+              <CardHeader>
+                <CardTitle>Text + AI Image</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold mb-2">3 <span className="text-lg text-slate-600">credits</span></p>
+                <p className="text-slate-600 text-sm mb-4">
+                  Complete package: post + custom AI-generated image.
+                </p>
+                <p className="text-xs text-slate-500">Most popular • Caption + hashtags + image</p>
+              </CardContent>
+            </Card>
+          </div>
+          </div>
+        </section>
 
         {/* CTA Section */}
         <section id="cta" className="bg-slate-50 py-16 md:py-24 border-b">
@@ -522,107 +621,6 @@ We are in the office if you want to sit down and look at the actual numbers.
                   </div>
                 </div>
               )}
-            </div>
-          </div>
-        </section>
-
-        {/* Pricing Section */}
-        <section id="pricing" className="bg-white py-16 md:py-24 border-b">
-          <div className="mx-auto max-w-6xl px-6 sm:px-6">
-            <div className="mb-12">
-              <h2 className="text-3xl font-bold mb-4 text-slate-900">Simple, Transparent Pricing</h2>
-              <div className="text-slate-600 max-w-2xl space-y-2">
-                <p>Pay only for what you use. No subscriptions, no minimums.</p>
-                <p>Beta pricing coming soon — join the waitlist to lock in your early rate.</p>
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-8 max-w-2xl">
-            <Card className="border-slate-200">
-              <CardHeader>
-                <CardTitle>Text Post</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold mb-2">1 <span className="text-lg text-slate-600">credit</span></p>
-                <p className="text-slate-600 text-sm mb-4">
-                  5 tips, myth-busting, community spotlights, and more.
-                </p>
-                <p className="text-xs text-slate-500">Caption + hashtags</p>
-              </CardContent>
-            </Card>
-            <Card className="border-slate-200">
-              <CardHeader>
-                <CardTitle>AI Image</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold mb-2">2 <span className="text-lg text-slate-600">credits</span></p>
-                <p className="text-slate-600 text-sm mb-4">
-                  Custom AI-generated image to match your post.
-                </p>
-                <p className="text-xs text-slate-500">Image only</p>
-              </CardContent>
-            </Card>
-            <Card className="border-slate-200 md:col-span-2">
-              <CardHeader>
-                <CardTitle>Text + AI Image</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold mb-2">3 <span className="text-lg text-slate-600">credits</span></p>
-                <p className="text-slate-600 text-sm mb-4">
-                  Complete package: post + custom AI-generated image.
-                </p>
-                <p className="text-xs text-slate-500">Most popular • Caption + hashtags + image</p>
-              </CardContent>
-            </Card>
-          </div>
-          </div>
-
-        </section>
-
-        {/* Early Adopter Tiers */}
-        <section className="bg-slate-50 py-16 md:py-24 border-b">
-          <div className="mx-auto max-w-6xl px-6 sm:px-6">
-            <div className="mb-12">
-              <h2 className="text-3xl font-bold mb-4 text-slate-900">Early Adopter Perks</h2>
-              <p className="text-slate-600 max-w-2xl">
-                Join our beta and get exclusive discounts on your first year of credits.
-              </p>
-            </div>
-            <div className="grid md:grid-cols-2 gap-8 max-w-3xl">
-              <Card className="border-2 border-blue-600 bg-slate-50">
-                <CardHeader>
-                  <div className="flex items-center justify-between mb-2">
-                    <CardTitle>First 50 Signups</CardTitle>
-                    <Zap className="w-5 h-5 text-cyan-800" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-3xl font-bold mb-2">50% <span className="text-lg text-slate-600">off</span></p>
-                  <p className="text-slate-600 text-sm">
-                    Get 50% off credit prices for your entire first year.
-                  </p>
-                  <div className="mt-4 pt-4 border-t border-blue-200">
-                    <p className="text-xs text-slate-600">Spots filled: <strong>12 / 50</strong></p>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="border-slate-200">
-                <CardHeader>
-                  <div className="flex items-center justify-between mb-2">
-                    <CardTitle>Next 50 Signups</CardTitle>
-                    <Clock className="w-5 h-5 text-slate-600" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-3xl font-bold mb-2">25% <span className="text-lg text-slate-600">off</span></p>
-                  <p className="text-slate-600 text-sm">
-                    Get 25% off credit prices for your entire first year.
-                  </p>
-                  <div className="mt-4 pt-4 border-t border-slate-200">
-                    <p className="text-xs text-slate-600">Spots filled: <strong>0 / 50</strong></p>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           </div>
         </section>
