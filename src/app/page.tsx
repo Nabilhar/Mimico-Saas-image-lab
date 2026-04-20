@@ -139,8 +139,8 @@ export default function Home() {
           </div>
         </section>
 
-                {/* How It Works Section */}
-                <section className="bg-slate-50 py-16 md:py-24 border-b">
+        {/* How It Works Section */}
+        <section className="bg-slate-50 py-16 md:py-24 border-b">
           <div className="mx-auto max-w-6xl px-6 sm:px-6">
             <div className="mb-12">
               <h2 className="text-3xl font-bold mb-4 text-slate-900">How It Works</h2>
@@ -201,7 +201,7 @@ export default function Home() {
                 </div>
               </div>
             </div>
-          </div>
+
 
             {/* Habit Builder Callout */}
             <div className="bg-white rounded-lg border border-slate-200 p-6 md:p-8">
@@ -232,7 +232,8 @@ export default function Home() {
                 </div>
               </div>
             </div>
-          </section>
+          </div>  
+        </section>
 
         {/* Examples Section */}
         <section id="examples" className="bg-white py-16 md:py-24 border-b">
