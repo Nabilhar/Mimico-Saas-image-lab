@@ -114,9 +114,11 @@ If you’re planning a quick visit before the weekend rush, the chair is ready a
 
 By 7 am the kitchen hums with the sizzle of garlic, the bright orange of roasted peppers, and the warm glow of our gold‑trimmed spice rack as I hand‑roll each shawarma.
 
-I whisk a splash of lemon into the yogurt sauce, slice crisp lettuce harvested from the community garden, and sprinkle a pinch of sea‑salt that reminds me of the lake’s breeze. Watching the steam rise, I feel the rhythm of our little dockside crew, all ready to serve friends strolling by the boardwalk.
+I whisk a splash of lemon into the yogurt sauce, slice crisp lettuce harvested from the community garden, and sprinkle a pinch of sea‑salt that reminds me of the lake’s breeze. 
 
-If you’re out for a walk along the waterfront, pop in for a quick taste – we’ll have a fresh roll waiting for you 😊🌊.
+Watching the steam rise, I feel the rhythm of our Queen St shopping district crew, all ready to serve friends strolling by the boardwalk.
+
+If you’re out for a walk along Woodbine Beach, pop in for a quick taste – we’ll have a fresh roll waiting for you 😊🌊.
 
 
 #TheBeaches #EastsideEats #SpringEats`,
