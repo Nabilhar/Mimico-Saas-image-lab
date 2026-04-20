@@ -179,7 +179,7 @@ export default function Home() {
                 </div>
                 <p className="text-slate-600 mb-3 flex-grow">
                 Every post is generated using live local signals—weather, landmarks, neighbourhood events, seasonal context, and time of day—so your content reflects what's happening right now.
-                You can also include Promotions/Offers, and the AI naturally weaves them into the post in a way that feels organic.
+                You can also include Promotions/Offers, and the AI Engin naturally weaves them into the post in a way that feels organic.
                 </p>
                 <div className="flex flex-col gap-1 text-sm font-semibold text-cyan-800">
                   <span>✓ Always context-aware</span>
@@ -458,7 +458,7 @@ We are in the office if you want to sit down and look at the actual numbers.
             <div className="mb-12">
               <h2 className="text-3xl font-bold mb-4 text-slate-900">Early Adopter Perks</h2>
               <p className="text-slate-600 max-w-2xl">
-                Join our beta launch and lock your exclusive discounts on your first year of credits.
+                Join our beta launch and secure your exclusive discounts on your first year of credits.
               </p>
             </div>
             <div className="grid md:grid-cols-2 gap-8 max-w-3xl">

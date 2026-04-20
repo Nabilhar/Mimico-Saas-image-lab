@@ -52,7 +52,9 @@ export function GallerySection() {
 
 Imagine sinking your teeth into our juicy shawarma, the garlic sauce tingling on your palate, and a crisp, fresh side waiting beside it, brightening your day. 🍽️  
 
-That’s why we’re tucking a free side dish with your order until April 30th, just for our neighbors strolling by the Lakeshore and the families gathering after a walk`,
+That’s why we’re tucking a free side dish with your order until April 30th, just for our neighbors strolling by the Lakeshore and the families gathering after a walk
+
+#Waterfront #DowntownCore #BestShawarma `,
       imageUrl: "https://sqevbzmyxfydanimdcwp.supabase.co/storage/v1/object/public/post-images/1776698413755-oxqggb.png",
       timestamp: "APR 18, 2:04 PM",
     },
@@ -102,7 +104,7 @@ If you’re planning a quick visit before the weekend rush, the chair is ready a
 #Vaughan #DentalCare #Smile
 `,
       imageUrl: "https://sqevbzmyxfydanimdcwp.supabase.co/storage/v1/object/public/post-images/1776289007259-cqe5u.png",
-      timestamp: "APR 15, 5:35 AM",
+      timestamp: "APR 15, 10:35 AM",
     },
     {
       id: 6,
