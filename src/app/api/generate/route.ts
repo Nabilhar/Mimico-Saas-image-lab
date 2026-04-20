@@ -145,7 +145,7 @@ Rules:
 // ─────────────────────────────────────────────────────────────────────────────
 async function callAIProvider(provider: string, finalPrompt: string, currentTime: string, location: string) {
   if (provider === "groq") {
-    console.log("--- M8V ENGINE: ROUTING TO GROQ (LLAMA 3) ---");
+    console.log("--- Shoreline ENGINE: ROUTING TO GROQ (LLAMA 3) ---");
     const chatCompletion = await groq.chat.completions.create({
       messages: [
         { role: "system", content: `You are a helpful assistant. Follow the user's instructions precisely and output only what is requested.` },
@@ -158,10 +158,10 @@ async function callAIProvider(provider: string, finalPrompt: string, currentTime
   } 
   
   if (provider === "gemma") {
-    console.log("--- M8V ENGINE: ROUTING TO GEMMA 4 (26B MoE) ---");
+    console.log("--- Shoreline ENGINE: ROUTING TO GEMMA 4 (26B MoE) ---");
     const tools = [{ googleSearch: {} }] as any;
     const model = genAI.getGenerativeModel({ 
-      model: "gemma-4-26b-a4b-it", 
+      model: "models/gemma-4-26b-a4b-it", 
       tools: tools 
     }, { apiVersion: 'v1beta' });
 
@@ -180,18 +180,15 @@ async function callAIProvider(provider: string, finalPrompt: string, currentTime
   } 
   
   if (provider === "gemini") {
-    console.log("--- M8V ENGINE: ROUTING TO GOOGLE GEMINI ---");
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }, { apiVersion: 'v1beta' });
+    console.log("--- Shoreline ENGINE: ROUTING TO GOOGLE GEMINI ---");
+    const model = genAI.getGenerativeModel({ model: "models/gemini-2.5-flash"  }); 
+    
     const result = await model.generateContent({
       contents: [{ role: "user", parts: [{ text: finalPrompt }] }],
       generationConfig: { temperature: 0.8, maxOutputTokens: 1000 },
-      safetySettings: [
-        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-      ],
+      // ... safety settings
     });
+
     return result.response.text();
   }
   
@@ -337,7 +334,7 @@ export async function POST(req: Request) {
     }
 
       // --- ADD THIS DEBUG BLOCK ---
-      console.log("--- M8V MEMORY CHECK ---");
+      console.log("--- Shoreline MEMORY CHECK ---");
       if ( history && history.length > 0) {
         console.log(`Found ${history.length} previous posts.`);
         history.slice(0, 3).forEach((p: any, i: number) => {
@@ -423,11 +420,11 @@ export async function POST(req: Request) {
     if (engineMode === "TOGGLE") {
       // DEVELOPMENT MODE: Use exactly what the user toggled in the UI
       const providerToUse = requestedProvider || process.env.AI_PROVIDER || "gemini";
-      console.log(`--- M8V MODE: TOGGLE [Using ${providerToUse}] ---`);
+      console.log(`--- Shoreline MODE: TOGGLE [Using ${providerToUse}] ---`);
       rawResponse = await callAIProvider(providerToUse, finalPrompt, currentTime, location);
     } else {
       // LAB/PRODUCTION MODE: Robust Fallback Chain
-      console.log("--- M8V MODE: FALLBACK CHAIN ---");
+      console.log("--- Shoreline MODE: FALLBACK CHAIN ---");
       const fallbackChain = ["groq", "gemini", "gemma"];
       let success = false;
 
@@ -498,7 +495,7 @@ console.log("--- GENERATION SUCCESSFUL ---");
 return NextResponse.json({ content, framework });
 
 } catch (error: any) {
-console.error("--- M8V ENGINE CRASH REPORT ---");
+console.error("--- Shoreline ENGINE CRASH REPORT ---");
 console.error("Provider:", process.env.AI_PROVIDER);
 console.error("Error:", error.message);
 

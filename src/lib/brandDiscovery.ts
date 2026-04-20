@@ -46,7 +46,7 @@ export async function discoverAndSaveBrandIdentity(
   
   const tools = [{ googleSearch: {} }] as any;
   const model = genAI.getGenerativeModel({ 
-    model: "gemma-4-26b-a4b-it", 
+    model: "models/gemma-4-26b-a4b-it", 
     tools: tools
   }, { apiVersion: 'v1beta' });
 

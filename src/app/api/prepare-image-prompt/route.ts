@@ -16,11 +16,11 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 const tools = [  { googleSearch: {},}, ] as any;
 
 const gemmaModel = genAI.getGenerativeModel({ 
-  model: "gemma-4-26b-a4b-it", 
-  tools: tools, // <--- INTEGRATING THE RESEARCH TOOL
+  model: "models/gemma-4-31b-it", 
+ // tools: tools, // <--- INTEGRATING THE RESEARCH TOOL
   generationConfig: {
     temperature: 0.7,
-    maxOutputTokens: 2000, // The image prompt is only 5 sentences; don't let it ramble
+    maxOutputTokens: 1000, // The image prompt is only 5 sentences; don't let it ramble
     topP: 0.95,
   }
 }, { apiVersion: 'v1beta' });
@@ -34,7 +34,7 @@ const supabase = createClient(
 
 const ARCHITECT_MODE: "GEMINI" | "GROQ" | "GEMMA" = "GEMMA";
 
-const textModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }, { apiVersion: 'v1beta' });
+const textModel = genAI.getGenerativeModel({ model: "models/gemini-2.5-flash" }, { apiVersion: 'v1beta' });
 
 
 export async function POST(req: Request) {
@@ -110,7 +110,7 @@ export async function POST(req: Request) {
       const architectPrompt = `
         [SYSTEM]: Expert AI Image Prompt Engineer. Specialization: Hyper-local commercial/lifestyle photography for FLUX.1-schnell.
         [CRITICAL_ACTION]: You MUST use the Google Search tool to find the actual storefront and interior of "${business_name}" in "${location}" before engineering the prompt.
-
+        
         [FORBIDDEN_VISUALS]:
         ${recentImageHistory ? `STRICTLY FORBIDDEN (Already used):
         ${recentImageHistory}
@@ -121,7 +121,7 @@ export async function POST(req: Request) {
 
         [RESEARCH_GOALS]:
         Use Google Search for "${business_name}" at "${location}". Identify:
-        1. Storefront appearance & signage.
+        1. Storefront: appearance, color, materials, architecture only. IGNORE signage text/logos.
         2. Outdoor features (patio, terrace, seating).
         3. Local landmarks/views visible from the business.
         4. Interior style (lighting, materials, color palette, vibe).
@@ -149,16 +149,18 @@ export async function POST(req: Request) {
         [ENGINEERING_SPEC]:
         Write a 5-sentence prompt for FLUX.1-schnell following this sequence:
         1. COMPOSITION: Select one (Wide environmental / Medium scene / Detail close-up). Do not label it; just apply it.
-        2. SUBJECT: The hero element. Use researched details. No legible faces.
-        3. SIGNAGE STRATEGY: If business name is present, use: Shallow depth of field (bokeh), Angle displacement (partial frame), or Foreground occlusion (organic block).
+        2. SUBJECT: The hero element: product, or object, or scene. Use researched details. No legible faces. If human present, they support the hero — never dominate the frame.
+        3. SIGNAGE STRATEGY: If business name is present, use only one of: Shallow depth of field (bokeh), or Angle displacement (partial frame), or Foreground occlusion (organic block).
         4. SETTING: Real physical space of the business in ${location}.
         5. LIGHTING: Use ${seasonInfo?.lighting_mood} to define the exact light quality for ${currentMonth} at ${currentTime} in ${location}.
         6. MOOD: Extract emotion from the post tone.
-        7. PEOPLE: Candid, secondary, never dominating. No front-facing/legible faces.
+        7. PEOPLE: Candid, secondary, never dominating, if parcial: upper boddy minimum. No front-facing/legible faces. Never isolated body parts.
         8. IMPERFECTION: Include one subtle, realistic detail (e.g., condensation ring, scuff on brick, steam curl) to remove "AI sheen."
         9. TECHNICAL: End exactly with: "Shot on Sony A7, f/1.8, shallow depth of field, 1:1 square crop, no watermark, no legible text."
 
         [OUTPUT_RULES]:
+        - ZERO text/logos/signage on any surface. Storefront = color+material only.
+        - Business name NEVER appears on sign, awning, window, or object.
         - NO labels, NO preamble, NO commentary.
         - OUTPUT ONLY the final prompt.
         - CRITICAL: Always start the final image prompt with "*Final H Generation*".
@@ -176,7 +178,7 @@ export async function POST(req: Request) {
         });
         visualDescription = result.choices[0]?.message?.content || "";
       } else if (ARCHITECT_MODE === "GEMMA") {
-        console.log("M8V Architect: Requesting Gemma 4 via Google AI SDK...");
+        console.log("Shoreline Architect: Requesting Gemma 4 via Google AI SDK...");
         // Routing to Gemma 4 via Hugging Face Inference
         const result = await gemmaModel.generateContent(architectPrompt);
   

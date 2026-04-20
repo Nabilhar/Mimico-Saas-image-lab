@@ -131,43 +131,10 @@ export async function POST(req: Request) {
     } catch (e) {
       console.warn("Gemini image failed:", e);
     }
-
-    // ── PROVIDER 2: POLLINATIONS (download & upload) ───────────
-    // Free, unlimited, reliable enough for MVP — host it in Supabase
-    if (!hostedUrl) {
-
           ---------------------------------------------------------------*/
 
-      try {
-        console.log("Trying Pollinations download...");
-        const pollinationsUrl = buildPollinationsUrl(cleanDescription);
 
-        const res = await fetch(pollinationsUrl, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Referer': 'https://pollinations.ai/',
-            'Accept': 'image/png,image/*,*/*',
-          },
-          // Give Pollinations up to 30s to generate
-          signal: AbortSignal.timeout(30000),
-        });
-
-        if (!res.ok) throw new Error(`Pollinations fetch failed: ${res.status}`);
-
-        const contentType = res.headers.get('content-type') || '';
-        if (!contentType.includes('image')) {
-          throw new Error(`Pollinations returned non-image content: ${contentType}`);
-        }
-
-        const blob = await res.blob();
-        hostedUrl = await uploadToSupabase(blob, "POLLINATIONS");
-        if (hostedUrl) finalProvider = "POLLINATIONS";
-
-      } catch (e) {
-        console.warn("Pollinations download failed:", e);
-      }
-
-    // ── PROVIDER 3: HUGGING FACE SDK ───────────────────────────
+        // ── PROVIDER : HUGGING FACE SDK ───────────────────────────
     // Uses your free monthly credits (~200-300 images/month on free tier)
     if (!hostedUrl) {
       try {
@@ -175,7 +142,6 @@ export async function POST(req: Request) {
         const response: any = await hf.textToImage({
           model: "black-forest-labs/FLUX.1-schnell",
           inputs: cleanDescription,
-          provider: "hf-inference",
           parameters: {
             num_inference_steps: 4,
           },
@@ -201,7 +167,48 @@ export async function POST(req: Request) {
       }
     }
 
-    // ── LAST RESORT: POLLINATIONS URL (not hosted) ─────────────
+    // ── PROVIDER 2: CLOUD FLARE SDK ───────────────────────────
+    // Uses your free monthly credits (~100-300 images/month on free tier)
+    if (!hostedUrl) {
+      try {
+          console.log("Trying Cloudflare Workers AI (SDXL)...");
+          // *** MODEL ID CHANGED TO SDXL ***
+          const cloudflareApiUrl = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/ai/run/@cf/stabilityai/stable-diffusion-xl-base-1.0`;
+
+          const response = await fetch(cloudflareApiUrl, {
+              method: "POST",
+              headers: {
+                  "Authorization": `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
+                  "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                  prompt: cleanDescription,
+                  num_inference_steps: 25, // Good range for SDXL (typically 20-50)
+                  guidance_scale: 7.5,    // Standard for SDXL
+                  // SDXL on Cloudflare typically returns a PNG by default, no need for output_format
+              }),
+              signal: AbortSignal.timeout(60000), // SDXL can take up to 60s
+          });
+
+          if (!response.ok) {
+              const errorText = await response.text();
+              console.error(`Cloudflare AI (SDXL) failed response: ${errorText}`); // Log full error
+              throw new Error(`Cloudflare AI fetch failed (SDXL): ${response.status} - ${errorText}`);
+          }
+
+          // Cloudflare's SDXL model typically returns the image directly as a binary blob
+          const rawBlob = await response.blob();
+          const blob = new Blob([rawBlob], { type: 'image/png' });
+          hostedUrl = await uploadToSupabase(blob, "CLOUDFLARE_SDXL");
+          if (hostedUrl) finalProvider = "CLOUDFLARE_SDXL";
+          else console.warn("Cloudflare AI (SDXL) succeeded but Supabase upload failed");
+
+      } catch (e) {
+          console.warn("Cloudflare Workers AI (SDXL) failed:", e);
+      }
+     }
+
+    // ── 3 LAST RESORT: POLLINATIONS URL (not hosted) ─────────────
     // Image loads in browser but won't persist reliably in library
     if (!hostedUrl) {
       console.error("❌ All hosted providers failed. Returning Pollinations URL directly.");

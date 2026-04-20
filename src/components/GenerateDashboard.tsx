@@ -9,7 +9,7 @@ import PostActions from "@/components/PostActions";
 import { Post } from "@/app/dashboard/page";
 import { SavedImage } from "@/components/SavedImage";
 import { toast } from "react-hot-toast";
-
+import { useRouter } from "next/navigation";
 
 interface GenerateDashboardProps {
   onGenerateSuccess?: (content: string, imageUrl: string) => Promise<string | undefined>;
@@ -25,7 +25,7 @@ interface GenerateDashboardProps {
 // FIX: Added canGenerate here so the component can actually use the value
 export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, userCredits, onDelete, supabase, history, onImageUpdated }: GenerateDashboardProps) {
   const { user } = useUser();
-
+  const router = useRouter();
 
   // Profile States
   const [business_name, setbusiness_name] = useState("");
@@ -281,6 +281,15 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
         setLoading(false); 
     }
   } 
+
+  const handleGenerateClick = () => {
+    if (userCredits < 1) {
+      // Redirect to the Home page, specifically to the #cta section
+      router.push("/#cta");
+    } else {
+      handleGenerate();
+    }
+  };
   
   const handleGenerateImage = async () => {
     // 1. Initial Guards
@@ -355,9 +364,43 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
         } 
         
         // CASE 3: Architect Error (Gemma/Gemini failed)
+        // we don't just stop. We call the Architect to FIX it.
         else if (data.status === 'ERROR' || res.status >= 400) {
-          toast.error(data.message || "Architect encountered an error.");
-          setIsGeneratingImage(false);
+          console.log("🚨 Error detected in prompt. Triggering Architect repair...");
+          
+          // Show a loading toast so the user knows we are "fixing" it rather than "failing"
+          toast.loading("Prompt error detected. Repairing...", { id: 'repair' });
+
+          try {
+            // MANUALLY TRIGGER THE ARCHITECT TO OVERWRITE THE ERROR
+            await fetch("/api/prepare-image-prompt", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ 
+                postId: lastPostId,
+                generatedPost: content,
+                business_name,
+                business_id: user?.id,
+                location,
+                niche,
+                voice,
+                framework: getFramework(category, postType, voice),
+                postType,
+                currentMonth: new Date().toLocaleString("en", { month: "long" }),
+              }),
+            });
+
+            toast.success("Prompt repaired! Resuming generation...", { id: 'repair' });
+
+            // IMPORTANT: Now that the database is fixed, we restart the polling loop!
+            // This will make the next attempt hit CASE 2 (Success)
+            pollForImage();
+
+          } catch (repairErr) {
+            console.error("Repair attempt failed:", repairErr);
+            toast.error("Failed to repair prompt. Please try manual generation.", { id: 'repair' });
+            setIsGeneratingImage(false);
+          }
         }
   
       } catch (err) {
@@ -545,19 +588,20 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
       {/* BUTTON SECTION */}
       <div className="max-w-2xl mx-auto w-full px-4 sm:px-0">
         <button 
-          onClick={() => { handleGenerate(); }}
-          // UPDATE: Disable if loading OR if credits are less than 1
-          disabled={loading || userCredits < 1} 
-          className={`w-full mt-8 font-bold py-4 rounded-2xl text-md transition-all shadow-xl shadow-cyan-900/30 active:scale-[0.98] disabled:opacity-50 ${
-            userCredits < 1 // UPDATE: Check credits here for styling
-              ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none' 
-              : 'bg-cyan-800 text-white hover:bg-cyan-900 shadow-cyan-900/10'
+          onClick={handleGenerateClick} // <--- Use the new wrapper function
+          disabled={loading} // <--- ONLY disable if loading
+          className={`w-full mt-8 font-bold py-4 rounded-2xl text-md transition-all shadow-xl active:scale-[0.98] ${
+            loading 
+              ? 'bg-slate-400 text-white cursor-wait shadow-none' 
+              : userCredits < 1 
+                ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-amber-500/40' // Styling for "Join Waitlist" state
+                : 'bg-cyan-800 text-white hover:bg-cyan-900 shadow-cyan-900/30' // Styling for "Generate" state
           }`}
         >
           {loading 
             ? "Analyzing Shoreline Data..." 
             : userCredits < 1 
-              ? "Fill up credits" // UPDATE: Custom message
+              ? "Join Waitlist for more Credits" // <--- Updated text
               : "Generate Local Post (1 Credit)"}
         </button>
 
@@ -635,7 +679,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
               
               {isGeneratingImage ? (
                 /* --- MODERN SPINNER STATE --- */
-                <div className="flex flex-col items-center text-center">
+                <div className="flex flex-col items-center text-center px-4">
                   <div className="relative w-20 h-20 mb-6">
                     {/* Outer Glow */}
                     <div className="absolute inset-0 rounded-full border-4 border-cyan-100 opacity-25"></div>
@@ -647,12 +691,29 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
                     </div>
                   </div>
                   
-                  <h3 className="text-lg font-bold text-slate-800 animate-pulse">
-                    Painting your Shoreline scene...
-                  </h3>
-                  <p className="text-[11px] text-slate-500 mt-2 max-w-[240px] font-medium leading-tight">
-                    Applying local textures and lighting to match your brand voice.
-                  </p>
+                  {/* DYNAMIC MESSAGE BOX */}
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-bold text-slate-800 animate-pulse">
+                      Architecting your visual...
+                    </h3>
+                    <p className="text-[12px] text-slate-500 max-w-[280px] leading-relaxed font-medium">
+                      {/* This is the smart message that justifies the wait */}
+                      The AI Engine is researching your neighborhood and mapping your brand colors to the local scenery. 
+                      <span className="block mt-2 text-cyan-700 font-semibold">
+                        This deep-dive might take a minute, but ensures a perfect, hyper-local match.
+                      </span>
+                    </p>
+                  </div>
+                  
+                  {/* PROGRESS HINT */}
+                  <div className="mt-6 flex items-center gap-2 text-[10px] uppercase font-black tracking-widest text-slate-400">
+                    <div className="flex gap-1">
+                      <div className="w-1 h-1 bg-slate-300 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                      <div className="w-1 h-1 bg-slate-300 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                      <div className="w-1 h-1 bg-slate-300 rounded-full animate-bounce"></div>
+                    </div>
+                    <span>Precision Engineering in Progress</span>
+                  </div>
                 </div>
               ) : (
 
