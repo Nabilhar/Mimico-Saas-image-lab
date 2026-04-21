@@ -330,6 +330,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             postId: lastPostId, 
+            business_id: user?.id,
             business_name, 
             street,
             province_state,

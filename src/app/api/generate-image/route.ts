@@ -73,6 +73,7 @@ export async function POST(req: Request) {
     const { postId, business_id } = await req.json();
 
     if (!postId) {
+      console.error("❌ API Error: Missing postId or business_id in request");
       return NextResponse.json({ error: "Missing post ID" }, { status: 400 });
     }
 
@@ -96,8 +97,8 @@ export async function POST(req: Request) {
         .single();
       
         if (dbError || !post) {
-          console.error("Supabase Fetch Error:", dbError?.message);
-          return NextResponse.json({ error: "Post not found in community_table" }, { status: 404 });
+          console.error(`❌ Supabase Error: Could not find post with ID ${postId}`);
+          return NextResponse.json({ status: 'WAITING' }, { status: 202 });
         }
 
         // 2. EVALUATE THE STATUS OF THE PROMPT
