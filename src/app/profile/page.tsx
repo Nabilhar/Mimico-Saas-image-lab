@@ -39,6 +39,7 @@ export default function ProfilePage() {
   const [postalCode, setPostalCode] = useState("");
   const [voice, setVoice] = useState("");
   const [credits, setCredits] = useState(0);
+  const [business_description, setBusinessDescription] = useState("");
 
     // 4. Effects and Handlers
     useEffect(() => {
@@ -47,7 +48,7 @@ export default function ProfilePage() {
         
         const { data, error } = await supabase
           .from('profiles')
-          .select('business_name, street, city, country, postal_code, province_state, category, niche, voice, credits')
+          .select('business_name, street, city, country, postal_code, province_state, category, niche, voice, credits, business_description')
           .eq('id', user.id)
           .maybeSingle();
     
@@ -64,7 +65,8 @@ export default function ProfilePage() {
           setCategory(data.category || "");
           setVoice(data.voice || "");
           setNiche(data.niche || "");
-          setCredits(data.credits ?? 0)
+          setCredits(data.credits ?? 0);
+          setBusinessDescription(data.business_description || "")
 
         } else {
           // If no data in DB, check localStorage
@@ -109,7 +111,7 @@ export default function ProfilePage() {
         first_name: user.firstName,
         last_name: user.lastName,
         email: user.primaryEmailAddress?.emailAddress,
-        business_name :business_name,
+        business_name,
         street: street,
         city: city,
         province_state: province_state,
@@ -118,6 +120,7 @@ export default function ProfilePage() {
         category: category,
         niche: niche,
         voice: voice,
+        business_description: business_description,
         updated_at: new Date().toISOString(),
       };
   
@@ -126,6 +129,23 @@ export default function ProfilePage() {
         .upsert(profileData); // Use the object here
   
       if (error) throw error;
+
+      // 2. Trigger the new Gemma 4 Discovery API
+        fetch("/api/discover-brand", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            business_id: user.id,
+            business_name: business_name,
+            address: {
+              street,
+              city,
+              province_state,
+              country,
+              postalCode: postalCode // matches your lib naming
+            }
+          }),
+        }).catch(err => console.error("Discovery trigger failed:", err));
 
       // 2. TRIGGER: Call the RPC to claim welcome credits
       // This is the "Hybrid" logic we discussed

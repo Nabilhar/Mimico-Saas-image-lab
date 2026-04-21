@@ -144,7 +144,7 @@ Rules:
 // This encapsulates the actual API calls so the router can call them in a loop
 // ─────────────────────────────────────────────────────────────────────────────
 async function callAIProvider(provider: string, finalPrompt: string, currentTime: string, address: any) {
-  const fullAddress = `${address.city},${address.province_state} ${address.country} ${address.postal_code}`;
+  const fullAddress = `${address.city}, ${address.province_state} ${address.country} ${address.postal_code}`;
 
   if (provider === "groq") {
     console.log("--- Shoreline ENGINE: ROUTING TO GROQ (LLAMA 3) ---");
@@ -217,11 +217,12 @@ function buildPrompt(
   eventType: string,
   customDetails: string,
   colorTheme: ColorTheme | null,
-  businessVisuals: BusinessVisuals | null
+  businessVisuals: BusinessVisuals | null,
+  business_description: string | null
 
 ): string {
 
-  const fullAddress = `${address.street}, ${address.city},${address.province_state} ${address.country} ${address.postal_code}`;
+  const fullAddress = `${address.street}, ${address.city}, ${address.province_state} ${address.country} ${address.postal_code}`;
   const rawInstruction = POST_TYPE_PROMPTS[postType] 
 
   // Check: If it's a function, call it. If it's a string, use it as is.
@@ -234,6 +235,10 @@ function buildPrompt(
     minute: '2-digit', 
     hour12: true 
   });
+
+  const coreIntel = business_description 
+  ? `[BUSINESS_INTEL]: ${business_description}` 
+  : "[BUSINESS_INTEL]: Use researched neighborhood trends and the business niche.";
 
 // Handle the "New User" scenario: If no colors exist, tell the AI to derive them from research.
   const visualIdentity = `
@@ -263,6 +268,7 @@ function buildPrompt(
     return `
 
 [SYSTEM]: Marketing Master. Persona: Owner of "${business_name}" (${niche}) in ${fullAddress}.
+${coreIntel} 
 [TONE]: ${VOICE_PROMPTS[voice] || "Warm, community-first."}
 [CONTEXT]: Time: ${currentTime} | Month: ${month} | Season: ${season}
 [SEASONAL_GUIDE]: ${seasonalNicheGuidance}
@@ -351,7 +357,7 @@ export async function POST(req: Request) {
     
     const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('business_name, street, city, province_state, country, postal_code')
+    .select('business_name, street, city, province_state, country, postal_code, business_description')
     .eq('id', business_id)
     .single();
 
@@ -366,7 +372,7 @@ export async function POST(req: Request) {
     // --- PHASE 2: THE BACKGROUND PATH ---
     // If identity is missing, trigger the researcher in the background.
     // NOTICE: We do NOT 'await' this. It runs in parallel.
-    if (!brandIdentity.color_theme || !brandIdentity.business_visuals) {
+    if (!brandIdentity.color_theme || !brandIdentity.business_visuals || !profile.business_description) {
       console.log("--- MISSING BRAND DATA: Triggering background research ---");
       discoverAndSaveBrandIdentity(business_id, profile.business_name, {
         street: profile.street,
@@ -409,7 +415,8 @@ export async function POST(req: Request) {
       eventType || "",    // Argument 10
       customDetails || "", // Argument 11
       brandIdentity.color_theme,
-      brandIdentity.business_visuals
+      brandIdentity.business_visuals,
+      profile.business_description
     );
 
     // ── MOCK MODE (delete before going to production) ─────

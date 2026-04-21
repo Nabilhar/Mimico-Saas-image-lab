@@ -52,11 +52,11 @@ export async function discoverAndSaveBrandIdentity(
   
   const tools = [{ googleSearch: {} }] as any;
   const model = genAI.getGenerativeModel({ 
-    model: "models/gemma-4-26b-a4b-it", 
+    model: "models/gemma-4-31b-it", 
     tools: tools
   }, { apiVersion: 'v1beta' });
 
-  const fullAddressString = `${address.street}, ${address.city},${address.province_state}, ${address.country} ${address.postalCode}`;
+  const fullAddressString = `${address.street}, ${address.city}, ${address.province_state}, ${address.country} ${address.postalCode}`;
 
   const discoveryPrompt = `
     Search for the business "${businessName}" located in "${fullAddressString}".
@@ -75,13 +75,15 @@ export async function discoverAndSaveBrandIdentity(
       "theme_description": "a 1-sentence summary of the color palette",
       "logo_colors": "description of logo colors",
       "storefront_colors": "description of storefront",
-      "interior_colors": "description of interior"
+      "interior_colors": "description of interior",
+      "business_description": "A concise 2-3 sentence overview of what they do, including their primary products or services and what makes them unique."
     }
 
     INSTRUCTIONS:
     1. Search for "${businessName}" at "${fullAddressString}".
-    2. If exact colors aren't found, use "Thematic Inference" (e.g., 'Nautical' $\rightarrow$ Blues/Whites).
-    3. Output ONLY the JSON object. No preamble, no conversation.
+    2. If exact colors aren't found, use "Thematic Inference".
+    3. Identify exactly what they sell/provide (e.g., if it's a grocery, what are they known for? Artisanal cheese? Local produce?).
+    4. Output ONLY the JSON object. No preamble, no conversation.
   `;
 
   try {
@@ -103,6 +105,10 @@ export async function discoverAndSaveBrandIdentity(
 
     // RECONSTRUCTION: Convert the "Flat" AI response into your "Nested" DB structure
     const updatePayload: any = {};
+
+    if (extractedData.business_description) {
+      updatePayload.business_description = extractedData.business_description;
+    }
 
     if (extractedData.primary_color || extractedData.theme_description) {
       updatePayload.color_theme = {
