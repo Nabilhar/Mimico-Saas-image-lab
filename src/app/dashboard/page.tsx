@@ -176,6 +176,7 @@ export default function DashboardPage() {
               {businessData ? (
                 <GenerateDashboard 
                   supabase={supabase}
+                  businessData={businessData}
                   onGenerateSuccess={(content, url) => savePostToCloud(content, url)}
                   canGenerate={(businessData?.credits ?? 0) > 0}
                   userCredits={businessData?.credits ?? 0}

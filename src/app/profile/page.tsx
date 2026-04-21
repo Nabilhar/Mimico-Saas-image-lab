@@ -94,7 +94,7 @@ export default function ProfilePage() {
     }
 
   const categories = Object.keys(BUSINESS_ARCHETYPES);
-  const voices = ["The Expert", "The neighbour", "The Hustler", "The Minimalist"];
+  const voices = ["The Expert", "The Neighbour", "The Hustler", "The Minimalist"];
 
 
   const handleSave = async (e: React.FormEvent) => {

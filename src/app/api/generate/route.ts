@@ -68,7 +68,7 @@ const FRAMEWORK_PROMPTS: Record<string, string> = {
 const VOICE_PROMPTS: Record<string, string> = {
   "The Expert":
     "Authoritative, factual, confident. Uses industry terms lightly. No exclamation marks. Builds trust through knowledge, not enthusiasm.",
-  "The neighbour":
+  "The Neighbour":
     "Warm, conversational, community-first. Reads like a message from a friend who runs the business. Uses 'we' and 'you' naturally. Never corporate.",
   "The Hustler":
     "High-energy, direct, urgent. Short punchy sentences. Bold claims. Drives immediate action. Emphasis used sparingly but powerfully.",

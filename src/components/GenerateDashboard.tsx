@@ -74,20 +74,23 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
     // 1. SYNC PROFILE FROM PROPS (Lifting State Up)
     // We no longer fetch the profile from Supabase here because DashboardPage already did it.
     if (businessData) {
+      console.log("Child received businessData:", businessData); // Debug log
       setbusiness_name(businessData.business_name || "");
       setStreet(businessData.street || "");
       setCity(businessData.city || "");
-      setProvinceState(businessData.province_state || ""); // <--- ADDED
+      setProvinceState(businessData.province_state || "");
       setCountry(businessData.country || "Canada");
       setPostalCode(businessData.postal_code || "");
       setCategory(businessData.category || "Food & Beverage");
       setNiche(businessData.niche || "");
-      setVoice(businessData.voice || "The Neighbor");
+      setVoice(businessData.voice || "The Neighbour");
     }
 
     // 2. Pull the Last Generated Post (Still needed as this is post-specific, not profile-specific)
     const fetchLastPost = async () => {
       if (!user?.id) return;
+
+      console.log("Fetching last post for UI preview...");
       const { data: lastPost } = await supabase
         .from('community_posts')
         .select('id, content, image_url')
@@ -449,7 +452,11 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
           {/* BUSINESS NAME (READ ONLY) */}
           <div>
             <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Business</label>
-            <input className="mt-1 w-full p-3 border rounded-xl bg-slate-50 text-slate-500 outline-none cursor-not-allowed" value={business_name} readOnly />
+            <input 
+              className="mt-1 w-full p-3 border rounded-xl bg-slate-50 text-slate-500 outline-none cursor-not-allowed" 
+              value={businessData?.business_name || ""} // <--- Reads directly from props
+              readOnly 
+            />
           </div>
   
           {/* VOICE & STYLE GRID */}
