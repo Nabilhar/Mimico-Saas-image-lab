@@ -16,7 +16,7 @@ export const NICHE_DATA: Record<string, string[]> = {
   };
 
 export const CATEGORIES = Object.keys(NICHE_DATA);
-export const VOICES = ["The Expert", "The Neighbor", "The Hustler", "The Minimalist"] as const;
+export const VOICES = ["The Expert", "The neighbour", "The Hustler", "The Minimalist"] as const;
 export const POST_TYPES = ["5 Tips", "Promotion / offer", "Local event / news", "Myth-busting", "Behind the scenes"] as const;
 
 export interface ColorTheme {

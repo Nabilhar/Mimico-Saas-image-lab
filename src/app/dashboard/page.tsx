@@ -9,7 +9,7 @@ import PostActions from "@/components/PostActions";
 import { SavedImage } from "@/components/SavedImage";
 
 export interface Post { id: string; content: string; created_at: string; business_id: string; image_url?: string; }
-interface BusinessData { business_name: string; location: string; category: string; niche: string; voice: string; credits: number; history: Post[]; }
+interface BusinessData { business_name: string; street: string; city: string; province_state: string; country: string; postal_code: string; category: string; niche: string; voice: string; credits: number; history: Post[]; }
 
 export default function DashboardPage() {
   const { user, isLoaded } = useUser();
@@ -38,11 +38,13 @@ export default function DashboardPage() {
     setLoading(true);
     try {
       const [profileRes, postsRes] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
+        supabase.from('profiles')
+          .select('business_name, street, city, province_state, country, postal_code, category, niche, voice, credits')
+          .eq('id', user.id).maybeSingle(),
         supabase.from('community_posts')
-        .select('*')
-        .eq('business_id', user.id)
-        .order('created_at', { ascending: false })
+          .select('*')
+          .eq('business_id', user.id)
+          .order('created_at', { ascending: false })
       ]);
 
       if (!profileRes.data && !profileRes.error) {
@@ -53,7 +55,11 @@ export default function DashboardPage() {
       if (profileRes.data) {
         const formattedData: BusinessData = {
           business_name: profileRes.data.business_name,
-          location: profileRes.data.location,
+          street: profileRes.data.street || "",
+          city: profileRes.data.city || "",
+          province_state: profileRes.data.province_state || "",
+          country: profileRes.data.country || "",
+          postal_code: profileRes.data.postal_code || "",
           category: profileRes.data.category,
           voice: profileRes.data.voice,
           niche: profileRes.data.niche,
@@ -139,7 +145,7 @@ export default function DashboardPage() {
               Managing drafts for <span className="text-cyan-800 font-semibold">{businessData?.business_name || "Your Business"}</span>
             </p>
             <p className="text-slate-400 text-xs">
-              Located at: <span className="text-cyan-700 font-medium">{businessData?.location || "Your location"}</span>
+              Located at: <span className="text-cyan-700 font-medium">{businessData?.city  || "Your city "}</span>
             </p>
             <div className="mt-2 flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg w-fit">
               
@@ -196,7 +202,7 @@ export default function DashboardPage() {
               <div
                 key={post.id}
                 className="flex flex-col bg-white sm:rounded-2xl border-y border-x-0 sm:border-x border-slate-100 shadow-sm overflow-hidden"
-              >
+                >
                 {/* ── FACEBOOK-STYLE HEADER ───────────────── */}
                 <div className="p-4 flex items-center gap-3">
                   {/* Avatar circle */}
@@ -210,26 +216,28 @@ export default function DashboardPage() {
                       {businessData?.business_name || 'Your Business'}
                     </span>
 
-                    {/* Row for Location and Date */}
-                    <div className="flex items-center justify-between gap-2 mt-1">
-                      {businessData?.location && (
-                        <span className="text-[10px] text-slate-500 font-medium truncate">
-                          {businessData.location.split(',')[0]}
-                        </span>
-                      )}
-                    
-                      <span className="shrink-0 text-[10px] font-black text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded uppercase tracking-widest">
-                        {post?.created_at ? new Date(post.created_at).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            hour: 'numeric',
-                            minute: '2-digit',
-                            hour12: true,
-                        }) : 'Just now'}
-                      </span>
-                    </div>
-                  </div> {/* <── THIS WAS THE MISSING CLOSING TAG */}
-                </div>
+                  {/* Row for Location and Date */}
+                  <div className="flex items-center justify-between gap-2 mt-1 w-full">
+                    <span className="text-[10px] text-slate-500 font-medium truncate max-w-[70%]">
+                      {businessData 
+                        ? [businessData.street, businessData.city, businessData.postal_code]
+                            .filter(Boolean)
+                            .join(", ") 
+                        : "Your location"}
+                    </span>
+                  
+                    <span className="shrink-0 text-[10px] font-black text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded uppercase tracking-widest">
+                      {post?.created_at ? new Date(post.created_at).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: 'numeric',
+                          minute: '2-digit',
+                          hour12: true,
+                      }) : 'Just now'}
+                    </span>
+                  </div>
+                </div> {/* <── THIS WAS THE MISSING CLOSING TAG */}
+              </div>
             
                 {/* ── CAPTION (above image, like Facebook) ── */}
                 <div className="px-4 pb-3">

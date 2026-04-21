@@ -41,7 +41,7 @@
       STRUCTURE FOR PAS + 5 TIPS:
 
       [PROBLEM OPENING]
-      One sharp sentence naming a specific pain point in this neighborhood.
+      One sharp sentence naming a specific pain point in this neighbourhood.
       Make it concrete and local — not generic.
 
       [TRANSITION]
@@ -70,7 +70,7 @@
 
       [BEFORE OPENING]
       One relatable sentence placing the reader in their ordinary reality.
-      Make it specific to this neighborhood and this moment.
+      Make it specific to this neighbourhood and this moment.
 
       [TRANSITION]
       Bridge from before to after: "Here's how to get there:"
@@ -97,7 +97,7 @@
 
       [ATTENTION HOOK]
       One bold, surprising statement about these 5 tips.
-      Make it specific to this neighborhood and this moment.
+      Make it specific to this neighbourhood and this moment.
       It should make someone stop scrolling.
 
       [INTEREST — Why Now]

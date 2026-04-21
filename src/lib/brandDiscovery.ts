@@ -39,7 +39,13 @@ export async function getBrandIdentity(userId: string): Promise<BusinessIdentity
 export async function discoverAndSaveBrandIdentity(
   userId: string, 
   businessName: string, 
-  location: string
+  address: {
+    street: string;
+    city: string;
+    province_state: string;
+    country: string;
+    postalCode: string;
+  }
 ): Promise<void> {
   
   console.log(`--- [BACKGROUND] BRAND DISCOVERY STARTED FOR ${businessName} ---`);
@@ -50,8 +56,10 @@ export async function discoverAndSaveBrandIdentity(
     tools: tools
   }, { apiVersion: 'v1beta' });
 
+  const fullAddressString = `${address.street}, ${address.city},${address.province_state}, ${address.country} ${address.postalCode}`;
+
   const discoveryPrompt = `
-    Search for the business "${businessName}" located in "${location}".
+    Search for the business "${businessName}" located in "${fullAddressString}".
     Your goal is to identify their visual brand identity.
 
     STRICT OUTPUT REQUIREMENT:
@@ -71,7 +79,7 @@ export async function discoverAndSaveBrandIdentity(
     }
 
     INSTRUCTIONS:
-    1. Search for "${businessName}" at "${location}".
+    1. Search for "${businessName}" at "${fullAddressString}".
     2. If exact colors aren't found, use "Thematic Inference" (e.g., 'Nautical' $\rightarrow$ Blues/Whites).
     3. Output ONLY the JSON object. No preamble, no conversation.
   `;

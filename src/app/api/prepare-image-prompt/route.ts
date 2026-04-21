@@ -42,7 +42,11 @@ export async function POST(req: Request) {
       let generatedPost= "";
       let business_name= "";
       let business_id= "";
-      let location= "";
+      let street= "";
+      let city= "";
+      let province_state= "";
+      let country= "";
+      let postal_code= "";
       let niche= "";
       let voice= "";
       let framework= "";
@@ -56,7 +60,11 @@ export async function POST(req: Request) {
       generatedPost= body.generatedPost;
       business_name= body.business_name; 
       business_id= body.business_id;
-      location= body.location;
+      street = body.street;
+      city = body.city;
+      province_state = body.province_state;
+      country = body.country;
+      postal_code = body.postal_code;
       niche= body.niche;
       voice= body.voice;
       framework= body.framework;
@@ -66,6 +74,8 @@ export async function POST(req: Request) {
     if (!postId || !business_id) {
       return NextResponse.json({ error: "Missing ID" }, { status: 400 });
     }
+
+    const fullAddress = `${street}, ${city}, ${province_state}, ${country} ${postal_code}`;
 
     // 2. FETCH BRAND IDENTITY (The "Fast Path")
     const brandIdentity = await getBrandIdentity(business_id);
@@ -109,7 +119,7 @@ export async function POST(req: Request) {
       // ── STEP A: ARCHITECT (text → visual description) ─────────
       const architectPrompt = `
         [SYSTEM]: Expert AI Image Prompt Engineer. Specialization: Hyper-local commercial/lifestyle photography for FLUX.1-schnell.
-        [CRITICAL_ACTION]: You MUST use the Google Search tool to find the actual storefront and interior of "${business_name}" in "${location}" before engineering the prompt.
+        [CRITICAL_ACTION]: You MUST use the Google Search tool to find the actual storefront and interior of "${business_name}" in "${fullAddress}" before engineering the prompt.
         
         [FORBIDDEN_VISUALS]:
         ${recentImageHistory ? `STRICTLY FORBIDDEN (Already used):
@@ -120,19 +130,19 @@ export async function POST(req: Request) {
         - If recent = Waterfront $\rightarrow$ use Interior warmth/Close-ups.` : "No history. Full creative freedom."}
 
         [RESEARCH_GOALS]:
-        Use Google Search for "${business_name}" at "${location}". Identify:
+        Use Google Search for "${business_name}" at "${fullAddress}". Identify:
         1. Storefront: appearance, color, materials, architecture only. IGNORE signage text/logos.
         2. Outdoor features (patio, terrace, seating).
         3. Local landmarks/views visible from the business.
         4. Interior style (lighting, materials, color palette, vibe).
         5. Signature products/offerings.
         6. Unique branding details (uniforms, packaging, decor).
-        (Fallback: If no specific data found, use ${location} neighborhood context).
+        (Fallback: If no specific data found, use ${fullAddress} neighbourhood context).
 
         [ANALYSIS]:
         Post Content: "${generatedPost}"
         Business: ${business_name} (${niche})
-        Location: ${location}
+        Location: ${fullAddress}
         Visual Strategy: ${visualStrategy}
 
         [SEASONAL_CONTEXT]:
@@ -151,8 +161,8 @@ export async function POST(req: Request) {
         1. COMPOSITION: Select one (Wide environmental / Medium scene / Detail close-up). Do not label it; just apply it.
         2. SUBJECT: The hero element: product, or object, or scene. Use researched details. No legible faces. If human present, they support the hero — never dominate the frame.
         3. SIGNAGE STRATEGY: If business name is present, use only one of: Shallow depth of field (bokeh), or Angle displacement (partial frame), or Foreground occlusion (organic block).
-        4. SETTING: Real physical space of the business in ${location}.
-        5. LIGHTING: Use ${seasonInfo?.lighting_mood} to define the exact light quality for ${currentMonth} at ${currentTime} in ${location}.
+        4. SETTING: Real physical space of the business in ${fullAddress}.
+        5. LIGHTING: Use ${seasonInfo?.lighting_mood} to define the exact light quality for ${currentMonth} at ${currentTime} in ${fullAddress}.
         6. MOOD: Extract emotion from the post tone.
         7. PEOPLE: Candid, secondary, never dominating, if parcial: upper boddy minimum. No front-facing/legible faces. Never isolated body parts.
         8. IMPERFECTION: Include one subtle, realistic detail (e.g., condensation ring, scuff on brick, steam curl) to remove "AI sheen."

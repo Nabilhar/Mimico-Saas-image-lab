@@ -68,7 +68,7 @@ const FRAMEWORK_PROMPTS: Record<string, string> = {
 const VOICE_PROMPTS: Record<string, string> = {
   "The Expert":
     "Authoritative, factual, confident. Uses industry terms lightly. No exclamation marks. Builds trust through knowledge, not enthusiasm.",
-  "The Neighbor":
+  "The neighbour":
     "Warm, conversational, community-first. Reads like a message from a friend who runs the business. Uses 'we' and 'you' naturally. Never corporate.",
   "The Hustler":
     "High-energy, direct, urgent. Short punchy sentences. Bold claims. Drives immediate action. Emphasis used sparingly but powerfully.",
@@ -99,9 +99,9 @@ Make it feel like a privilege to read. Specific beats generic:
 "4am sourdough proofing" beats "we work hard every day."`,
 
 
-"Promotion / offer": (promoType: string, details: string, location: string) => {
+"Promotion / offer": (promoType: string, details: string, fullAddress: string) => {
   const strategies = {
-    discount: "Act like a friend giving a neighbor a 'heads up' on a way to save. Focus on the ease of the transaction. Use words like 'lighter on the wallet' or 'a little break'.",
+    discount: "Act like a friend giving a neighbour a 'heads up' on a way to save. Focus on the ease of the transaction. Use words like 'lighter on the wallet' or 'a little break'.",
     freebie: "Act like a generous host. The focus is 100% on hospitality and 'our treat'. It's about a gift, not a transaction. Use words like 'on the house' or 'tucked in for you'.",
     custom: "Focus on the 'Why now?'. Is it a rainy day special? A celebration of a local milestone? Create a 'just for us' community feeling."
   };
@@ -109,24 +109,24 @@ Make it feel like a privilege to read. Specific beats generic:
   return `
     [GOAL]: Announce a ${promoType} without sounding like a flyer.
     [DATA]: ${details}
-    [TONE]: ${strategies[promoType as keyof typeof strategies] || "Neighborly and warm."}
-    [STRICT RULE]: The details "${details}" must be the center of the story, but woven in as a solution to a specific ${location} moment (e.g., a post-work treat or a weekend reward).
+    [TONE]: ${strategies[promoType as keyof typeof strategies] || "neighbourly and warm."}
+    [STRICT RULE]: The details "${details}" must be the center of the story, but woven in as a solution to a specific ${fullAddress} moment (e.g., a post-work treat or a weekend reward).
 
 Rules:
 - "CRITICAL: You MUST use the following specific details: '${details}'. If these details are missing from the post, the post is a failure. Do not use generic placeholders like [Insert Date]."
 - The post must make the reader feel like a neighbour getting a genuine heads-up, not a customer seeing an ad.
 - The specific detail (price, date, quantity, condition) must appear naturally in the post body — not just in the CTA.
 - Never say "limited time offer" — if there's a limit, show it ("only until Sunday", "last 10 spots", "this week only").
-- To claim the offer, the reader should just "show this post on their phone" when they arrive. Example : "Just let the team know you're a neighbor and show them this post." 
+- To claim the offer, the reader should just "show this post on their phone" when they arrive. Example : "Just let the team know you're a neighbour and show them this post." 
     `;
 },
 
 
-"Local event / news": (eventType: string, details: string, location: string) => {
+"Local event / news": (eventType: string, details: string, fullAddress: string) => {
     return `
-      [GOAL]: Position the business as the neighborhood's information hub for this ${eventType}.
+      [GOAL]: Position the business as the neighbourhood's information hub for this ${eventType}.
       [DATA]: ${details}
-      [NARRATIVE]: Don't just report the news. Explain why it matters to someone standing on Lake Shore Blvd right now. 
+      [NARRATIVE]: Don't just report the news. Explain why it matters to someone standing in ${fullAddress} right now. 
       [STRICT RULE]: If it's an event, the call to action should be about 'stopping by on your way to/from' the event.
     
     Rules:
@@ -143,7 +143,9 @@ Rules:
 // HELPER: THE PROVIDER CALLER
 // This encapsulates the actual API calls so the router can call them in a loop
 // ─────────────────────────────────────────────────────────────────────────────
-async function callAIProvider(provider: string, finalPrompt: string, currentTime: string, location: string) {
+async function callAIProvider(provider: string, finalPrompt: string, currentTime: string, address: any) {
+  const fullAddress = `${address.city},${address.province_state} ${address.country} ${address.postal_code}`;
+
   if (provider === "groq") {
     console.log("--- Shoreline ENGINE: ROUTING TO GROQ (LLAMA 3) ---");
     const chatCompletion = await groq.chat.completions.create({
@@ -168,7 +170,7 @@ async function callAIProvider(provider: string, finalPrompt: string, currentTime
     const result = await model.generateContent({
       contents: [{ 
         role: "user", 
-        parts: [{ text: `Use your <research> thinking mode to check for current ${location} news or events including the current weather at ${currentTime} before writing: \n\n ${finalPrompt}` }] 
+        parts: [{ text: `Use your <research> thinking mode to check for current ${fullAddress} news or events including the current weather at ${currentTime} before writing: \n\n ${finalPrompt}` }] 
       }],
       generationConfig: {
         temperature: 1.0,
@@ -205,7 +207,7 @@ async function callAIProvider(provider: string, finalPrompt: string, currentTime
 function buildPrompt(
   business_name: string,
   niche: string,
-  location: string,
+  address: any,
   voice: string,
   postType: string,
   framework: string,
@@ -219,12 +221,12 @@ function buildPrompt(
 
 ): string {
 
-
+  const fullAddress = `${address.street}, ${address.city},${address.province_state} ${address.country} ${address.postal_code}`;
   const rawInstruction = POST_TYPE_PROMPTS[postType] 
 
   // Check: If it's a function, call it. If it's a string, use it as is.
   const postSpecificInstructions = typeof rawInstruction === "function"
-    ? rawInstruction(postType === "Promotion / offer" ? promoType : eventType, customDetails, location)
+    ? rawInstruction(postType === "Promotion / offer" ? promoType : eventType, customDetails, fullAddress)
     : rawInstruction;
 
   const currentTime = new Date().toLocaleTimeString('en-US', { 
@@ -260,7 +262,7 @@ function buildPrompt(
 
     return `
 
-[SYSTEM]: Marketing Master. Persona: Owner of "${business_name}" (${niche}) in ${location}.
+[SYSTEM]: Marketing Master. Persona: Owner of "${business_name}" (${niche}) in ${fullAddress}.
 [TONE]: ${VOICE_PROMPTS[voice] || "Warm, community-first."}
 [CONTEXT]: Time: ${currentTime} | Month: ${month} | Season: ${season}
 [SEASONAL_GUIDE]: ${seasonalNicheGuidance}
@@ -271,9 +273,9 @@ ${visualIdentity}
 - BANNED: "bike-to-work buzz", "I'm always", "After a day", "Juggling", "Finding a", "stone's throw", "pour our hearts", "passionate about", "quality service", "reach out", "don't hesitate", "pride ourselves", "No cap", "Slay", "It's giving", "That's a wrap", "Are you tired of", "Don't miss out", "Limited time offer"
 
 [TASK]:
-1. <research>Neighborhood Name: Landmark 1, Landmark 2, Local Trend 1, Local Trend 2</research> (Max 20 words)
+1. <research>neighbourhood Name: Landmark 1, Landmark 2, Local Trend 1, Local Trend 2</research> (Max 20 words)
 2. Social Media Post
-3. 3-4 Hashtags (Neighborhood, Niche, Broad)
+3. 3-4 Hashtags (neighbourhood, Niche, Broad)
 
 [POST_SPECIFICS]:
 Type: ${postType}
@@ -314,7 +316,6 @@ export async function POST(req: Request) {
     const body = await req.json();
     const {
       business_name,
-      location,
       business_id,
       category,
       niche,
@@ -347,6 +348,17 @@ export async function POST(req: Request) {
       }
       console.log("-----------------------");
 
+    
+    const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('business_name, street, city, province_state, country, postal_code')
+    .eq('id', business_id)
+    .single();
+
+    if (profileError || !profile) {
+      return NextResponse.json({ error: "Business profile not found. Please complete your profile." }, { status: 404 });
+    }
+
         // --- PHASE 1: THE FAST PATH ---
     // Get existing brand identity from DB (Fast, no search)
     const brandIdentity = await getBrandIdentity(business_id);
@@ -356,7 +368,13 @@ export async function POST(req: Request) {
     // NOTICE: We do NOT 'await' this. It runs in parallel.
     if (!brandIdentity.color_theme || !brandIdentity.business_visuals) {
       console.log("--- MISSING BRAND DATA: Triggering background research ---");
-      discoverAndSaveBrandIdentity(business_id, business_name, location)
+      discoverAndSaveBrandIdentity(business_id, profile.business_name, {
+        street: profile.street,
+        city: profile.city,
+        province_state: profile.province_state,
+        country: profile.country,
+        postalCode: profile.postal_code
+      })
         .catch(err => console.error("Background Discovery Error:", err));
     }
 
@@ -379,9 +397,9 @@ export async function POST(req: Request) {
 
     // Build the final prompt
     const finalPrompt = buildPrompt(
-      business_name,
+      profile.business_name,
       niche,
-      location,
+      profile,   
       voice,
       postType,
       framework,
@@ -398,7 +416,7 @@ export async function POST(req: Request) {
     if (process.env.NEXT_PUBLIC_MOCK_AI === "true") {
       await new Promise((resolve) => setTimeout(resolve, 800));
       return NextResponse.json({
-        content: `<research>TEST MODE: ${location} | Framework: ${framework} | Month: ${month}</research>\n\nThis is a mock post for ${business_name} in ${location}. Framework auto-selected: ${framework}. No API tokens used.`,
+        content: `<research>TEST MODE: ${profile.city} | Framework: ${framework} | Month: ${month}</research>\n\nThis is a mock post for ${business_name} in ${profile.city}. Framework auto-selected: ${framework}. No API tokens used.`,
         framework,
       });
     }
@@ -421,7 +439,7 @@ export async function POST(req: Request) {
       // DEVELOPMENT MODE: Use exactly what the user toggled in the UI
       const providerToUse = requestedProvider || process.env.AI_PROVIDER || "gemini";
       console.log(`--- Shoreline MODE: TOGGLE [Using ${providerToUse}] ---`);
-      rawResponse = await callAIProvider(providerToUse, finalPrompt, currentTime, location);
+      rawResponse = await callAIProvider(providerToUse, finalPrompt, currentTime, profile);
     } else {
       // LAB/PRODUCTION MODE: Robust Fallback Chain
       console.log("--- Shoreline MODE: FALLBACK CHAIN ---");
@@ -430,7 +448,7 @@ export async function POST(req: Request) {
 
       for (const provider of fallbackChain) {
         try {
-          rawResponse = await callAIProvider(provider, finalPrompt, currentTime, location);
+          rawResponse = await callAIProvider(provider, finalPrompt, currentTime, profile);
           if (rawResponse) {
             success = true;
             break; // Stop the loop as soon as we get a successful response

@@ -32,7 +32,11 @@ import { GallerySection } from "@/components/GallerySection";
 export default function Home() {
   const [email, setEmail] = useState("");
   const [businessName, setBusinessName] = useState("");
-  const [address, setAddress] = useState("");
+  const [street, setStreet] = useState("");
+  const [city, setCity] = useState("");
+  const [province_state, setProvinceState] = useState("");
+  const [country, setCountry] = useState("Canada"); // Default to Canada
+  const [postalCode, setPostalCode] = useState("");
   const [waitlistPosition, setWaitlistPosition] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -45,7 +49,8 @@ export default function Home() {
 
   const handleWaitlistSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !businessName || !address) {
+    // Updated validation to check all new fields
+    if (!email || !businessName || !street || !city || !province_state || !postalCode) {
       toast.error("Please fill in all fields");
       return;
     }
@@ -58,7 +63,11 @@ export default function Home() {
         body: JSON.stringify({
           email,
           business_name: businessName,
-          address: address,
+          street,
+          city,   
+          province_state,
+          country,
+          postal_code: postalCode,
         }),
       });
 
@@ -73,7 +82,11 @@ export default function Home() {
       toast.success(`Welcome! You're #${data.position} on the waitlist.`);
       setEmail("");
       setBusinessName("");
-      setAddress("");
+      setStreet("");
+      setCity("");
+      setProvinceState("");
+      setCountry("Canada");
+      setPostalCode("");
     } catch (error) {
       console.error("Waitlist signup error:", error);
       toast.error("Something went wrong. Please try again.");
@@ -552,78 +565,267 @@ We are in the office if you want to sit down and look at the actual numbers.
           </div>
         </section>
 
-        {/* CTA Section */}
-        <section id="cta" className="bg-slate-50 py-16 md:py-24 border-b">
-          <div className="mx-auto max-w-6xl px-6 sm:px-6">
-            <div className="max-w-2xl">
-              <h2 className="text-3xl font-bold mb-4 text-slate-900">Join the Beta Waitlist</h2>
-              <p className="text-slate-600 mb-8">
-                Be among the first to access Shoreline Studio when we launch. Secure your early adopter discount and get direct access to our team for feedback and support.
-              </p>
-              <form onSubmit={handleWaitlistSignup} className="space-y-4 bg-white p-6 rounded-lg border border-slate-200">
-                <div>
-                  <Label htmlFor="business-name" className="text-sm font-medium text-slate-900">
-                    Business Name
+      {/* CTA Section */}
+      <section id="cta" className="bg-slate-50 py-16 md:py-24 border-b">
+        <div className="mx-auto max-w-6xl px-6 sm:px-6">
+          <div className="max-w-2xl">
+            <h2 className="text-3xl font-bold mb-4 text-slate-900">Join the Beta Waitlist</h2>
+            <p className="text-slate-600 mb-8">
+              Be among the first to access Shoreline Studio when we launch. Secure your early adopter discount and get direct access to our team for feedback and support.
+            </p>
+            <form onSubmit={handleWaitlistSignup} className="space-y-4 bg-white p-6 rounded-lg border border-slate-200">
+              
+              {/* Business Name */}
+              <div>
+                <Label htmlFor="business-name" className="text-sm font-medium text-slate-900">
+                  Business Name
+                </Label>
+                <Input
+                  id="business-name"
+                  placeholder="e.g., By The Lake Pizza"
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  className="mt-2 border-slate-300"
+                  required
+                />
+              </div>
+
+              {/* Structured Address Section */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <Label htmlFor="street" className="text-sm font-medium text-slate-900">
+                    Street Address
                   </Label>
                   <Input
-                    id="business-name"
-                    placeholder="e.g., By The Lake Pizza"
-                    value={businessName}
-                    onChange={(e) => setBusinessName(e.target.value)}
-                    className="mt-2 border-slate-300"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="address" className="text-sm font-medium text-slate-900">
-                    Business Address (including Postal Code)
-                  </Label>
-                  <Input
-                    id="address"
-                    placeholder="e.g., 2415 Lake Shore Blvd W, Toronto, M8V 1E5"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
+                    id="street"
+                    placeholder="e.g., 2415 Lake Shore Blvd W"
+                    value={street}
+                    onChange={(e) => setStreet(e.target.value)}
                     className="mt-2 border-slate-300"
                     required
                   />
-                  <p className="text-[10px] text-slate-400 mt-1 ml-1">
-                    We use your exact location to find nearby landmarks and events.
-                  </p>
                 </div>
+                
                 <div>
-                  <Label htmlFor="email" className="text-sm font-medium text-slate-900">
-                    Email Address
+                  <Label htmlFor="city" className="text-sm font-medium text-slate-900">
+                    City
                   </Label>
                   <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@business.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    id="city"
+                    placeholder="e.g., Toronto"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
                     className="mt-2 border-slate-300"
+                    required
                   />
                 </div>
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full bg-cyan-800 hover:bg-cyan-900 text-white"
-                >
-                  {isSubmitting ? "Joining..." : "Join the Waitlist"}
-                </Button>
-              </form>
-              {waitlistPosition && (
-                <div className="mt-6 p-4 bg-green-50 rounded-lg flex items-start gap-3 border border-green-200">
-                  <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-slate-900">You're on the beta waitlist!</p>
-                    <p className="text-sm text-slate-600">
-                      You are #{waitlistPosition} in line. We will email you when beta access is ready with your early adopter discount.
-                    </p>
-                  </div>
+
+                <div>
+                  <Label htmlFor="province-state" className="text-sm font-medium text-slate-900">
+                    Province / State
+                  </Label>
+                  <Input
+                    id="province-state"
+                    placeholder="e.g., ON or Ontario"
+                    value={province_state}
+                    onChange={(e) => setProvinceState(e.target.value)}
+                    className="mt-2 border-slate-300"
+                    required
+                  />
                 </div>
-              )}
-            </div>
+
+                <div>
+                  <Label htmlFor="country" className="text-sm font-medium text-slate-900">
+                    Country
+                  </Label>
+                  <Select value={country} onValueChange={setCountry}>
+                    <SelectTrigger className="mt-2 border-slate-300">
+                      <SelectValue placeholder="Select country" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Canada">Canada 🇨🇦</SelectItem>
+                      <SelectItem value="USA">USA 🇺🇸</SelectItem>
+                      <SelectItem value="Afghanistan">Afghanistan 🇦🇫</SelectItem>
+                      <SelectItem value="Albania">Albania 🇦🇱</SelectItem>
+                      <SelectItem value="Algeria">Algeria 🇩🇿</SelectItem>
+                      <SelectItem value="Andorra">Andorra 🇦🇩</SelectItem>
+                      <SelectItem value="Angola">Angola 🇦🇴</SelectItem>
+                      <SelectItem value="Argentina">Argentina 🇦🇷</SelectItem>
+                      <SelectItem value="Armenia">Armenia 🇦🇲</SelectItem>
+                      <SelectItem value="Australia">Australia 🇦🇺</SelectItem>
+                      <SelectItem value="Austria">Austria 🇦🇹</SelectItem>
+                      <SelectItem value="Azerbaijan">Azerbaijan 🇦🇿</SelectItem>
+                      <SelectItem value="Bahamas">Bahamas 🇧🇸</SelectItem>
+                      <SelectItem value="Bahrain">Bahrain 🇧🇭</SelectItem>
+                      <SelectItem value="Bangladesh">Bangladesh 🇧🇩</SelectItem>
+                      <SelectItem value="Barbados">Barbados 🇧🇧</SelectItem>
+                      <SelectItem value="Belarus">Belarus 🇧🇾</SelectItem>
+                      <SelectItem value="Belgium">Belgium 🇧🇪</SelectItem>
+                      <SelectItem value="Belize">Belize 🇧🇿</SelectItem>
+                      <SelectItem value="Benin">Benin 🇧🇯</SelectItem>
+                      <SelectItem value="Bhutan">Bhutan 🇧🇹</SelectItem>
+                      <SelectItem value="Bolivia">Bolivia 🇧🇴</SelectItem>
+                      <SelectItem value="Bosnia and Herzegovina">Bosnia and Herzegovina 🇧🇦</SelectItem>
+                      <SelectItem value="Botswana">Botswana 🇧🇼</SelectItem>
+                      <SelectItem value="Brazil">Brazil 🇧🇷</SelectItem>
+                      <SelectItem value="Brunei">Brunei 🇧🇳</SelectItem>
+                      <SelectItem value="Bulgaria">Bulgaria 🇧🇬</SelectItem>
+                      <SelectItem value="Burkina Faso">Burkina Faso 🇧🇫</SelectItem>
+                      <SelectItem value="Burundi">Burundi 🇧🇮</SelectItem>
+                      <SelectItem value="Cambodia">Cambodia 🇰🇭</SelectItem>
+                      <SelectItem value="Cameroon">Cameroon 🇨🇲</SelectItem>
+                      <SelectItem value="Cape Verde">Cape Verde 🇨🇻</SelectItem>
+                      <SelectItem value="Central African Republic">Central African Republic 🇨🇫</SelectItem>
+                      <SelectItem value="Chad">Chad 🇹🇩</SelectItem>
+                      <SelectItem value="Chile">Chile 🇨🇱</SelectItem>
+                      <SelectItem value="China">China 🇨🇳</SelectItem>
+                      <SelectItem value="Colombia">Colombia 🇨🇴</SelectItem>
+                      <SelectItem value="Comoros">Comoros 🇰🇲</SelectItem>
+                      <SelectItem value="Congo">Congo 🇨🇬</SelectItem>
+                      <SelectItem value="Costa Rica">Costa Rica 🇨🇷</SelectItem>
+                      <SelectItem value="Croatia">Croatia 🇭🇷</SelectItem>
+                      <SelectItem value="Cuba">Cuba 🇨🇺</SelectItem>
+                      <SelectItem value="Cyprus">Cyprus 🇨🇾</SelectItem>
+                      <SelectItem value="Czech Republic">Czech Republic 🇨🇿</SelectItem>
+                      <SelectItem value="Denmark">Denmark 🇩🇰</SelectItem>
+                      <SelectItem value="Djibouti">Djibouti 🇩🇯</SelectItem>
+                      <SelectItem value="Dominica">Dominica 🇩🇲</SelectItem>
+                      <SelectItem value="Dominican Republic">Dominican Republic 🇩🇴</SelectItem>
+                      <SelectItem value="Ecuador">Ecuador 🇪🇨</SelectItem>
+                      <SelectItem value="Egypt">Egypt 🇪🇬</SelectItem>
+                      <SelectItem value="El Salvador">El Salvador 🇸🇻</SelectItem>
+                      <SelectItem value="Equatorial Guinea">Equatorial Guinea 🇬🇶</SelectItem>
+                      <SelectItem value="Eritrea">Eritrea 🇪🇷</SelectItem>
+                      <SelectItem value="Estonia">Estonia 🇪🇪</SelectItem>
+                      <SelectItem value="Eswatini">Eswatini 🇸🇿</SelectItem>
+                      <SelectItem value="Ethiopia">Ethiopia 🇪🇹</SelectItem>
+                      <SelectItem value="Fiji">Fiji 🇫🇯</SelectItem>
+                      <SelectItem value="Finland">Finland 🇫🇮</SelectItem>
+                      <SelectItem value="France">France 🇫🇷</SelectItem>
+                      <SelectItem value="Gabon">Gabon 🇬🇦</SelectItem>
+                      <SelectItem value="Gambia">Gambia 🇬🇲</SelectItem>
+                      <SelectItem value="Georgia">Georgia 🇬🇪</SelectItem>
+                      <SelectItem value="Germany">Germany 🇩🇪</SelectItem>
+                      <SelectItem value="Ghana">Ghana 🇬🇭</SelectItem>
+                      <SelectItem value="Greece">Greece 🇬🇷</SelectItem>
+                      <SelectItem value="Grenada">Grenada 🇬🇩</SelectItem>
+                      <SelectItem value="Guatemala">Guatemala 🇬🇹</SelectItem>
+                      <SelectItem value="Guinea">Guinea 🇬🇳</SelectItem>
+                      <SelectItem value="Guyana">Guyana 🇬🇾</SelectItem>
+                      <SelectItem value="Haiti">Haiti 🇭🇹</SelectItem>
+                      <SelectItem value="Honduras">Honduras 🇭🇳</SelectItem>
+                      <SelectItem value="Hungary">Hungary 🇭🇺</SelectItem>
+                      <SelectItem value="Iceland">Iceland 🇮🇸</SelectItem>
+                      <SelectItem value="India">India 🇮🇳</SelectItem>
+                      <SelectItem value="Indonesia">Indonesia 🇮🇩</SelectItem>
+                      <SelectItem value="Iran">Iran 🇮🇷</SelectItem>
+                      <SelectItem value="Iraq">Iraq 🇮🇶</SelectItem>
+                      <SelectItem value="Ireland">Ireland 🇮🇪</SelectItem>
+                      <SelectItem value="Israel">Israel 🇮🇱</SelectItem>
+                      <SelectItem value="Italy">Italy 🇮🇹</SelectItem>
+                      <SelectItem value="Jamaica">Jamaica 🇯🇲</SelectItem>
+                      <SelectItem value="Japan">Japan 🇯🇵</SelectItem>
+                      <SelectItem value="Jordan">Jordan 🇯🇴</SelectItem>
+                      <SelectItem value="Kazakhstan">Kazakhstan 🇰🇿</SelectItem>
+                      <SelectItem value="Kenya">Kenya 🇰🇪</SelectItem>
+                      <SelectItem value="Korea, South">South Korea 🇰🇷</SelectItem>
+                      <SelectItem value="Kuwait">Kuwait 🇰🇼</SelectItem>
+                      <SelectItem value="Latvia">Latvia 🇱🇻</SelectItem>
+                      <SelectItem value="Lebanon">Lebanon 🇱🇧</SelectItem>
+                      <SelectItem value="Libya">Libya 🇱🇾</SelectItem>
+                      <SelectItem value="Lithuania">Lithuania 🇱🇹</SelectItem>
+                      <SelectItem value="Luxembourg">Luxembourg 🇱🇺</SelectItem>
+                      <SelectItem value="Malaysia">Malaysia 🇲🇾</SelectItem>
+                      <SelectItem value="Maldives">Maldives 🇲🇻</SelectItem>
+                      <SelectItem value="Mexico">Mexico 🇲🇽</SelectItem>
+                      <SelectItem value="Monaco">Monaco 🇲🇨</SelectItem>
+                      <SelectItem value="Morocco">Morocco 🇲🇦</SelectItem>
+                      <SelectItem value="Netherlands">Netherlands 🇳🇱</SelectItem>
+                      <SelectItem value="New Zealand">New Zealand 🇳🇿</SelectItem>
+                      <SelectItem value="Nigeria">Nigeria 🇳🇬</SelectItem>
+                      <SelectItem value="Norway">Norway 🇳🇴</SelectItem>
+                      <SelectItem value="Pakistan">Pakistan 🇵🇰</SelectItem>
+                      <SelectItem value="Peru">Peru 🇵🇪</SelectItem>
+                      <SelectItem value="Philippines">Philippines 🇵🇭</SelectItem>
+                      <SelectItem value="Poland">Poland 🇵🇱</SelectItem>
+                      <SelectItem value="Portugal">Portugal 🇵🇹</SelectItem>
+                      <SelectItem value="Qatar">Qatar 🇶🇦</SelectItem>
+                      <SelectItem value="Romania">Romania 🇷🇴</SelectItem>
+                      <SelectItem value="Russia">Russia 🇷🇺</SelectItem>
+                      <SelectItem value="Saudi Arabia">Saudi Arabia 🇸🇦</SelectItem>
+                      <SelectItem value="Singapore">Singapore 🇸🇬</SelectItem>
+                      <SelectItem value="South Africa">South Africa 🇿🇦</SelectItem>
+                      <SelectItem value="Spain">Spain 🇪🇸</SelectItem>
+                      <SelectItem value="Sweden">Sweden 🇸🇪</SelectItem>
+                      <SelectItem value="Switzerland">Switzerland 🇨🇭</SelectItem>
+                      <SelectItem value="Thailand">Thailand 🇹🇭</SelectItem>
+                      <SelectItem value="Turkey">Turkey 🇹🇷</SelectItem>
+                      <SelectItem value="Ukraine">Ukraine 🇺🇦</SelectItem>
+                      <SelectItem value="United Arab Emirates">United Arab Emirates 🇦🇪</SelectItem>
+                      <SelectItem value="United Kingdom">United Kingdom 🇬🇧</SelectItem>
+                      <SelectItem value="Vietnam">Vietnam 🇻🇳</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="md:col-span-2">
+                  <Label htmlFor="postal-code" className="text-sm font-medium text-slate-900">
+                    Postal / Zip Code
+                  </Label>
+                  <Input
+                    id="postal-code"
+                    placeholder="e.g., M8V 1E5"
+                    value={postalCode}
+                    onChange={(e) => setPostalCode(e.target.value)}
+                    className="mt-2 border-slate-300"
+                    required
+                  />
+                </div>
+              </div>
+              <p className="text-[10px] text-slate-400 ml-1">
+                We use your exact location to find nearby landmarks and events for your posts.
+              </p>
+
+              {/* Email */}
+              <div>
+                <Label htmlFor="email" className="text-sm font-medium text-slate-900">
+                  Email Address
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@business.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="mt-2 border-slate-300"
+                  required
+                />
+              </div>
+
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full bg-cyan-800 hover:bg-cyan-900 text-white"
+              >
+                {isSubmitting ? "Joining..." : "Join the Waitlist"}
+              </Button>
+            </form>
+
+            {waitlistPosition && (
+              <div className="mt-6 p-4 bg-green-50 rounded-lg flex items-start gap-3 border border-green-200">
+                <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium text-slate-900">You're on the beta waitlist!</p>
+                  <p className="text-sm text-slate-600">
+                    You are #{waitlistPosition} in line. We will email you when beta access is ready with your early adopter discount.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
-        </section>
+        </div>
+      </section>
 
       </main>
     </>

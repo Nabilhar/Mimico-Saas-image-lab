@@ -10,10 +10,10 @@ const supabase = createClient(
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, business_name, neighborhood } = body;
+    const { email, business_name, street, city, province_state, country, postal_code } = body;
 
     // Validate input
-    if (!email || !business_name || !neighborhood) {
+    if (!email || !business_name || !street || !city || !province_state || !country || !postal_code) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -60,9 +60,13 @@ export async function POST(request: NextRequest) {
       .from('waitlist')
       .insert([
         {
-          email,
-          business_name,
-          neighborhood,
+          email: email, 
+          business_name: business_name, 
+          street: street, 
+          city: city, 
+          province_state: province_state, 
+          country: country, 
+          postal_code: postal_code,
           position: nextPosition,
           discount_tier,
           created_at: new Date().toISOString(),

@@ -70,11 +70,24 @@ function buildPollinationsUrl(visualDescription: string): string {
 export async function POST(req: Request) {
   try {
     // We now just need the ID to find the cached prompt
-    const { postId, business_name, location } = await req.json();
+    const { postId, business_id } = await req.json();
 
     if (!postId) {
       return NextResponse.json({ error: "Missing post ID" }, { status: 400 });
     }
+
+    const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('business_name, street, city, province_state, country, postal_code')
+    .eq('id', business_id)
+    .single();
+
+    if (profileError || !profile) {
+      return NextResponse.json({ error: "Business profile not found." }, { status: 404 });
+    }
+
+    const fullAddress = `${profile.street}, ${profile.city}, ${profile.province_state}, ${profile.country} ${profile.postal_code}`;
+    const businessName = profile.business_name;
  
     const { data: post, error: dbError } = await supabase
         .from('community_posts')
@@ -105,7 +118,7 @@ export async function POST(req: Request) {
 
 
     const finalDescription = postPrompt 
-    const cleanDescription = `Professional photography of ${finalDescription} for ${business_name} in ${location}.`;
+    const cleanDescription = `Professional photography of ${finalDescription} for  ${businessName} in ${fullAddress}.`;
 
 
     let hostedUrl: string | null = null;

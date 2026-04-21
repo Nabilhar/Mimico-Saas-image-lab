@@ -12,6 +12,7 @@ import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 
 interface GenerateDashboardProps {
+  businessData: any;
   onGenerateSuccess?: (content: string, imageUrl: string) => Promise<string | undefined>;
   onShare?: (content: string, imageUrl?: string) => void;
   canGenerate: boolean; 
@@ -23,13 +24,17 @@ interface GenerateDashboardProps {
 }
 
 // FIX: Added canGenerate here so the component can actually use the value
-export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, userCredits, onDelete, supabase, history, onImageUpdated }: GenerateDashboardProps) {
+export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, userCredits, onDelete, supabase, history, onImageUpdated, businessData }: GenerateDashboardProps) {
   const { user } = useUser();
   const router = useRouter();
 
   // Profile States
   const [business_name, setbusiness_name] = useState("");
-  const [location, setLocation] = useState("");
+  const [street, setStreet] = useState("");
+  const [city, setCity] = useState("");
+  const [province_state, setProvinceState] = useState("");
+  const [country, setCountry] = useState("Canada");
+  const [postalCode, setPostalCode] = useState("");
   const [category, setCategory] = useState("");
   const [niche, setNiche] = useState("");
   const [voice, setVoice] = useState("");
@@ -58,50 +63,48 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
   const loadingPhases = [
     "Locating address...",
     "Identifying local landmarks...",
-    "Researching neighborhood trends...",
+    "Researching neighbourhood trends...",
     "Applying strategy...",
     "Polishing owner voice...",
     "Finalizing post..."
   ];
 
-    // Master Initialization: Load Profile and Last Post from Supabase
-    useEffect(() => {
-      const fetchDashboardData = async () => {
-        if (!user?.id) return;
+  // Master Initialization: Load Profile and Last Post from Supabase
+  useEffect(() => {
+    // 1. SYNC PROFILE FROM PROPS (Lifting State Up)
+    // We no longer fetch the profile from Supabase here because DashboardPage already did it.
+    if (businessData) {
+      setbusiness_name(businessData.business_name || "");
+      setStreet(businessData.street || "");
+      setCity(businessData.city || "");
+      setProvinceState(businessData.province_state || ""); // <--- ADDED
+      setCountry(businessData.country || "Canada");
+      setPostalCode(businessData.postal_code || "");
+      setCategory(businessData.category || "Food & Beverage");
+      setNiche(businessData.niche || "");
+      setVoice(businessData.voice || "The Neighbor");
+    }
 
-        // 1. Pull the Business Profile
-        const { data: profile } = await supabase
-          .from('profiles') // ** IMPORTANT: Change this if your table name is different **
-          .select('business_name, location, category, niche, voice')
-          .eq('id', user.id)
-          .single();
+    // 2. Pull the Last Generated Post (Still needed as this is post-specific, not profile-specific)
+    const fetchLastPost = async () => {
+      if (!user?.id) return;
+      const { data: lastPost } = await supabase
+        .from('community_posts')
+        .select('id, content, image_url')
+        .eq('business_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-        if (profile) {
-          setbusiness_name(profile.business_name || "");
-          setLocation(profile.location || "");
-          setCategory(profile.category || "Food & Beverage");
-          setNiche(profile.niche || "");
-          setVoice(profile.voice || "The Neighbor");
-        }
+      if (lastPost) {
+        setContent(lastPost.content);
+        setLastPostId(lastPost.id);
+        setCurrentImage(lastPost.image_url || null);
+      }
+    };
 
-        // 2. Pull the Last Generated Post
-        const { data: lastPost } = await supabase
-          .from('community_posts') // ** IMPORTANT: Change this if your table name is different **
-          .select('id, content, image_url')
-          .eq('business_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (lastPost) {
-          setContent(lastPost.content);
-          setLastPostId(lastPost.id);
-          setCurrentImage(lastPost.image_url || null);
-        }
-      };
-
-      fetchDashboardData();
-    }, [user?.id, supabase]);
+    fetchLastPost();
+  }, [user?.id, supabase, businessData]);
 
   // Loading Interval
   useEffect(() => {
@@ -159,7 +162,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
           duration: { minutes: 10 },
           title: `🎨 Shoreline Studio: Time to Create!`,
           description: `Open your Shoreline Studio dashboard to generate and share today's local post for ${business_name}.\n\nGo to: ${window.location.origin}/dashboard`,
-          location: `${location}`,
+          location: `${street}, ${city}, ${province_state}, ${country}`,
           url: window.location.origin,
           status: 'CONFIRMED',
           busyStatus: 'FREE',
@@ -209,20 +212,24 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          prompt: `Generate a ${postType} post for ${business_name}`,
+          prompt: `Generate a ${postType} post for ${business_name}in ${city}, ${province_state} ${country}`,
           business_name,
-           location,
-           category,
-           niche,
-           voice,  
-           postType, 
-           promoType,    // "discount", "freebie", or "custom"
-           eventType,    // "news", "event", "update"
-           customDetails, // The raw text from the box
-           business_id: user?.id,
-           history: history,
-           framework: framework ,
-           currentMonth: new Date().toLocaleString("en", { month: "long" })
+          street,
+          city,
+          province_state,
+          country,
+          postal_code: postalCode,
+          category,
+          niche,
+          voice,  
+          postType, 
+          promoType,    // "discount", "freebie", or "custom"
+          eventType,    // "news", "event", "update"
+          customDetails, // The raw text from the box
+          business_id: user?.id,
+          history: history,
+          framework: framework ,
+          currentMonth: new Date().toLocaleString("en", { month: "long" })
         }),
       });
 
@@ -263,7 +270,11 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
               generatedPost: cleanPost,
               business_name,
               business_id: user?.id,
-              location,
+              street,
+              city,
+              province_state,
+              country,
+              postal_code: postalCode,
               niche,
               voice,          // Added
               framework: framework ,    // Added
@@ -317,7 +328,11 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
           body: JSON.stringify({ 
             postId: lastPostId, 
             business_name, 
-            location 
+            street,
+            province_state,
+            city,
+            country,
+            postal_code: postalCode
           }),
         });
   
@@ -381,8 +396,11 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
                 generatedPost: content,
                 business_name,
                 business_id: user?.id,
-                location,
-                niche,
+                street,
+                city,
+                province_state,
+                country,
+                postal_code: postalCode,
                 voice,
                 framework: getFramework(category, postType, voice),
                 postType,
@@ -642,7 +660,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
           <div>
             <p className="font-bold text-slate-900 text-sm leading-tight">{business_name}</p>
             <p className="text-[10px] text-slate-500 font-medium tracking-tight mt-0.5">
-              Just now • {location} 🌐
+              Just now • {city} 🌐
             </p>
           </div>
         </div>
@@ -698,7 +716,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
                     </h3>
                     <p className="text-[12px] text-slate-500 max-w-[280px] leading-relaxed font-medium">
                       {/* This is the smart message that justifies the wait */}
-                      The AI Engine is researching your neighborhood and mapping your brand colors to the local scenery. 
+                      The AI Engine is researching your neighbourhood and mapping your brand colors to the local scenery. 
                       <span className="block mt-2 text-cyan-700 font-semibold">
                         This deep-dive might take a minute, but ensures a perfect, hyper-local match.
                       </span>

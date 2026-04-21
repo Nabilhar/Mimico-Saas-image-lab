@@ -52,7 +52,7 @@ export function GallerySection() {
 
 Imagine sinking your teeth into our juicy shawarma, the garlic sauce tingling on your palate, and a crisp, fresh side waiting beside it, brightening your day. 🍽️  
 
-That’s why we’re tucking a free side dish with your order until April 30th, just for our neighbors strolling by the Lakeshore and the families gathering after a walk
+That’s why we’re tucking a free side dish with your order until April 30th, just for our neighbours strolling by the Lakeshore and the families gathering after a walk
 
 #Waterfront #DowntownCore #BestShawarma `,
       imageUrl: "https://sqevbzmyxfydanimdcwp.supabase.co/storage/v1/object/public/post-images/1776698413755-oxqggb.png",
@@ -66,7 +66,7 @@ That’s why we’re tucking a free side dish with your order until April 30th, 
 
 By the time the first client settles into the chair, the air is scented with warm rosemary oil, the mirrors gleam, and navy‑blue towels are folded just so, inviting you to unwind.  
 
-I hand‑mix that rosemary blend in our back room, right beside the window that frames the CN Tower’s silhouette. Watching the tower catch the sunrise reminds me why we love serving our Harbourfront neighbors.  
+I hand‑mix that rosemary blend in our back room, right beside the window that frames the CN Tower’s silhouette. Watching the tower catch the sunrise reminds me why we love serving our Harbourfront neighbours.  
 
 If you’re strolling past the Rogers Centre later, swing by for a quick scalp refresh – no appointment needed, just a friendly hello. 🌿  
 
@@ -96,7 +96,7 @@ That moment is when I pull the newest market report, highlight a condo that just
 
 When I step into Smile Dental each morning, the scent of fresh coffee ☕ mixes with the faint hum of the sterilizer, and I watch Mrs. Patel from next door settle into the chair, her smile already brightening the room.
 
-After her check‑up, she tells me about the new patio at the Vaughan Mills food court, and I can’t help but feel we’re all part of the same lively neighborhood rhythm.
+After her check‑up, she tells me about the new patio at the Vaughan Mills food court, and I can’t help but feel we’re all part of the same lively neighbourhood rhythm.
 
 If you’re planning a quick visit before the weekend rush, the chair is ready and the kettle is on—just swing by, and we’ll make sure your smile is as ready for the festivities as the rest of us.
 
