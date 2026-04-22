@@ -1,32 +1,122 @@
 'use client';
 import { useUser, useSession, useAuth } from "@clerk/nextjs";
-import { useState, useEffect, useMemo } from "react";
-import { useRouter } from "next/navigation"; // Added for redirecting
-import { SiteHeader } from "@/components/SiteHeader"; // Keep consistent branding
+import { useState, useEffect, useMemo, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { SiteHeader } from "@/components/SiteHeader";
 import { getFramework, BUSINESS_ARCHETYPES } from "@/lib/frameworks";
 import { NICHE_DATA, CATEGORIES, VOICES } from "@/lib/constants";
 import { createClerksupabase } from '@/lib/supabase';
+import { UploadedPhoto } from "@/lib/brandDiscovery";
 import toast from "react-hot-toast";
 
+// ---------------------------------------------------------------------------
+// Helper: converts a File object → UploadedPhoto (base64 + mimeType + label)
+// Runs entirely in the browser — no server round-trip needed.
+// ---------------------------------------------------------------------------
+function fileToUploadedPhoto(file: File, label: string): Promise<UploadedPhoto> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      // dataUrl format: "data:image/jpeg;base64,/9j/4AAQ..."
+      // We strip the prefix so Gemini receives pure base64
+      const base64 = dataUrl.split(",")[1];
+      resolve({ base64, mimeType: file.type, label });
+    };
+    reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
+    reader.readAsDataURL(file);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Sub-component: a single photo upload slot with preview
+// ---------------------------------------------------------------------------
+interface PhotoSlotProps {
+  label: string;
+  sublabel: string;
+  icon: string;
+  file: File | null;
+  onChange: (file: File | null) => void;
+}
+
+function PhotoSlot({ label, sublabel, icon, file, onChange }: PhotoSlotProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const previewUrl = file ? URL.createObjectURL(file) : null;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
+        {icon} {label}
+      </label>
+      <div
+        onClick={() => inputRef.current?.click()}
+        className={`relative flex items-center justify-center rounded-2xl border-2 border-dashed cursor-pointer transition overflow-hidden h-32
+          ${file
+            ? "border-cyan-400 bg-cyan-50"
+            : "border-slate-200 bg-slate-50 hover:border-cyan-300 hover:bg-cyan-50/50"
+          }`}
+      >
+        {previewUrl ? (
+          // Show thumbnail preview once a file is selected
+          <>
+            <img
+              src={previewUrl}
+              alt={label}
+              className="absolute inset-0 w-full h-full object-cover rounded-2xl"
+            />
+            {/* Overlay with change/remove controls */}
+            <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center gap-1 opacity-0 hover:opacity-100 transition rounded-2xl">
+              <span className="text-white text-xs font-semibold">Change photo</span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onChange(null);
+                  if (inputRef.current) inputRef.current.value = "";
+                }}
+                className="text-red-300 text-[10px] hover:text-red-100 underline"
+              >
+                Remove
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-col items-center gap-1 text-slate-400 pointer-events-none px-4 text-center">
+            <span className="text-2xl">{icon}</span>
+            <span className="text-[11px] font-semibold text-slate-500">{sublabel}</span>
+            <span className="text-[10px] text-slate-400">JPG, PNG, WEBP</span>
+          </div>
+        )}
+      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={(e) => onChange(e.target.files?.[0] || null)}
+      />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main Profile Page
+// ---------------------------------------------------------------------------
 export default function ProfilePage() {
-  // 1. Define all hooks
   const { user, isLoaded } = useUser();
   const { session } = useSession();
   const { getToken } = useAuth();
   const router = useRouter();
 
-  // Initialize the supabase client
-
-  // Updated - dynamic template based on environment
   const template = process.env.NEXT_PUBLIC_APP_ENV === 'development'
-  ? 'supabase-dev'
-  : 'supabase-prod';
-  const supabase = useMemo(() => {
-    
-    return createClerksupabase(() => getToken({ template}));
-  }, []); // Empty dependency array!
+    ? 'supabase-dev'
+    : 'supabase-prod';
 
-  // STATES DEFINITIONS
+  const supabase = useMemo(() => {
+    return createClerksupabase(() => getToken({ template }));
+  }, []);
+
+  // ── Form state ────────────────────────────────────────────────────────────
   const [loading, setLoading] = useState(false);
   const [testResult, setTestResult] = useState("");
   const [business_name, setbusiness_name] = useState("");
@@ -41,132 +131,137 @@ export default function ProfilePage() {
   const [credits, setCredits] = useState(0);
   const [business_description, setBusinessDescription] = useState("");
 
-    // 4. Effects and Handlers
-    useEffect(() => {
-      const fetchProfile = async () => {
-        if (!user?.id || !supabase) return;
-        
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('business_name, street, city, country, postal_code, province_state, category, niche, voice, credits, business_description')
-          .eq('id', user.id)
-          .maybeSingle();
-    
-        console.log('Profile fetch:', { data, error });
+  // ── Photo upload state (3 optional slots) ─────────────────────────────────
+  const [storefrontPhoto, setStorefrontPhoto] = useState<File | null>(null);
+  const [logoPhoto, setLogoPhoto] = useState<File | null>(null);
+  const [heroProductPhoto, setHeroProductPhoto] = useState<File | null>(null);
 
-        if (data) {
-          // If we found data in Supabase, use it
-          setbusiness_name(data.business_name || "");
-          setStreet(data.street || "");
-          setCity(data.city || "");
-          setProvinceState(data.province_state || "");
-          setCountry(data.country || "Canada");
-          setPostalCode(data.postal_code || "");
-          setCategory(data.category || "");
-          setVoice(data.voice || "");
-          setNiche(data.niche || "");
-          setCredits(data.credits ?? 0);
-          setBusinessDescription(data.business_description || "")
+  // ── Brand source state — drives which UI the photo section shows ─────────
+  // null        = first visit, discovery hasn't run yet
+  // 'photos'    = real colors captured from owner photos ✅
+  // 'text_search' = estimated colors from Gemma web research (upgradeable)
+  const [brandSource, setBrandSource] = useState<string | null>(null);
 
-        } else {
-          // If no data in DB, check localStorage
-          const saved = localStorage.getItem("shoreline_business_profile");
-          if (saved) {
-            const localData = JSON.parse(saved);
-            setbusiness_name(localData.business_name || "");
-            setStreet(localData.street || "");
-            setCity(localData.city || "");
-            setCountry(localData.country || "Canada");
-            setPostalCode(localData.postal_code || "");
-            setCategory(localData.category || "");
-            setVoice(localData.voice || "");
-            setNiche(localData.niche || "");
-            setCredits(localData.credits ?? 0)
-          }
+  // ── Fetch existing profile ─────────────────────────────────────────────────
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user?.id || !supabase) return;
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('business_name, street, city, country, postal_code, province_state, category, niche, voice, credits, business_description, brand_source')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      console.log('Profile fetch:', { data, error });
+
+      if (data) {
+        setbusiness_name(data.business_name || "");
+        setStreet(data.street || "");
+        setCity(data.city || "");
+        setProvinceState(data.province_state || "");
+        setCountry(data.country || "Canada");
+        setPostalCode(data.postal_code || "");
+        setCategory(data.category || "");
+        setVoice(data.voice || "");
+        setNiche(data.niche || "");
+        setCredits(data.credits ?? 0);
+        setBusinessDescription(data.business_description || "");
+        setBrandSource(data.brand_source || null);
+      } else {
+        const saved = localStorage.getItem("shoreline_business_profile");
+        if (saved) {
+          const localData = JSON.parse(saved);
+          setbusiness_name(localData.business_name || "");
+          setStreet(localData.street || "");
+          setCity(localData.city || "");
+          setCountry(localData.country || "Canada");
+          setPostalCode(localData.postal_code || "");
+          setCategory(localData.category || "");
+          setVoice(localData.voice || "");
+          setNiche(localData.niche || "");
+          setCredits(localData.credits ?? 0);
         }
-      };
-    
-      if (isLoaded && user) {
-        fetchProfile();
       }
-    }, [isLoaded, user, supabase]);
-    // 3. Early Return (Now 'session' is defined and safe to check)
-    if (!isLoaded || !user || !session) {
-      return <div className="p-10 text-center text-slate-500">Loading Profile...</div>;
-    }
+    };
+
+    if (isLoaded && user) fetchProfile();
+  }, [isLoaded, user, supabase]);
+
+  if (!isLoaded || !user || !session) {
+    return <div className="p-10 text-center text-slate-500">Loading Profile...</div>;
+  }
 
   const categories = Object.keys(BUSINESS_ARCHETYPES);
   const voices = ["The Expert", "The Neighbour", "The Hustler", "The Minimalist"];
 
-
+  // ── Save handler ───────────────────────────────────────────────────────────
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !supabase) return;
-    
+
     setLoading(true);
     try {
-      // We define the object HERE so both Supabase and LocalStorage can use it
       const profileData = {
         id: user.id,
         first_name: user.firstName,
         last_name: user.lastName,
         email: user.primaryEmailAddress?.emailAddress,
         business_name,
-        street: street,
-        city: city,
-        province_state: province_state,
-        country: country,
+        street,
+        city,
+        province_state,
+        country,
         postal_code: postalCode,
-        category: category,
-        niche: niche,
-        voice: voice,
-        business_description: business_description,
+        category,
+        niche,
+        voice,
+        business_description,
         updated_at: new Date().toISOString(),
       };
-  
-      const { error } = await supabase
-        .from('profiles')
-        .upsert(profileData); // Use the object here
-  
+
+      // 1. Save profile to Supabase
+      const { error } = await supabase.from('profiles').upsert(profileData);
       if (error) throw error;
 
-      // 2. Trigger the new Gemma 4 Discovery API
-        fetch("/api/discover-brand", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            business_id: user.id,
-            business_name: business_name,
-            address: {
-              street,
-              city,
-              province_state,
-              country,
-              postalCode: postalCode // matches your lib naming
-            }
-          }),
-        }).catch(err => console.error("Discovery trigger failed:", err));
+      // 2. Convert any uploaded photos to base64 for the discovery API
+      const photoFiles = [
+        { file: storefrontPhoto,   label: "storefront"   },
+        { file: logoPhoto,         label: "logo"         },
+        { file: heroProductPhoto,  label: "hero_product" },
+      ].filter((p) => p.file !== null) as { file: File; label: string }[];
 
-      // 2. TRIGGER: Call the RPC to claim welcome credits
-      // This is the "Hybrid" logic we discussed
+      const uploadedPhotos: UploadedPhoto[] = await Promise.all(
+        photoFiles.map(({ file, label }) => fileToUploadedPhoto(file, label))
+      );
+
+      // 3. Trigger brand discovery in the background (fire and forget)
+      fetch("/api/discover-brand", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          business_id:   user.id,
+          business_name: business_name,
+          address: { street, city, province_state, country, postalCode },
+          photos:        uploadedPhotos, // [] if none uploaded → text fallback
+        }),
+      }).catch((err) => console.error("Discovery trigger failed:", err));
+
+      // 4. Claim welcome credits
       const { data: creditData, error: creditError } = await supabase.rpc('claim_welcome_credits');
-      
+
       if (creditError) {
         console.error("Credit claim error:", creditError);
-        // We don't throw this error because the profile was still saved successfully
       } else if (creditData?.success) {
         toast.success("Welcome! 15 free credits have been added to your account! 🚀");
-      }else if (creditData && creditData.success === false) {
-
+      } else if (creditData && creditData.success === false) {
         toast.error(creditData.message || "Unable to grant welcome credits.");
       }
-  
-      // Now this won't throw an error because profileData is defined above
+
       localStorage.setItem("shoreline_business_profile", JSON.stringify(profileData));
-  
       alert("SUCCESS! Shoreline Profile Saved.");
       router.push("/dashboard");
-  
+
     } catch (err: any) {
       console.error("Save failed:", err.message);
       alert("Save Error: " + err.message);
@@ -174,19 +269,20 @@ export default function ProfilePage() {
       setLoading(false);
     }
   };
-  
+
   const runLogicCheck = () => {
     if (!category || !voice) {
       setTestResult("Please select a category and voice first!");
       return;
     }
-    const result = getFramework(category, "5 Tips", voice); 
+    const result = getFramework(category, "5 Tips", voice);
     const archetype = BUSINESS_ARCHETYPES[category];
     setTestResult(`Logic: ${category} is "${archetype}". Using ${voice} voice for "5 Tips" results in: ${result} framework.`);
   };
 
   if (!isLoaded) return <div className="p-10 text-center text-slate-500">Loading Profile...</div>;
 
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <>
       <SiteHeader />
@@ -197,8 +293,10 @@ export default function ProfilePage() {
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">Your Business Profile</h1>
             <p className="text-slate-500 text-sm mt-2">Tell the Shoreline AI about your business to generate more accurate, local content.</p>
           </header>
-          
+
           <form onSubmit={handleSave} className="space-y-6">
+
+            {/* ── Name fields ─────────────────────────────────────────────── */}
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               <div className="flex flex-col">
                 <label className="text-sm font-semibold text-slate-700 mb-1">First Name</label>
@@ -210,27 +308,27 @@ export default function ProfilePage() {
               </div>
             </div>
 
+            {/* ── Business name ────────────────────────────────────────────── */}
             <div className="flex flex-col">
               <label className="text-sm font-semibold text-slate-700 mb-1">Business Name</label>
-              <input 
-                className="border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition" 
-                placeholder="e.g. San Remo Bakery" 
+              <input
+                className="border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition"
+                placeholder="e.g. San Remo Bakery"
                 value={business_name}
                 onChange={(e) => setbusiness_name(e.target.value)}
                 required
               />
             </div>
 
-
-            {/* DECONSTRUCTED ADDRESS SECTION */}
+            {/* ── Address ──────────────────────────────────────────────────── */}
             <div className="space-y-4">
               <label className="text-sm font-semibold text-slate-700">Business Location</label>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="flex flex-col sm:col-span-2">
                   <label className="text-[10px] uppercase text-slate-400 mb-1 ml-1">Street Address</label>
-                  <input 
-                    className="border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none transition" 
-                    placeholder="e.g. 2447 Lake Shore Blvd W" 
+                  <input
+                    className="border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none transition"
+                    placeholder="e.g. 2447 Lake Shore Blvd W"
                     value={street}
                     onChange={(e) => setStreet(e.target.value)}
                     required
@@ -238,9 +336,9 @@ export default function ProfilePage() {
                 </div>
                 <div className="flex flex-col">
                   <label className="text-[10px] uppercase text-slate-400 mb-1 ml-1">City</label>
-                  <input 
-                    className="border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none transition" 
-                    placeholder="e.g. Toronto" 
+                  <input
+                    className="border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none transition"
+                    placeholder="e.g. Toronto"
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
                     required
@@ -248,9 +346,9 @@ export default function ProfilePage() {
                 </div>
                 <div className="flex flex-col">
                   <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Province / State</label>
-                  <input 
-                    className="border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none transition" 
-                    placeholder="e.g. ON or Ontario" 
+                  <input
+                    className="border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none transition"
+                    placeholder="e.g. ON or Ontario"
                     value={province_state}
                     onChange={(e) => setProvinceState(e.target.value)}
                     required
@@ -258,7 +356,7 @@ export default function ProfilePage() {
                 </div>
                 <div className="flex flex-col">
                   <label className="text-[10px] uppercase text-slate-400 mb-1 ml-1">Country</label>
-                  <select 
+                  <select
                     className="border border-slate-200 p-3 rounded-xl bg-white focus:ring-2 focus:ring-cyan-500 outline-none transition"
                     value={country}
                     onChange={(e) => setCountry(e.target.value)}
@@ -385,14 +483,14 @@ export default function ProfilePage() {
                     <option value="Ukraine">Ukraine 🇺🇦</option>
                     <option value="United Arab Emirates">United Arab Emirates 🇦🇪</option>
                     <option value="United Kingdom">United Kingdom 🇬🇧</option>
-                    <option value="Vietnam">Vietnam 🇻🇳</option>                
+                    <option value="Vietnam">Vietnam 🇻🇳</option>
                   </select>
                 </div>
                 <div className="flex flex-col sm:col-span-2">
                   <label className="text-[10px] uppercase text-slate-400 mb-1 ml-1">Postal / Zip Code</label>
-                  <input 
-                    className="border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none transition" 
-                    placeholder="e.g. M8V 1E5" 
+                  <input
+                    className="border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none transition"
+                    placeholder="e.g. M8V 1E5"
                     value={postalCode}
                     onChange={(e) => setPostalCode(e.target.value)}
                     required
@@ -404,16 +502,14 @@ export default function ProfilePage() {
               </p>
             </div>
 
+            {/* ── Category / Niche / Voice ──────────────────────────────────── */}
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               <div className="flex flex-col">
                 <label className="text-sm font-semibold text-slate-700 mb-1">Business Category</label>
-                <select 
+                <select
                   className="border border-slate-200 p-3 rounded-xl bg-white focus:ring-2 focus:ring-cyan-500 outline-none"
                   value={category}
-                  onChange={(e) => {
-                    setCategory(e.target.value);
-                    setNiche("");
-                  }}
+                  onChange={(e) => { setCategory(e.target.value); setNiche(""); }}
                   required
                 >
                   <option value="">Select Category...</option>
@@ -423,11 +519,11 @@ export default function ProfilePage() {
 
               <div className="flex flex-col">
                 <label className="text-sm font-semibold text-slate-700 mb-1">Business Niche (Trade)</label>
-                <select 
+                <select
                   className={`border border-slate-200 p-3 rounded-xl bg-white ${!category ? 'opacity-50 cursor-not-allowed' : ''}`}
                   value={niche}
                   onChange={(e) => setNiche(e.target.value)}
-                  disabled={!category} // Lock until category is picked [cite: 193]
+                  disabled={!category}
                   required
                 >
                   <option value="">{category ? "Select Trade..." : "Select Category First"}</option>
@@ -439,7 +535,7 @@ export default function ProfilePage() {
 
               <div className="flex flex-col">
                 <label className="text-sm font-semibold text-slate-700 mb-1">Brand Voice</label>
-                <select 
+                <select
                   className="border border-slate-200 p-3 rounded-xl bg-white focus:ring-2 focus:ring-cyan-500 outline-none"
                   value={voice}
                   onChange={(e) => setVoice(e.target.value)}
@@ -451,7 +547,97 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <button 
+            {/* ── Brand Photos — 3-state section driven by brandSource ──────── */}
+            <div className="space-y-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <label className="text-sm font-semibold text-slate-700">Brand Photos</label>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Upload your own photos so the AI learns your exact brand colors and style.
+                  </p>
+                </div>
+                {/* Badge changes based on what we know */}
+                {brandSource === "photos" ? (
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-full mt-0.5">
+                    ✅ Captured
+                  </span>
+                ) : brandSource === "text_search" ? (
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-full mt-0.5">
+                    ⚡ Estimated
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 bg-slate-100 px-2 py-1 rounded-full mt-0.5">
+                    Optional
+                  </span>
+                )}
+              </div>
+
+              {/* STATE 1: Brand captured from real photos — hide slots, show success */}
+              {brandSource === "photos" ? (
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 flex items-start gap-3">
+                  <span className="text-2xl">🎨</span>
+                  <div>
+                    <p className="text-sm font-semibold text-emerald-800">Brand identity captured from your photos</p>
+                    <p className="text-[11px] text-emerald-700 mt-0.5">
+                      The AI has analyzed your storefront, logo, and hero product to extract your exact brand colors and style.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setBrandSource(null)}
+                      className="text-[11px] text-emerald-600 underline mt-2 hover:text-emerald-800"
+                    >
+                      Re-upload photos to refresh brand analysis
+                    </button>
+                  </div>
+                </div>
+
+              ) : brandSource === "text_search" ? (
+                /* STATE 2: Estimated from web — show slots with upgrade nudge */
+                <>
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 flex items-start gap-3 mb-3">
+                    <span className="text-2xl">⚡</span>
+                    <div>
+                      <p className="text-sm font-semibold text-amber-800">Brand colors were estimated from web research</p>
+                      <p className="text-[11px] text-amber-700 mt-0.5">
+                        Upload your actual photos below for a more accurate brand analysis. Real photos always win.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <PhotoSlot label="Storefront" sublabel="Exterior / signage" icon="🏪" file={storefrontPhoto} onChange={setStorefrontPhoto} />
+                    <PhotoSlot label="Logo" sublabel="Your brand mark" icon="✦" file={logoPhoto} onChange={setLogoPhoto} />
+                    <PhotoSlot label="Hero Product" sublabel="Best-selling item" icon="⭐" file={heroProductPhoto} onChange={setHeroProductPhoto} />
+                  </div>
+                  {storefrontPhoto || logoPhoto || heroProductPhoto ? (
+                    <p className="text-[11px] text-cyan-700 bg-cyan-50 border border-cyan-100 rounded-xl px-3 py-2">
+                      ✅ The AI will re-analyze your brand using these photos after saving.
+                    </p>
+                  ) : null}
+                </>
+
+              ) : (
+                /* STATE 3: First visit — neutral upload slots, no pressure */
+                <>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <PhotoSlot label="Storefront" sublabel="Exterior / signage" icon="🏪" file={storefrontPhoto} onChange={setStorefrontPhoto} />
+                    <PhotoSlot label="Logo" sublabel="Your brand mark" icon="✦" file={logoPhoto} onChange={setLogoPhoto} />
+                    <PhotoSlot label="Hero Product" sublabel="Best-selling item" icon="⭐" file={heroProductPhoto} onChange={setHeroProductPhoto} />
+                  </div>
+                  {storefrontPhoto || logoPhoto || heroProductPhoto ? (
+                    <p className="text-[11px] text-cyan-700 bg-cyan-50 border border-cyan-100 rounded-xl px-3 py-2">
+                      ✅ The AI will analyze your photos to extract your exact brand colors and style after saving.
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-slate-400 italic">
+                      No photos? No problem — the AI will research your business online as a fallback.
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* ── Save button ───────────────────────────────────────────────── */}
+            <button
               type="submit"
               disabled={loading}
               className={`w-full font-bold py-5 rounded-2xl transition shadow-lg ${
@@ -462,11 +648,11 @@ export default function ProfilePage() {
             </button>
           </form>
 
-          {/* Logic Tester - styled as a "developer" utility */}
+          {/* ── Framework Debugger ────────────────────────────────────────── */}
           <div className="mt-12 p-6 bg-slate-50 border border-dashed border-slate-300 rounded-2xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest">Framework Debugger</h3>
-              <button 
+              <button
                 type="button"
                 onClick={runLogicCheck}
                 className="text-xs font-bold text-cyan-800 hover:underline"
@@ -482,6 +668,7 @@ export default function ProfilePage() {
               <p className="text-xs text-slate-500 italic">No logic check performed yet.</p>
             )}
           </div>
+
         </div>
       </main>
     </>
