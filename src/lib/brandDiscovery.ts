@@ -15,39 +15,42 @@ const supabase = createClient(
 // ---------------------------------------------------------------------------
 
 export interface UploadedPhoto {
-  base64: string;   // Pure base64 string (no data URI prefix)
-  mimeType: string; // e.g. "image/jpeg", "image/png"
-  label: string;    // "storefront" | "logo" | "hero_product"
+  base64: string;   // Pure base64 string
+  mimeType: string; // e.g. "image/jpeg"
+  label: string;    // "storefront" | "logo" | "interior"
 }
 
 // ---------------------------------------------------------------------------
 // THE LIGHT READER (Fast Path)
-// Purpose: Called during the critical path of text generation.
-// Only reads from the database — never waits for AI research.
 // ---------------------------------------------------------------------------
 
 export async function getBrandIdentity(userId: string): Promise<BusinessIdentity> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('color_theme, business_visuals')
+    .select('color_theme, business_visuals, storefront_architecture, interior_layout')
     .eq('id', userId)
     .maybeSingle();
 
   if (error) {
     console.error("Error fetching brand identity:", error.message);
-    return { color_theme: null, business_visuals: null };
+    return { 
+      color_theme: null, 
+      business_visuals: null,
+      storefront_architecture: null,
+      interior_layout: null
+    };
   }
 
   return {
     color_theme: data?.color_theme || null,
     business_visuals: data?.business_visuals || null,
+    storefront_architecture: data?.storefront_architecture || null,
+    interior_layout: data?.interior_layout || null,
   };
 }
 
 // ---------------------------------------------------------------------------
-// PATH A: Gemini Vision Analysis (when user uploads photos)
-// Sends the owner's own photos to Gemini for precise brand extraction.
-// This is the gold standard path — real colors from real brand assets.
+// PATH A: Gemini Vision Analysis
 // ---------------------------------------------------------------------------
 
 async function analyzePhotosWithGemini(
@@ -57,9 +60,9 @@ async function analyzePhotosWithGemini(
 ): Promise<any> {
   console.log(`[Gemini Vision] Analyzing ${photos.length} uploaded photos for ${businessName}...`);
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  // FIX: Explicitly use v1 for stable models like Flash to avoid 404 errors
+  const model = genAI.getGenerativeModel({ model: "models/gemini-2.5-flash" }, { apiVersion: "v1beta" });
 
-  // Build image parts — Gemini expects { inlineData: { data, mimeType } }
   const imageParts = photos.map((photo) => ({
     inlineData: {
       data: photo.base64,
@@ -67,36 +70,36 @@ async function analyzePhotosWithGemini(
     },
   }));
 
-  // Build a context string so Gemini knows what each photo represents
   const photoContext = photos
-    .map((p, i) => `Photo ${i + 1}: ${p.label.replace("_", " ")}`)
+    .map((p, i) => `Photo ${i + 1}: ${p.label}`)
     .join(", ");
 
   const textPrompt = `
-    You are a professional brand analyst. The business owner of "${businessName}" (${fullAddress}) 
-    has personally uploaded these photos of their business: ${photoContext}.
-
-    These are the AUTHORITATIVE brand assets. Base ALL your analysis on what you 
-    ACTUALLY SEE in these photos. Do not guess or infer what you can observe directly.
+    Analyze these photos of "${businessName}" (${fullAddress}): ${photoContext}.
 
     STRICT OUTPUT REQUIREMENT:
-    Return a JSON object with exactly these 8 keys.
+    Return a JSON object with exactly 10 keys. 
     Do not use nested objects. Do not omit any keys.
-    Only use "Not visible in photos" if a detail genuinely cannot be seen.
+
+    1. PHOTO 1 (Storefront): Architecture, facade materials, and exterior colors.
+    2. PHOTO 2 (Logo): Exact brand palette (Primary/Secondary colors).
+    3. PHOTO 3 (Interior): Spatial layout, lighting warmth, and surface materials.
 
     REQUIRED FLAT JSON STRUCTURE:
     {
-      "primary_color": "the dominant brand color you see (e.g., 'Deep Forest Green', 'Warm Terracotta')",
-      "secondary_color": "the supporting color you see",
-      "accent_color": "the contrast or highlight color you see",
-      "theme_description": "a 1-sentence summary of the overall visual palette and mood",
-      "logo_colors": "exact colors seen in the logo photo",
-      "storefront_colors": "exact exterior colors, signage, and materials seen",
-      "interior_colors": "interior colors, lighting warmth, and surface materials seen",
-      "business_description": "A concise 2-3 sentence overview of what this business does, their primary products or services, and what makes them visually distinctive."
+      "primary_color": "dominant brand color from logo",
+      "secondary_color": "supporting color from logo",
+      "accent_color": "contrast color from logo or storefront",
+      "theme_description": "1-sentence summary of mood and palette",
+      "logo_colors": "colors seen in the logo photo",
+      "storefront_colors": "exterior colors and signage",
+      "storefront_architecture": "building type, facade material, window/door style",
+      "interior_colors": "interior colors and lighting warmth",
+      "interior_layout": "spatial arrangement (e.g. counter location, seating)",
+      "business_description": "2-3 sentence overview of the business and its vibe"
     }
 
-    Output ONLY the JSON object. No preamble, no markdown fences, no conversation.
+    Output ONLY the JSON object. No preamble, no conversation.
   `;
 
   const result = await model.generateContent([...imageParts, { text: textPrompt }]);
@@ -112,47 +115,27 @@ async function analyzePhotosWithGemini(
 }
 
 // ---------------------------------------------------------------------------
-// PATH B: Gemini Text Search Fallback (when user skips photo upload)
-// Uses Gemma 4 + Google Search grounding to make an educated brand estimate.
-// Clearly labelled as an estimate — not real visual data.
+// PATH B: Gemini Text Search Fallback
 // ---------------------------------------------------------------------------
 
 async function analyzeWithTextSearch(
   businessName: string,
   fullAddress: string
 ): Promise<any> {
-  console.log(`[Gemini Text] No photos uploaded — running text search fallback for ${businessName}...`);
+  console.log(`[Gemini Text] Running text search fallback for ${businessName}...`);
 
-  const tools = [{ googleSearch: {} }] as any;
+  // FIX: Tools like Google Search require v1beta
   const model = genAI.getGenerativeModel(
-    { model: "models/gemma-4-31b-it", tools },
+    { model: "models/gemma-4-31b-it", tools: [{ googleSearch: {} }] as any },
     { apiVersion: "v1beta" }
   );
 
   const prompt = `
-    Search for the business "${businessName}" located at "${fullAddress}".
-    Your goal is to estimate their visual brand identity based on any online presence you can find.
-
-    STRICT OUTPUT REQUIREMENT:
-    Return a JSON object with exactly these 8 keys.
-    Do not use nested objects. Do not omit any keys.
-    Since you are working from web research only (not actual photos), use 
-    "Thematic Inference" for any detail you cannot find directly — make a 
-    professional estimate based on the business type and neighbourhood vibe.
-
-    REQUIRED FLAT JSON STRUCTURE:
-    {
-      "primary_color": "estimated dominant color (e.g., 'Navy Blue')",
-      "secondary_color": "estimated supporting color",
-      "accent_color": "estimated contrast color",
-      "theme_description": "a 1-sentence summary of the estimated color palette",
-      "logo_colors": "estimated logo colors based on web research",
-      "storefront_colors": "estimated storefront description based on web research",
-      "interior_colors": "estimated interior description based on web research",
-      "business_description": "A concise 2-3 sentence overview of what they do, their primary products or services, and what makes them unique."
-    }
-
-    Output ONLY the JSON object. No preamble, no conversation.
+    Search for "${businessName}" at "${fullAddress}".
+    Estimate their visual identity and return a JSON object with exactly 10 keys:
+    primary_color, secondary_color, accent_color, theme_description, logo_colors, 
+    storefront_colors, storefront_architecture, interior_colors, interior_layout, business_description.
+    Output ONLY the JSON object.
   `;
 
   const result = await model.generateContent(prompt);
@@ -168,10 +151,7 @@ async function analyzeWithTextSearch(
 }
 
 // ---------------------------------------------------------------------------
-// THE HEAVY RESEARCHER (Slow Path)
-// Purpose: Called in the BACKGROUND after the user saves their profile.
-// Chooses Path A (vision) or Path B (text) based on whether photos were uploaded.
-// Saves the extracted brand identity to the profiles table in Supabase.
+// THE HEAVY RESEARCHER (Orchestrator)
 // ---------------------------------------------------------------------------
 
 export async function discoverAndSaveBrandIdentity(
@@ -184,73 +164,63 @@ export async function discoverAndSaveBrandIdentity(
     country: string;
     postalCode: string;
   },
-  photos: UploadedPhoto[] = [] // Empty array = no photos uploaded = fallback path
+  photos: UploadedPhoto[] = []
 ): Promise<void> {
   console.log(`--- [BACKGROUND] BRAND DISCOVERY STARTED FOR: ${businessName} ---`);
-  console.log(`    Path: ${photos.length > 0 ? `Vision (${photos.length} photos)` : "Text Search Fallback"}`);
 
   const fullAddressString = `${address.street}, ${address.city}, ${address.province_state}, ${address.country} ${address.postalCode}`;
+  let extractedData: any = null;
 
-  try {
-    let extractedData: any = null;
-
-    // ── Choose path based on whether the user uploaded photos ─────────────
-    if (photos.length > 0) {
-      // PATH A: Real visual analysis from owner-uploaded photos
+  // 1. Try Vision Path if photos exist
+  if (photos.length > 0) {
+    try {
       extractedData = await analyzePhotosWithGemini(photos, businessName, fullAddressString);
-    } else {
-      // PATH B: Text search educated guess
+    } catch (visionErr) {
+      console.warn("⚠️ Vision Path failed. Falling back to Text Search.", visionErr);
+      // Fall through to Path B
+    }
+  }
+
+  // 2. Fallback to Text Path if Vision failed or was skipped
+  if (!extractedData) {
+    try {
       extractedData = await analyzeWithTextSearch(businessName, fullAddressString);
+    } catch (textErr) {
+      console.error("❌ Both Vision and Text paths failed.");
+      throw textErr; // Re-throw to signal real failure
     }
+  }
 
-    // ── Reconstruct nested DB payload from flat AI response ───────────────
-    const updatePayload: any = {};
-
-    if (extractedData.business_description) {
-      updatePayload.business_description = extractedData.business_description;
-    }
-
-    if (extractedData.primary_color || extractedData.theme_description) {
-      updatePayload.color_theme = {
-        primary:     extractedData.primary_color   || "neutral",
-        secondary:   extractedData.secondary_color || "neutral",
-        accent:      extractedData.accent_color    || "neutral",
+  // 3. Reconstruct and Save
+  try {
+    const updatePayload: any = {
+      business_description: extractedData.business_description,
+      color_theme: {
+        primary: extractedData.primary_color || "neutral",
+        secondary: extractedData.secondary_color || "neutral",
+        accent: extractedData.accent_color || "neutral",
         description: extractedData.theme_description || "natural tones",
-      };
-    }
-
-    if (
-      extractedData.logo_colors     ||
-      extractedData.storefront_colors ||
-      extractedData.interior_colors
-    ) {
-      updatePayload.business_visuals = {
-        logoColors:       extractedData.logo_colors       || "Not provided",
+      },
+      business_visuals: {
+        logoColors: extractedData.logo_colors || "Not provided",
         storefrontColors: extractedData.storefront_colors || "Not provided",
-        interiorColors:   extractedData.interior_colors   || "Not provided",
-      };
-    }
+        interiorColors: extractedData.interior_colors || "Not provided",
+      },
+      storefront_architecture: extractedData.storefront_architecture,
+      interior_layout: extractedData.interior_layout,
+      brand_source: (photos.length > 0 && extractedData.primary_color) ? "photos" : "text_search"
+    };
 
-    // ── Record which path ran so the UI knows what it's working with ────────
-    // 'photos'      = real visual data from owner-uploaded images (gold standard)
-    // 'text_search' = educated guess from Gemma web research (can be upgraded)
-    updatePayload.brand_source = photos.length > 0 ? "photos" : "text_search";
+    const { error: updateError } = await supabase
+      .from("profiles")
+      .update(updatePayload)
+      .eq("id", userId);
 
-    // ── Save to Supabase ───────────────────────────────────────────────────
-    if (Object.keys(updatePayload).length > 0) {
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update(updatePayload)
-        .eq("id", userId);
+    if (updateError) throw updateError;
+    console.log(`--- [BACKGROUND] SUCCESS: Saved via ${updatePayload.brand_source} ---`);
 
-      if (updateError) throw updateError;
-
-      console.log("--- [BACKGROUND] BRAND DISCOVERY SAVED SUCCESSFULLY ---");
-      console.log(`    Source:        ${updatePayload.brand_source}`);
-      console.log(`    Colors found:  ${!!updatePayload.color_theme}`);
-      console.log(`    Visuals found: ${!!updatePayload.business_visuals}`);
-    }
-  } catch (err) {
-    console.error("--- [BACKGROUND] BRAND DISCOVERY FAILED ---", err);
+  } catch (saveErr) {
+    console.error("--- [BACKGROUND] SAVE FAILED ---", saveErr);
+    throw saveErr;
   }
 }

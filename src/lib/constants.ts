@@ -35,5 +35,7 @@ export interface BusinessVisuals {
 export interface BusinessIdentity {
   color_theme: ColorTheme | null;
   business_visuals: BusinessVisuals | null;
+  storefront_architecture: string | null;
+  interior_layout: string | null;
 }
 

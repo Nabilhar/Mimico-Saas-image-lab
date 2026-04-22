@@ -134,7 +134,7 @@ export default function ProfilePage() {
   // ── Photo upload state (3 optional slots) ─────────────────────────────────
   const [storefrontPhoto, setStorefrontPhoto] = useState<File | null>(null);
   const [logoPhoto, setLogoPhoto] = useState<File | null>(null);
-  const [heroProductPhoto, setHeroProductPhoto] = useState<File | null>(null);
+  const [interiorPhoto, setInteriorPhoto] = useState<File | null>(null);
 
   // ── Brand source state — drives which UI the photo section shows ─────────
   // null        = first visit, discovery hasn't run yet
@@ -228,7 +228,7 @@ export default function ProfilePage() {
       const photoFiles = [
         { file: storefrontPhoto,   label: "storefront"   },
         { file: logoPhoto,         label: "logo"         },
-        { file: heroProductPhoto,  label: "hero_product" },
+        { file: interiorPhoto,     label: "interior" },
       ].filter((p) => p.file !== null) as { file: File; label: string }[];
 
       const uploadedPhotos: UploadedPhoto[] = await Promise.all(
@@ -606,9 +606,9 @@ export default function ProfilePage() {
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <PhotoSlot label="Storefront" sublabel="Exterior / signage" icon="🏪" file={storefrontPhoto} onChange={setStorefrontPhoto} />
                     <PhotoSlot label="Logo" sublabel="Your brand mark" icon="✦" file={logoPhoto} onChange={setLogoPhoto} />
-                    <PhotoSlot label="Hero Product" sublabel="Best-selling item" icon="⭐" file={heroProductPhoto} onChange={setHeroProductPhoto} />
+                    <PhotoSlot label="Interior" sublabel="Main space / layout" icon="⭐" file={interiorPhoto} onChange={setInteriorPhoto} />
                   </div>
-                  {storefrontPhoto || logoPhoto || heroProductPhoto ? (
+                  {storefrontPhoto || logoPhoto || interiorPhoto ? (
                     <p className="text-[11px] text-cyan-700 bg-cyan-50 border border-cyan-100 rounded-xl px-3 py-2">
                       ✅ The AI will re-analyze your brand using these photos after saving.
                     </p>
@@ -621,9 +621,9 @@ export default function ProfilePage() {
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <PhotoSlot label="Storefront" sublabel="Exterior / signage" icon="🏪" file={storefrontPhoto} onChange={setStorefrontPhoto} />
                     <PhotoSlot label="Logo" sublabel="Your brand mark" icon="✦" file={logoPhoto} onChange={setLogoPhoto} />
-                    <PhotoSlot label="Hero Product" sublabel="Best-selling item" icon="⭐" file={heroProductPhoto} onChange={setHeroProductPhoto} />
+                    <PhotoSlot label="Interior" sublabel="Main space / layout" icon="🪑" file={interiorPhoto} onChange={setInteriorPhoto} />
                   </div>
-                  {storefrontPhoto || logoPhoto || heroProductPhoto ? (
+                  {storefrontPhoto || logoPhoto || interiorPhoto ? (
                     <p className="text-[11px] text-cyan-700 bg-cyan-50 border border-cyan-100 rounded-xl px-3 py-2">
                       ✅ The AI will analyze your photos to extract your exact brand colors and style after saving.
                     </p>
