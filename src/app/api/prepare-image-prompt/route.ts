@@ -17,7 +17,7 @@ const tools = [  { googleSearch: {},}, ] as any;
 
 const gemmaModel = genAI.getGenerativeModel({ 
   model: "models/gemma-4-31b-it", 
- // tools: tools, // <--- INTEGRATING THE RESEARCH TOOL
+  tools: tools, // <--- INTEGRATING THE RESEARCH TOOL
   generationConfig: {
     temperature: 0.7,
     maxOutputTokens: 1000,
@@ -127,10 +127,17 @@ export async function POST(req: Request) {
       Logo:      ${brandIdentity.business_visuals?.logoColors     || "N/A"}
     `.trim();
 
+        // STRUCTURE & SPACE — drives physical setting, camera angle, composition
+    // storefront_architecture is now a JSON object: { building, features }
+    const arch = (brandIdentity as any).storefront_architecture;
+    const archBuilding = typeof arch === "object" ? arch?.building : arch;
+    const archFeatures = typeof arch === "object" ? arch?.features : null;
+
     // STRUCTURE & SPACE — drives physical setting, camera angle, composition
     const brandStructureBlock = `
       Storefront Colors:    ${brandIdentity.business_visuals?.storefrontColors  || "N/A"}
-      Storefront Structure: ${(brandIdentity as any).storefront_architecture    || "Infer from neighbourhood and business type"}
+      Storefront Structure: ${archBuilding || "Infer from neighbourhood and business type"}
+      Location Features:    ${archFeatures || "None identified"}
       Interior Colors:      ${brandIdentity.business_visuals?.interiorColors    || "N/A"}
       Interior Layout:      ${(brandIdentity as any).interior_layout            || "Infer from business type and niche"}
     `.trim();
@@ -138,8 +145,7 @@ export async function POST(req: Request) {
     // ── ARCHITECT PROMPT ───────────────────────────────────────────────────
     const architectPrompt = `
       [SYSTEM]: Expert AI Image Prompt Engineer. Specialization: Hyper-local commercial/lifestyle photography for FLUX.1-schnell.
-      [CRITICAL_ACTION]: You MUST use the Google Search tool to find the actual storefront and interior of "${business_name}" in "${fullAddress}" before engineering the prompt.
-      
+           
       [FORBIDDEN_VISUALS]:
       ${recentImageHistory ? `STRICTLY FORBIDDEN (Already used):
       ${recentImageHistory}
@@ -150,13 +156,10 @@ export async function POST(req: Request) {
 
       [RESEARCH_GOALS]:
       Use Google Search for "${business_name}" at "${fullAddress}". Identify:
-      1. Storefront: appearance, color, materials, architecture only. IGNORE signage text/logos.
-      2. Outdoor features (patio, terrace, seating).
-      3. Local landmarks/views visible from the business.
-      4. Interior style (lighting, materials, color palette, vibe).
-      5. Signature products/offerings.
-      6. Unique branding details (uniforms, packaging, decor).
-      (Fallback: If no specific data found, use ${fullAddress} neighbourhood context).
+      1. New, seasonal, or trending products/offerings.
+      2. Buzz-worthy branding details (limited packaging, staff uniforms, decor updates).
+      3. Local landmarks or neighbourhood context visible from the business.
+      (Brand Identity blocks below take priority. Search only fills gaps or adds novelty.)
 
       [ANALYSIS]:
       Post Content: "${generatedPost}"
@@ -180,6 +183,7 @@ export async function POST(req: Request) {
       ${brandStructureBlock}
       RULE: Use "Storefront Structure" as the physical architecture for exterior shots
       (building type, facade material, window/door style, scale).
+      Use "Location Features" to add contextual setting details when relevant
       Use "Interior Layout" as the spatial blueprint for interior shots
       (counter position, ceiling height, seating arrangement, floor material).
       These are not suggestions — they are the GROUND TRUTH of this physical space.
@@ -187,20 +191,21 @@ export async function POST(req: Request) {
       a believable real-world setting. Never use a generic or imaginary space.
 
       [ENGINEERING_SPEC]:
-      Write a 5-sentence prompt for FLUX.1-schnell following this sequence:
-      1. COMPOSITION: Select one (Wide environmental / Medium scene / Detail close-up). Do not label it; just apply it.
+      PALETTE RULE: [BRAND_IDENTITY — STRUCTURE & SPACE] is your palette — draw only what serves this specific shot. A close-up needs none of the architecture. An exterior needs none of the interior. Every prompt should feel like a different photograph of the same business.
+      Write a 60-70 words prompt for FLUX.1-schnell following this sequence:
+      1. COMPOSITION: Select one (Wide environmental / Medium scene / Detail close-up). Pick one, do not label it; just apply it.
       2. SUBJECT: The hero element: product, or object, or scene. Use researched details. No legible faces. If human present, they support the hero — never dominate the frame.
-      3. SIGNAGE STRATEGY: If business name is present, use only one of: Shallow depth of field (bokeh), or Angle displacement (partial frame), or Foreground occlusion (organic block).
-      4. SETTING: Real physical space of the business in ${fullAddress}. Ground every detail in the [BRAND_IDENTITY — STRUCTURE & SPACE] block above.
-      5. LIGHTING: Use ${seasonInfo?.lighting_mood} to define the exact light quality for ${currentMonth} at ${currentTime} in ${fullAddress}.
-      6. MOOD: Extract emotion from the post tone.
-      7. PEOPLE: Candid, secondary, never dominating, if partial: upper body minimum. No front-facing/legible faces. Never isolated body parts.
-      8. IMPERFECTION: Include one subtle, realistic detail (e.g., condensation ring, scuff on brick, steam curl) to remove "AI sheen."
-      9. TECHNICAL: End exactly with: "Shot on Sony A7, f/1.8, shallow depth of field, 1:1 square crop, no watermark, no legible text."
+      3. SETTING: Physical space grounded in [BRAND_IDENTITY — STRUCTURE & SPACE]. Architecture, materials, spatial feel.
+      4. LIGHTING: Exact light quality for ${currentMonth} at ${currentTime} in ${fullAddress}. Use ${seasonInfo?.lighting_mood}.
+      5. MOOD + IMPERFECTION: Emotional tone from post + one subtle realistic flaw (condensation ring, scuff on brick, steam curl) to remove "AI sheen."
+      6. TECHNICAL: End exactly with: "Shot on Sony A7, f/1.8, shallow depth of field, 1:1 square crop, no watermark, no legible text."
+
+      [INCLUDE ONLY IF RELEVANT]:
+      - PEOPLE: Candid, secondary, never dominating, if partial: upper body minimum. No front-facing/legible faces. Never isolated body parts.
+      - STOREFRONT & SIGNAGE: Always secondary. Never the hero of the shot. If exterior scene, storefront and signage may appear to anchor the setting and add realism — but pushed to mid or background, slightly out of focus.
 
       [OUTPUT_RULES]:
-      - ZERO text/logos/signage on any surface. Storefront = color+material only.
-      - Business name NEVER appears on sign, awning, window, or object.
+      - NO legible text, logos, or readable signage on any surface.
       - NO labels, NO preamble, NO commentary.
       - OUTPUT ONLY the final prompt.
       - CRITICAL: Always start the final image prompt with "*Final H Generation*".

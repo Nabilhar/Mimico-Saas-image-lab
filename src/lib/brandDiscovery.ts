@@ -61,7 +61,7 @@ async function analyzePhotosWithGemini(
   console.log(`[Gemini Vision] Analyzing ${photos.length} uploaded photos for ${businessName}...`);
 
   // FIX: Explicitly use v1 for stable models like Flash to avoid 404 errors
-  const model = genAI.getGenerativeModel({ model: "models/gemini-2.5-flash" }, { apiVersion: "v1beta" });
+  const model = genAI.getGenerativeModel({ model: "models/gemini-2.5-flash", tools: [{ googleSearch: {} }] as any, }, { apiVersion: "v1beta" });
 
   const imageParts = photos.map((photo) => ({
     inlineData: {
@@ -70,33 +70,37 @@ async function analyzePhotosWithGemini(
     },
   }));
 
-  const photoContext = photos
-    .map((p, i) => `Photo ${i + 1}: ${p.label}`)
-    .join(", ");
+  const photoContext = photos.length > 0
+  ? photos.map((p, i) => `Photo ${i + 1}: ${p.label}`).join(", ")
+  : "No photos provided";
 
   const textPrompt = `
-    Analyze these photos of "${businessName}" (${fullAddress}): ${photoContext}.
+    [ROLE]: Brand Analyst
+    [CONTEXT]: Business: "${businessName}" | Address: "${fullAddress}" | Photos: ${photoContext}
 
-    STRICT OUTPUT REQUIREMENT:
-    Return a JSON object with exactly 10 keys. 
-    Do not use nested objects. Do not omit any keys.
+    [DATA_SOURCES]:
+    - S1 (Photos): Authoritative for all visual assets. If a detail is missing, use "Not visible in photos".
+    - S2 (Search): googleSearch for "${businessName}" at "${fullAddress}". Use ONLY for "storefront_architecture.features" (e.g., patio, seating, landmarks, waterfront, corner location). If missing, use "None identified".
 
-    1. PHOTO 1 (Storefront): Architecture, facade materials, and exterior colors.
-    2. PHOTO 2 (Logo): Exact brand palette (Primary/Secondary colors).
-    3. PHOTO 3 (Interior): Spatial layout, lighting warmth, and surface materials.
+    [OUTPUT_RULES]:
+    - Return ONLY a raw JSON object. 
+    - No preamble, no markdown fences, no conversation.
+    - Strict adherence to the following schema:
 
-    REQUIRED FLAT JSON STRUCTURE:
     {
-      "primary_color": "dominant brand color from logo",
-      "secondary_color": "supporting color from logo",
-      "accent_color": "contrast color from logo or storefront",
-      "theme_description": "1-sentence summary of mood and palette",
-      "logo_colors": "colors seen in the logo photo",
-      "storefront_colors": "exterior colors and signage",
-      "storefront_architecture": "building type, facade material, window/door style",
-      "interior_colors": "interior colors and lighting warmth",
-      "interior_layout": "spatial arrangement (e.g. counter location, seating)",
-      "business_description": "2-3 sentence overview of the business and its vibe"
+      "primary_color": "S1: dominant brand color from logo",
+      "secondary_color": "S1: supporting color from logo/storefront",
+      "accent_color": "S1: contrast or highlight color",
+      "theme_description": "S1: 1-sentence summary of visual palette and mood",
+      "logo_colors": "S1: exact colors seen in logo",
+      "storefront_colors": "S1: exterior/signage colors and facade materials",
+      "storefront_architecture": {
+        "building": "S1: type, material, window/door style, scale",
+        "features": "S2: patio, seating, visible landmarks, location type"
+      },
+      "interior_colors": "S1: colors, lighting warmth, surface materials",
+      "interior_layout": "S1: spatial arrangement (counter, ceiling, seating, floor)",
+      "business_description": "S2: 2-3 sentence overview of business, what it does and its vibe"
     }
 
     Output ONLY the JSON object. No preamble, no conversation.
@@ -131,11 +135,31 @@ async function analyzeWithTextSearch(
   );
 
   const prompt = `
-    Search for "${businessName}" at "${fullAddress}".
-    Estimate their visual identity and return a JSON object with exactly 10 keys:
-    primary_color, secondary_color, accent_color, theme_description, logo_colors, 
-    storefront_colors, storefront_architecture, interior_colors, interior_layout, business_description.
-    Output ONLY the JSON object.
+    [TASK]: Research and estimate visual brand identity for "${businessName}" at "${fullAddress}".
+
+    [LOGIC]: 
+    - Base analysis on web research. 
+    - If data is missing, use "Thematic Inference": provide professional estimates based on the business type and neighbourhood vibe.
+
+    [OUTPUT]: 
+    - Return ONLY a raw JSON object. No preamble, no markdown, no conversation.
+    - Structure exactly as follows:
+
+    {
+      "primary_color": "dominant brand color",
+      "secondary_color": "supporting brand color",
+      "accent_color": "contrast/highlight color",
+      "theme_description": "1-sentence summary of color palette",
+      "logo_colors": "colors seen/inferred from logo",
+      "storefront_colors": "exterior colors and facade materials",
+      "storefront_architecture": {
+        "building": "type, material, window/door style",
+        "features": "patio, seating, landmarks, etc. (or 'None identified')"
+      },
+      "interior_colors": "interior colors and lighting warmth",
+      "interior_layout": "spatial feel and layout based on business type",
+      "business_description": "2-3 sentence overview of of what they do and what makes them unique."
+    }
   `;
 
   const result = await model.generateContent(prompt);
