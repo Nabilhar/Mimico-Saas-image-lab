@@ -9,24 +9,6 @@ import { createClerksupabase } from '@/lib/supabase';
 import { UploadedPhoto } from "@/lib/brandDiscovery";
 import toast from "react-hot-toast";
 
-// ---------------------------------------------------------------------------
-// Helper: converts a File object → UploadedPhoto (base64 + mimeType + label)
-// Runs entirely in the browser — no server round-trip needed.
-// ---------------------------------------------------------------------------
-function fileToUploadedPhoto(file: File, label: string): Promise<UploadedPhoto> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      // dataUrl format: "data:image/jpeg;base64,/9j/4AAQ..."
-      // We strip the prefix so Gemini receives pure base64
-      const base64 = dataUrl.split(",")[1];
-      resolve({ base64, mimeType: file.type, label });
-    };
-    reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
-    reader.readAsDataURL(file);
-  });
-}
 
 // ---------------------------------------------------------------------------
 // Sub-component: a single photo upload slot with preview
@@ -231,21 +213,47 @@ export default function ProfilePage() {
         { file: interiorPhoto,     label: "interior" },
       ].filter((p) => p.file !== null) as { file: File; label: string }[];
 
-      const uploadedPhotos: UploadedPhoto[] = await Promise.all(
-        photoFiles.map(({ file, label }) => fileToUploadedPhoto(file, label))
-      );
+      const uploadedPhotoData: UploadedPhoto[] = [];
 
+      for (const { file, label } of photoFiles) {
+        const fileExt = file.name.split('.').pop();
+        // Ensure a unique path for each file to prevent conflicts
+        const filePath = `${user.id}/${label}-${Date.now()}.${fileExt}`; 
+        
+        const { error: uploadError } = await supabase.storage
+          .from('brand_assets') // Make sure this matches your new bucket name!
+          .upload(filePath, file, {
+            cacheControl: '3600', // Optional: Caching strategy
+            upsert: false,        // Optional: Do not overwrite if file exists at path
+          });
+
+        if (uploadError) {
+          console.error(`Supabase upload failed for ${label}:`, uploadError.message);
+          // Decide if you want to throw an error and stop, or continue without this photo
+          toast.error(`Failed to upload ${label} photo.`);
+          continue; // Skip this photo if upload failed
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('brand_assets')
+          .getPublicUrl(filePath);
+        
+        uploadedPhotoData.push({ url: publicUrl, mimeType: file.type, label });
+      }
+
+      toast('Brand analysis started in the background! ✨', { icon: '🤖' });
       // 3. Trigger brand discovery in the background (fire and forget)
-      fetch("/api/discover-brand", {
+      await fetch("/api/discover-brand", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           business_id:   user.id,
           business_name: business_name,
           address: { street, city, province_state, country, postalCode },
-          photos:        uploadedPhotos, // [] if none uploaded → text fallback
+          photos:        uploadedPhotoData, // [] if none uploaded → text fallback
         }),
       }).catch((err) => console.error("Discovery trigger failed:", err));
+      toast('Brand analysis started in the background! ✨', { icon: '🤖' });
 
       // 4. Claim welcome credits
       const { data: creditData, error: creditError } = await supabase.rpc('claim_welcome_credits');
@@ -254,17 +262,15 @@ export default function ProfilePage() {
         console.error("Credit claim error:", creditError);
       } else if (creditData?.success) {
         toast.success("Welcome! 15 free credits have been added to your account! 🚀");
-      } else if (creditData && creditData.success === false) {
-        toast.error(creditData.message || "Unable to grant welcome credits.");
       }
 
       localStorage.setItem("shoreline_business_profile", JSON.stringify(profileData));
-      alert("SUCCESS! Shoreline Profile Saved.");
+      toast.success("SUCCESS! Shoreline Profile Saved.");
       router.push("/dashboard");
 
     } catch (err: any) {
       console.error("Save failed:", err.message);
-      alert("Save Error: " + err.message);
+      toast.error("Save Error: " + err.message);
     } finally {
       setLoading(false);
     }

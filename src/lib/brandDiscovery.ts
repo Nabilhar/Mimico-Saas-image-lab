@@ -15,9 +15,34 @@ const supabase = createClient(
 // ---------------------------------------------------------------------------
 
 export interface UploadedPhoto {
-  base64: string;   // Pure base64 string
+  url: string;      // Public Supabase URL to the image
   mimeType: string; // e.g. "image/jpeg"
   label: string;    // "storefront" | "logo" | "interior"
+}
+
+// HELPER: Fetches an image from a public URL and converts it to Gemini's inlineData format
+async function urlToGenerativePart(url: string, mimeType: string) {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.error(`Failed to fetch image from URL: ${url}. Status: ${response.status}`);
+      throw new Error(`Failed to fetch image from URL: ${url}`);
+    }
+    
+    const arrayBuffer = await response.arrayBuffer();
+    // Use Node.js Buffer to convert ArrayBuffer to Base64
+    const base64Data = Buffer.from(arrayBuffer).toString('base64');
+    
+    return {
+      inlineData: {
+        data: base64Data,
+        mimeType: mimeType,
+      },
+    };
+  } catch (error) {
+    console.error(`Error converting URL to Generative Part for ${url}:`, error);
+    throw error; // Re-throw to propagate the error
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -63,12 +88,10 @@ async function analyzePhotosWithGemini(
   // FIX: Explicitly use v1 for stable models like Flash to avoid 404 errors
   const model = genAI.getGenerativeModel({ model: "models/gemini-2.5-flash", tools: [{ googleSearch: {} }] as any, }, { apiVersion: "v1beta" });
 
-  const imageParts = photos.map((photo) => ({
-    inlineData: {
-      data: photo.base64,
-      mimeType: photo.mimeType,
-    },
-  }));
+ // FIX: Fetch images from URLs and convert to base64 INTERNALLY
+  const imageParts = await Promise.all(
+    photos.map(photo => urlToGenerativePart(photo.url, photo.mimeType))
+  );
 
   const photoContext = photos.length > 0
   ? photos.map((p, i) => `Photo ${i + 1}: ${p.label}`).join(", ")
