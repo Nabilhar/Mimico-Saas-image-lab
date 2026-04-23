@@ -177,13 +177,18 @@ export default function ProfilePage() {
   const categories = Object.keys(BUSINESS_ARCHETYPES);
   const voices = ["The Expert", "The Neighbour", "The Hustler", "The Minimalist"];
 
-  // ── Save handler ───────────────────────────────────────────────────────────
+  
+  // ── REFINED Save handler for intelligent toasts (More Concise) ──────────
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !supabase) return;
 
-    setLoading(true);
+    setLoading(true); // Start loading immediately for profile save + photo uploads
+
+    const uploadedPhotoData: UploadedPhoto[] = []; // Collects URLs of *successfully* uploaded photos
+
     try {
+      // 1. Save basic profile to Supabase (this is usually fast)
       const profileData = {
         id: user.id,
         first_name: user.firstName,
@@ -202,62 +207,70 @@ export default function ProfilePage() {
         updated_at: new Date().toISOString(),
       };
 
-      // 1. Save profile to Supabase
-      const { error } = await supabase.from('profiles').upsert(profileData);
-      if (error) throw error;
+      const { error: profileError } = await supabase.from('profiles').upsert(profileData);
+      if (profileError) throw profileError;
 
-      // 2. Convert any uploaded photos to base64 for the discovery API
-      const photoFiles = [
-        { file: storefrontPhoto,   label: "storefront"   },
-        { file: logoPhoto,         label: "logo"         },
-        { file: interiorPhoto,     label: "interior" },
+      // 2. Process and upload photos to Supabase Storage
+      const selectedPhotoFiles = [ // These are the files the user *selected*
+        { file: storefrontPhoto, label: "storefront" },
+        { file: logoPhoto,       label: "logo"       },
+        { file: interiorPhoto,   label: "interior"   },
       ].filter((p) => p.file !== null) as { file: File; label: string }[];
 
-      const uploadedPhotoData: UploadedPhoto[] = [];
+      if (selectedPhotoFiles.length > 0) {
+        for (const { file, label } of selectedPhotoFiles) {
+          const fileExt = file.name.split('.').pop();
+          const filePath = `${user.id}/${label}-${Date.now()}.${fileExt}`; 
+          
+          const { error: uploadError } = await supabase.storage
+            .from('brand_assets') // Ensure this matches your bucket name!
+            .upload(filePath, file, {
+              cacheControl: '3600',
+              upsert: false,
+            });
 
-      for (const { file, label } of photoFiles) {
-        const fileExt = file.name.split('.').pop();
-        // Ensure a unique path for each file to prevent conflicts
-        const filePath = `${user.id}/${label}-${Date.now()}.${fileExt}`; 
-        
-        const { error: uploadError } = await supabase.storage
-          .from('brand_assets') // Make sure this matches your new bucket name!
-          .upload(filePath, file, {
-            cacheControl: '3600', // Optional: Caching strategy
-            upsert: false,        // Optional: Do not overwrite if file exists at path
-          });
-
-        if (uploadError) {
-          console.error(`Supabase upload failed for ${label}:`, uploadError.message);
-          // Decide if you want to throw an error and stop, or continue without this photo
-          toast.error(`Failed to upload ${label} photo.`);
-          continue; // Skip this photo if upload failed
+          if (uploadError) {
+            console.error(`Supabase upload failed for ${label}:`, uploadError.message);
+            toast.error(`Failed to upload ${label} photo.`); 
+          } else {
+            const { data: { publicUrl } } = supabase.storage
+              .from('brand_assets')
+              .getPublicUrl(filePath);
+            
+            uploadedPhotoData.push({ url: publicUrl, mimeType: file.type, label });
+          }
         }
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('brand_assets')
-          .getPublicUrl(filePath);
-        
-        uploadedPhotoData.push({ url: publicUrl, mimeType: file.type, label });
       }
 
-      toast('Brand analysis started in the background! ✨', { icon: '🤖' });
-      // 3. Trigger brand discovery in the background (fire and forget)
-      await fetch("/api/discover-brand", {
+      // Determine if we should show the "Brand analysis started" toast.
+      // This toast now appears on the profile page, before redirect.
+      // Show if:
+      // 1. New photos were successfully uploaded (uploadedPhotoData.length > 0).
+      // 2. OR, no photos were uploaded *this time*, but the current brandSource isn't 'photos' yet.
+      //    (meaning, we are either doing initial discovery or upgrading from text_search).
+      const isNewPhotoVisionAnalysisTriggered = uploadedPhotoData.length > 0;
+      const isInitialTextAnalysisTriggered = selectedPhotoFiles.length === 0 && brandSource !== "photos";
+      
+      if (isNewPhotoVisionAnalysisTriggered || isInitialTextAnalysisTriggered) {
+        toast('Brand analysis started in the background! ✨', { icon: '🤖', duration: 5000 });
+      }
+
+      // 3. Trigger brand discovery API (fire and forget from frontend's await perspective)
+      // The backend's /api/discover-brand route *will* await the full analysis.
+      fetch("/api/discover-brand", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           business_id:   user.id,
           business_name: business_name,
           address: { street, city, province_state, country, postalCode },
-          photos:        uploadedPhotoData, // [] if none uploaded → text fallback
+          photos:        uploadedPhotoData, // Send only successfully uploaded photos
         }),
-      }).catch((err) => console.error("Discovery trigger failed:", err));
-      toast('Brand analysis started in the background! ✨', { icon: '🤖' });
+      }).catch((err) => console.error("Discovery API trigger failed (frontend catch):", err));
 
-      // 4. Claim welcome credits
+
+      // 4. Claim welcome credits (existing logic)
       const { data: creditData, error: creditError } = await supabase.rpc('claim_welcome_credits');
-
       if (creditError) {
         console.error("Credit claim error:", creditError);
       } else if (creditData?.success) {
@@ -265,14 +278,14 @@ export default function ProfilePage() {
       }
 
       localStorage.setItem("shoreline_business_profile", JSON.stringify(profileData));
-      toast.success("SUCCESS! Shoreline Profile Saved.");
+      toast.success("Profile Saved! Redirecting to dashboard."); 
       router.push("/dashboard");
 
     } catch (err: any) {
       console.error("Save failed:", err.message);
       toast.error("Save Error: " + err.message);
     } finally {
-      setLoading(false);
+      setLoading(false); // Frontend tasks are done, backend analysis is running asynchronously.
     }
   };
 
