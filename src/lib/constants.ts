@@ -1,3 +1,5 @@
+//lib/constants
+
 export const NICHE_DATA: Record<string, string[]> = {
     "Health & Wellness": ["Dentist", "Physiotherapist", "Chiropractor", "Optometrist", "Pharmacist", "Family doctor", "Naturopath", "Massage therapist", "Nutritionist / dietitian", "Mental health therapist", "Acupuncturist", "Hearing clinic", "Orthodontist", "Dermatologist", "Medical aesthetics clinic"],
     "Home Services": ["Plumber", "Electrician", "HVAC / furnace repair", "Roofer", "Landscaper / lawn care", "Pest control", "House cleaner", "Painter", "General contractor", "Window & door installer", "Flooring installer", "Interior designer", "Moving company", "Home inspector", "Security systems"],

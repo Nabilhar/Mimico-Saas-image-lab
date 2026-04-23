@@ -36,6 +36,8 @@
   }
 
   export function getFrameworkTipsStructure(framework: Framework): string {
+    
+    //Narative
     const structures: Record<Framework, string> = {
       PAS: `
       STRUCTURE FOR PAS + 5 TIPS:
@@ -127,6 +129,12 @@
     return structures[framework];
   }
 
+  export const POST_TYPE_CTA_OVERRIDE: Partial<Record<string, string>> = {
+    "Promotion / offer": `CTA OVERRIDE (supersedes framework CTA rule): The only action is to show this post on their phone when they arrive. Phrase it warmly — e.g., "Just show this post to the team when you stop by." No links, no DMs, no booking.`,
+    "Local event / news": `CTA OVERRIDE: The only action is to stop by on their way to or from the event. No links, no booking.`,
+  };
+
+  //Visual
   export const FRAMEWORK_POST_TYPE_COMBINATIONS = {
     "PAS_5 Tips": `Show the solution state or the benefit of applying the tips. Visual should feel instructive and clear.`,
     "PAS_Myth-busting": `Show the truth/solution state. Visual should feel authoritative and confident.`,
@@ -156,6 +164,7 @@
   return seasons[month] || "Spring";
   };
 
+  // Visual
   export const SEASONALITY_CONTEXT = {
     "Winter": {
       visual_elements: "Possible snow/frost, bare trees, cool tones, warm interior contrast",
@@ -179,6 +188,7 @@
     }
   };
   
+  //Visual
   export const SEASONAL_NICHE_CONTEXT: Record<string, Record<string, string>> = {
     "Winter": {
       "Health & Wellness": "Winter is recovery season. Show cozy, warm interiors. Emphasize indoor wellness (yoga, massage, therapy). Highlight warm lighting, blankets, comfort.",
@@ -230,6 +240,7 @@
     },
   };
 
+  //Narative
   export const SEASONAL_NICHE_NARRATIVE: Record<string, Record<string, string>> = {
     "Winter": {
       "Health & Wellness": "Theme: Recovery and warmth. Focus on indoor wellness, soothing treatments, and escaping the cold. Pain points: Winter blues, stiffness, dehydration.",

@@ -9,7 +9,7 @@ import { NextResponse } from "next/server";
 import Groq from "groq-sdk"; // <-- NEW
 import { createClient } from '@supabase/supabase-js';
 import { getFramework, BUSINESS_ARCHETYPES,getFrameworkTipsStructure  } from "@/lib/frameworks";
-import { SEASONALITY_CONTEXT, SEASONAL_NICHE_NARRATIVE, getSeason } from "@/lib/frameworks";
+import { SEASONALITY_CONTEXT, POST_TYPE_CTA_OVERRIDE, SEASONAL_NICHE_NARRATIVE, getSeason } from "@/lib/frameworks";
 import { getBrandIdentity, discoverAndSaveBrandIdentity } from "@/lib/brandDiscovery";
 import { ColorTheme, BusinessVisuals } from '@/lib/constants';
 
@@ -170,7 +170,7 @@ async function callAIProvider(provider: string, finalPrompt: string, currentTime
     const result = await model.generateContent({
       contents: [{ 
         role: "user", 
-        parts: [{ text: `Use your <research> thinking mode to check for current ${fullAddress} news or events including the current weather at ${currentTime} before writing: \n\n ${finalPrompt}` }] 
+        parts: [{ text: `Before writing, silently research current local news, events, and weather for ${fullAddress} at ${currentTime}. Use those findings naturally in the post. Then write: \n\n ${finalPrompt}` }] 
       }],
       generationConfig: {
         temperature: 1.0,
@@ -183,7 +183,9 @@ async function callAIProvider(provider: string, finalPrompt: string, currentTime
   
   if (provider === "gemini") {
     console.log("--- Shoreline ENGINE: ROUTING TO GOOGLE GEMINI ---");
-    const model = genAI.getGenerativeModel({ model: "models/gemini-2.5-flash"  }); 
+    const model = genAI.getGenerativeModel({   model: "models/gemini-2.5-flash",
+      tools: [{ googleSearch: {} }] as any,
+    }, { apiVersion: 'v1beta' });
     
     const result = await model.generateContent({
       contents: [{ role: "user", parts: [{ text: finalPrompt }] }],
@@ -225,10 +227,14 @@ function buildPrompt(
   const fullAddress = `${address.street}, ${address.city}, ${address.province_state} ${address.country} ${address.postal_code}`;
   const rawInstruction = POST_TYPE_PROMPTS[postType] 
 
+  const ctaOverride = POST_TYPE_CTA_OVERRIDE[postType] || "";
+
   // Check: If it's a function, call it. If it's a string, use it as is.
   const postSpecificInstructions = typeof rawInstruction === "function"
     ? rawInstruction(postType === "Promotion / offer" ? promoType : eventType, customDetails, fullAddress)
     : rawInstruction;
+
+  const wordCount = postType === "5 Tips" ? "200-260" : "130-180";
 
   const currentTime = new Date().toLocaleTimeString('en-US', { 
     hour: 'numeric', 
@@ -246,7 +252,7 @@ function buildPrompt(
   Palette: ${colorTheme?.primary || "Auto-detect"}, ${colorTheme?.secondary || "Auto-detect"}, ${colorTheme?.accent || "Auto-detect"}
   Mood: ${colorTheme?.description || "Derive from research/niche"}
   Details: Logo(${businessVisuals?.logoColors || "N/A"}), Store(${businessVisuals?.storefrontColors || "N/A"}), Interior(${businessVisuals?.interiorColors || "N/A"})
-  RULE: Match vocabulary to this palette. If "Auto-detect" is listed, use your <research> findings to determine the brand's visual vibe and match your language to it.`;
+  RULE: Let the Palette, Mood and Details shape your word choices — warm earthy tones call for grounded tactile language; clean minimal tones call for precise spare language. Do not describe the colors directly. If "Auto-detect" is listed, use your research findings to determine the brand's visual vibe and match your language to it.`;
 
 
     // --- SAFE ACCESS / FALLBACK LOGIC ---
@@ -270,17 +276,26 @@ function buildPrompt(
 [SYSTEM]: Marketing Master. Persona: Owner of "${business_name}" (${niche}) in ${fullAddress}.
 ${coreIntel} 
 [TONE]: ${VOICE_PROMPTS[voice] || "Warm, community-first."}
-[CONTEXT]: Time: ${currentTime} | Month: ${month} | Season: ${season}
+[CONTEXT]: Season: ${season} | Month: ${month} | Current local time: ${currentTime}  : The post must be temporally aligned.
 [SEASONAL_GUIDE]: ${seasonalNicheGuidance}
 ${visualIdentity}
 
-[ANTI_PATTERNS]:
-- DO NOT use these opening themes/phrases: ${recentHistory || "None"}
-- BANNED: "bike-to-work buzz", "I'm always", "After a day", "Juggling", "Finding a", "stone's throw", "pour our hearts", "passionate about", "quality service", "reach out", "don't hesitate", "pride ourselves", "No cap", "Slay", "It's giving", "That's a wrap", "Are you tired of", "Don't miss out", "Limited time offer"
+[BANNED_PHRASES]: Never use these words or phrases verbatim:
+"bike-to-work buzz", "stone's throw", "pour our hearts", "passionate about", 
+"quality service", "reach out", "don't hesitate", "pride ourselves", 
+"No cap", "Slay", "It's giving", "That's a wrap", 
+"Are you tired of", "Don't miss out", "Limited time offer"
+
+[BANNED_OPENING_THEMES]: Do not open with these narrative patterns, 
+even if the exact words differ:
+- The "busy juggling life" opener (e.g., "Juggling work and family...")
+- The "end of a long day" opener (e.g., "After a day like today...", "Finding a moment...")
+- The "I'm always..." self-description opener
+- Previous post openings (do not echo these): ${recentHistory || "None"}
 
 [TASK]:
-1. <research>neighbourhood Name: Landmark 1, Landmark 2, Local Trend 1, Local Trend 2</research> (Max 20 words)
-2. Social Media Post
+1. [LOCAL_CONTEXT]: Search for "${business_name}" at "${fullAddress}" to find: neighbourhood name, nearby landmarks, local trends, and brand visual vibe] (Max 30 words. Metadata only — stripped before publishing.)
+2. Write a Social Media Post as the busines owner of "${business_name}"
 3. 3-4 Hashtags (neighbourhood, Niche, Broad)
 
 [POST_SPECIFICS]:
@@ -290,20 +305,20 @@ Instruction: ${postSpecificInstructions}
 ${postType === "5 Tips" ? `Structure: ${getFrameworkTipsStructure(framework as any)}` : ""}
 
 [CONSTRAINTS]:
-- Length: 130-180 words.
+- Length: ${wordCount} words.
 - POV: 1st Person ("I"/"We").
 - Hook: First sentence must include a natural local keyword/trend.
 - Formatting: Short paragraphs, double spacing between them.
 - CTA: Low-pressure, physically possible for a ${niche}. No "Book now" or "Link in bio" unless naturally woven.
+ ${ctaOverride ? `- ${ctaOverride}` : ""}
 - No labels (e.g., no "Problem:", "Tip 1:").
 - No commentary, word counts, or self-evaluation.
 - Max 3 emojis.
 
 [OUTPUT_ORDER]: 
-1. <research> tag (contain keywords only)
-2. The signal: [FINAL_POST_START]
-3. The social media post body
-4. Hashtags
+1. The signal: [FINAL_POST_START]
+2. The social media post body
+3. Hashtags
 (Do not include any other symbols, arrows, or labels)
 
 `;}
@@ -471,11 +486,11 @@ export async function POST(req: Request) {
     // ─────────────────────────────────────────────────────────────────────────────
     // LOGGING & CLEANUP
     // ─────────────────────────────────────────────────────────────────────────────
-if (rawResponse.includes("<research>")) {
-  console.log("\x1b[32m%s\x1b[0m", "--- [Shoreline RESEARCH LOG] ---");
-  const researchMatch = rawResponse.match(/<research>([\s\S]*?)<\/research>/);
-  console.log(researchMatch ? researchMatch[1].trim() : "Empty research.");
-}
+    const localContextMatch = rawResponse.match(/\[LOCAL_CONTEXT:[\s\S]*?\]/);
+    if (localContextMatch) {
+      console.log("\x1b[32m%s\x1b[0m", "--- [Shoreline LOCAL CONTEXT] ---");
+      console.log(localContextMatch[0]);
+    }
 // 2. SMART CLEANUP (Handles the <research> tags for BOTH models)
 // 2. SMART CLEANUP (Handles the <research> tags for BOTH models)
 
@@ -489,12 +504,7 @@ if (content.includes(signal)) {
   content = content.substring(lastSignalIndex + signal.length).trim();
 } else {
   // FALLBACK: If the AI missed the signal, use the old split method
-  if (content.includes("</research>")) {
-    content = content.split("</research>").pop()?.trim() || content;
-  } else if (content.includes("`")) {
-    const parts = content.split("`").filter(p => p.trim().length > 10);
-    content = parts[parts.length - 1].trim();
-  }
+  content = content.replace(/\[LOCAL_CONTEXT:[\s\S]*?\]/g, "").trim();
 }
 // Step B: Nuclear Scrub
 // This removes any stray tags, citations, or metadata
