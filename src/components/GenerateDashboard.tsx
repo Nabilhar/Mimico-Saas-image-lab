@@ -480,9 +480,9 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
                 className="mt-1 w-full p-3 border rounded-xl bg-white focus:ring-2 focus:ring-cyan-100 outline-none transition-all"
               >
                 <option value="Behind the scenes">Behind the scenes</option>
+                <option value="Myth-busting">Myth-busting</option>
                 <option value="Promotion / offer">Promotion / offer</option>
                 <option value="Local event / news">Local event / news</option>
-                <option value="Myth-busting">Myth-busting</option>
                 <option value="5 Tips">5 Tips</option>
                 
               </select>

@@ -105,8 +105,6 @@ async function callAIProvider(provider: string, finalPrompt: string, currentTime
   throw new Error(`Unsupported provider: ${provider}`);
 }
 
-
-
 // ─────────────────────────────────────────────
 // 4. PROMPT BUILDER
 // Owner-perspective persona + <research> tags + seasonality
@@ -128,7 +126,8 @@ function buildPrompt(
   customDetails: string,
   colorTheme: ColorTheme | null,
   businessVisuals: BusinessVisuals | null,
-  business_description: string | null
+  business_description: string | null,
+  varietyRules: string 
 
 ): string {
 
@@ -288,6 +287,12 @@ function buildPrompt(
   - Any opener where the owner is watching customers from the outside
   - Do not echo these recent openings: ${recentHistory || "None"}
 
+  [VARIETY RULES]:
+  These were used in recent posts — avoid repeating them:
+  ${varietyRules}
+  If all offerings have been used recently — pick the least recently used one.
+  If all landmarks have been used recently — use none.
+
   [SELF-CHECK — REQUIRED BEFORE OUTPUT]:
   Verify each item. If any fail — fix before writing output.
   No invented landmarks — use [LOCAL_GROUND_TRUTH] Nearby only
@@ -313,6 +318,8 @@ function buildPrompt(
   - Word count is within ${wordCount} range
   - No banned phrases used
   - No banned opener pattern used
+  - No Products/offerings from [VARIETY RULES] used
+  - No Landmarks from [VARIETY RULES] used
   - Post is written as the owner — not as a marketer
 
   [OUTPUT]: <<<POST_BEGIN>>> then post body then hashtags. Nothing else.
@@ -346,16 +353,16 @@ export async function POST(req: Request) {
       promoType = "discount",    // <-- Make sure these are here
       eventType = "event",    // <-- Make sure these are here
       customDetails = "", // <-- Make sure these are here
-      history,
+      history: postHistory,
       provider: requestedProvider
 
     } = body;
 
       // --- ADD THIS DEBUG BLOCK ---
       console.log("--- Shoreline MEMORY CHECK ---");
-      if ( history && history.length > 0) {
-        console.log(`Found ${history.length} previous posts.`);
-        history.slice(0, 3).forEach((p: any, i: number) => {
+      if ( postHistory && postHistory.length > 0) {
+        console.log(`Found ${postHistory.length} previous posts.`);
+        postHistory.slice(0, 3).forEach((p: any, i: number) => {
           const firstSentence = (p.content || "").split(/[.!?]/)[0].trim();
           console.log(`Post ${i + 1} opening: "${firstSentence}"`);
         });
@@ -393,15 +400,70 @@ export async function POST(req: Request) {
       }).catch(err => console.error("Background Discovery Error:", err));
     }
 
-    const recentHistory = history?.length
-    ? history
-        .slice(0, 2)
+    const recentHistory = postHistory?.length
+    ? postHistory
+        .slice(0, 3)
         .map((p: any, i: number) => {
-          const firstSentence = (p.content || "").split(/[.!?]/)[0].trim();
-          return `- Avoid this opening pattern: "${firstSentence.slice(0, 40)}..."`;
+          const content = p.content || "";
+          
+          // Extract opening pattern (truncated)
+          const firstSentence = content.split(/[.!?]/)[0].trim();
+          const openingPattern = firstSentence.slice(0, 40);
+  
+          // Extract product/offering mentions
+          const offerings = intel?.products_services || [];
+          const mentionedOfferings = offerings.filter((offering: string) =>
+            content.toLowerCase().includes(offering.toLowerCase())
+          );
+  
+          // Extract landmark mentions
+          const landmarks = intel?.landmarks || [];
+          const mentionedLandmarks = landmarks.filter((landmark: string) =>
+            content.toLowerCase().includes(landmark.toLowerCase())
+          );
+  
+          return [
+            `Post ${i + 1}:`,
+            `  - Opening pattern: "${openingPattern}..."`,
+            mentionedOfferings.length
+              ? `  - Products used: ${mentionedOfferings.join(", ")}`
+              : null,
+            mentionedLandmarks.length
+                ? `  - Landmarks used: ${mentionedLandmarks.join(", ")}`
+                : null,
+          ]
+            .filter(Boolean)
+            .join("\n");
         })
-        .join("\n")
+        .join("\n\n")
     : "No previous posts found.";
+    
+        // Variety rules — products and landmarks used recently
+    const usedOfferings = postHistory?.slice(0, 3).flatMap((p: any) => {
+      const offerings = intel?.products_services || [];
+      return offerings.filter((o: string) =>
+        (p.content || "").toLowerCase().includes(o.toLowerCase())
+      );
+    }) || [];
+
+    const usedLandmarks = postHistory?.slice(0, 3).flatMap((p: any) => {
+      const landmarks = intel?.landmarks || [];
+      return landmarks.filter((l: string) =>
+        (p.content || "").toLowerCase().includes(l.toLowerCase())
+      );
+    }) || [];
+
+    const uniqueUsedOfferings = [...new Set(usedOfferings)] as string[];
+    const uniqueUsedLandmarks = [...new Set(usedLandmarks)] as string[];
+
+    const varietyRules = [
+      uniqueUsedOfferings.length
+        ? `- Products/offerings to avoid: ${uniqueUsedOfferings.join(", ")}`
+        : "- No recent product patterns to avoid.",
+      uniqueUsedLandmarks.length
+        ? `- Landmarks to avoid: ${uniqueUsedLandmarks.join(", ")}`
+        : "- No recent landmark patterns to avoid.",
+    ].join("\n");
 
     // Auto-select framework — user never has to choose
     const framework = getFramework(category, postType, voice) || "PAS";
@@ -426,7 +488,8 @@ export async function POST(req: Request) {
       customDetails || "", // Argument 11
       profile.color_theme,   
       profile.business_visuals,
-      profile.business_description
+      profile.business_description,
+      varietyRules
     );
 
     // ── MOCK MODE (delete before going to production) ─────

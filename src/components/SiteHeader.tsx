@@ -9,7 +9,7 @@ export function SiteHeader() {
           <span className="text-lg font-bold tracking-tight text-slate-900">
             Shoreline Studio
           </span>
-          <span className="hidden text-sm text-slate-500 sm:inline">Toronto</span>
+          <span className="hidden text-sm text-slate-500 sm:inline">Toronto, ON</span>
         </Link>
         
         <nav className="hidden sm:flex items-center gap-6 text-sm font-medium text-slate-600">
