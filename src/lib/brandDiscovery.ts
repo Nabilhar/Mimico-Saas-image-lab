@@ -52,7 +52,7 @@ async function urlToGenerativePart(url: string, mimeType: string) {
 export async function getBrandIdentity(userId: string): Promise<BusinessIdentity> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('color_theme, business_visuals, storefront_architecture, interior_layout')
+    .select('color_theme, business_visuals, storefront_architecture, interior_layout, brand_source, business_description')
     .eq('id', userId)
     .maybeSingle();
 
@@ -62,7 +62,9 @@ export async function getBrandIdentity(userId: string): Promise<BusinessIdentity
       color_theme: null, 
       business_visuals: null,
       storefront_architecture: null,
-      interior_layout: null
+      interior_layout: null,
+      brand_source: null,
+      business_description: null
     };
   }
 
@@ -71,6 +73,44 @@ export async function getBrandIdentity(userId: string): Promise<BusinessIdentity
     business_visuals: data?.business_visuals || null,
     storefront_architecture: data?.storefront_architecture || null,
     interior_layout: data?.interior_layout || null,
+    brand_source: data?.brand_source || null,
+    business_description: data?.business_description || null,
+  };
+}
+
+
+export function parseBusinessIntel(raw: string | null) {
+  if (!raw) return null;
+  
+  try {
+    // Attempt to parse the string as JSON
+    const parsed = JSON.parse(raw);
+    
+    // Check if it has our new "neighbourhood" key to confirm it's the new format
+    if (parsed && parsed.neighbourhood) {
+      return {
+        description: parsed.description || "",
+        neighbourhood: parsed.neighbourhood || "",
+        landmarks: Array.isArray(parsed.landmarks) ? parsed.landmarks : [],
+        transit: Array.isArray(parsed.transit) ? parsed.transit : [],
+        local_trends: Array.isArray(parsed.local_trends) ? parsed.local_trends : [],
+        products_services: Array.isArray(parsed.products_services) ? parsed.products_services : [],
+        isJson: true
+      };
+    }
+  } catch (e) {
+    // If parsing fails, it's a legacy plain-text description
+  }
+
+  // Fallback for Legacy/Plain Text users
+  return {
+    description: raw,
+    neighbourhood: null,
+    landmarks: [],
+    transit: [],
+    local_trends: [],
+    products_services: [],
+    isJson: false
   };
 }
 
@@ -101,29 +141,48 @@ async function analyzePhotosWithGemini(
     [ROLE]: Brand Analyst
     [CONTEXT]: Business: "${businessName}" | Address: "${fullAddress}" | Photos: ${photoContext}
 
+    [RESEARCH_TASK]:
+    1. Use googleSearch to cross-reference this business across Yelp, social media, and its official website.
+    2. Identify the business, who they are, what they do, who they serve, what makes them distinct.
+    3. Identify the "Hero" offerings (the 5 most mentioned or distinct products/services).
+    4. Verify the exact neighbourhood name and 5 physical landmarks within walking distance.
+    5. Identify nearby transit (bus/subway/train) and 2 current local vibe trends (e.g., "active waterfront," "weekend brunch crowd").
+
     [DATA_SOURCES]:
     - S1 (Photos): Authoritative for all visual assets. If a detail is missing, use "Not visible in photos".
-    - S2 (Search): googleSearch for "${businessName}" at "${fullAddress}". Use ONLY for "storefront_architecture.features" (e.g., patio, seating, landmarks, waterfront, corner location). If missing, use "None identified".
+    - S2 (Search): Use [RESEARCH_TASK] as authoritative for names, landmarks, and service lists, use "None identified".
 
     [OUTPUT_RULES]:
     - Return ONLY a raw JSON object. 
     - No preamble, no markdown fences, no conversation.
+    - Keep the 'description' focused on the unique value proposition.
     - Strict adherence to the following schema:
 
     {
-      "primary_color": "S1: dominant brand color from logo",
-      "secondary_color": "S1: supporting color from logo/storefront",
-      "accent_color": "S1: contrast or highlight color",
-      "theme_description": "S1: 1-sentence summary of visual palette and mood",
-      "logo_colors": "S1: exact colors seen in logo",
-      "storefront_colors": "S1: exterior/signage colors and facade materials",
-      "storefront_architecture": {
-        "building": "S1: type, material, window/door style, scale",
-        "features": "S2: patio, seating, visible landmarks, location type"
+      "physical_details":{
+        "description": "S2: 2-3 sentence business description. Who they do, who they serve, what makes them distinct.",
+        "neighbourhood": "S2: exact neighbourhood name",
+        "landmarks": S2: ["5 verified landmarks"],
+        "transit": S2: ["2 verified routes"],
+        "local_trends": S2: ["2 local trends/vibes"],
+        "products_services": S2: ["5 'hero' products or services"]
       },
-      "interior_colors": "S1: colors, lighting warmth, surface materials",
-      "interior_layout": "S1: spatial arrangement (counter, ceiling, seating, floor)",
-      "business_description": "S2: 2-3 sentence overview of business, what it does and its vibe"
+
+      "visuals": {
+        "primary_color": "S1: dominant brand color from logo",
+        "secondary_color": "S1: supporting color from logo/storefront",
+        "accent_color": "S1: contrast or highlight color",
+        "theme_description": "S1: 1-sentence summary of visual palette and mood",
+        "logo_colors": "S1: exact colors seen in logo",
+        "storefront_colors": "S1: exterior/signage colors and facade materials",
+        "storefront_architecture": {
+          "building": "S1: type, material, window/door style, scale",
+          "features": "S2: patio, seating, visible landmarks, location type"
+        },
+        "interior_colors": "S1: colors, lighting warmth, surface materials",
+        "interior_layout": "S1: spatial arrangement (counter, ceiling, seating, floor)",
+
+      }
     }
 
     Output ONLY the JSON object. No preamble, no conversation.
@@ -160,28 +219,41 @@ async function analyzeWithTextSearch(
   const prompt = `
     [TASK]: Research and estimate visual brand identity for "${businessName}" at "${fullAddress}".
 
-    [LOGIC]: 
-    - Base analysis on web research. 
-    - If data is missing, use "Thematic Inference": provide professional estimates based on the business type and neighbourhood vibe.
+    [RESEARCH_REQUIREMENTS]:
+    1. Cross-reference Yelp, social media, and the official website.
+    2. Identify the core "Hero" offerings (top 5 products/services).
+    3. Identify 5 physical landmarks within walking distance.
+    4. Find the neighbourhood name, 2 transit routes, and 2 local vibe trends.
+    5. Based on the business type and web presence, infer the visual brand (colors and style).
+    6. If data is missing, use "Thematic Inference": provide professional estimates based on the business type and neighbourhood vibe.
 
     [OUTPUT]: 
     - Return ONLY a raw JSON object. No preamble, no markdown, no conversation.
     - Structure exactly as follows:
 
-    {
-      "primary_color": "dominant brand color",
-      "secondary_color": "supporting brand color",
-      "accent_color": "contrast/highlight color",
-      "theme_description": "1-sentence summary of color palette",
-      "logo_colors": "colors seen/inferred from logo",
-      "storefront_colors": "exterior colors and facade materials",
-      "storefront_architecture": {
-        "building": "type, material, window/door style",
-        "features": "patio, seating, landmarks, etc. (or 'None identified')"
+   {
+      "physical_details": {
+        "description": "2-3 sentence overview of what they do and who they serve.",
+        "neighbourhood": "exact neighbourhood name",
+        "landmarks": ["5 verified landmarks"],
+        "transit": ["2 verified routes"],
+        "local_trends": ["2 local trends"],
+        "products_services": ["5 hero products/services"]
       },
-      "interior_colors": "interior colors and lighting warmth",
-      "interior_layout": "spatial feel and layout based on business type",
-      "business_description": "2-3 sentence overview of of what they do and what makes them unique."
+      "visuals": {
+        "primary_color": "inferred dominant color",
+        "secondary_color": "inferred supporting color",
+        "accent_color": "inferred accent color",
+        "theme_description": "1-sentence visual vibe summary",
+        "logo_colors": "colors likely used in logo",
+        "storefront_colors": "typical facade colors for this business",
+        "storefront_architecture": {
+          "building": "estimated building style/materials",
+          "features": "seating, patio, or location type"
+        },
+        "interior_colors": "estimated interior palette",
+        "interior_layout": "estimated spatial arrangement"
+      }
     }
   `;
 
@@ -240,22 +312,29 @@ export async function discoverAndSaveBrandIdentity(
 
   // 3. Reconstruct and Save
   try {
+
+    const phys = extractedData.physical_details;
+    const vis = extractedData.visuals;
+
     const updatePayload: any = {
-      business_description: extractedData.business_description,
+
+      business_description: JSON.stringify(phys), 
+
       color_theme: {
-        primary: extractedData.primary_color || "neutral",
-        secondary: extractedData.secondary_color || "neutral",
-        accent: extractedData.accent_color || "neutral",
-        description: extractedData.theme_description || "natural tones",
+        primary: vis.primary_color || "neutral",
+        secondary: vis.secondary_color || "neutral",
+        accent: vis.accent_color || "neutral",
+        description: vis.theme_description || "natural tones",
       },
       business_visuals: {
-        logoColors: extractedData.logo_colors || "Not provided",
-        storefrontColors: extractedData.storefront_colors || "Not provided",
-        interiorColors: extractedData.interior_colors || "Not provided",
+        logoColors: vis.logo_colors || "Not provided",
+        storefrontColors: vis.storefront_colors || "Not provided",
+        interiorColors: vis.interior_colors || "Not provided",
       },
-      storefront_architecture: extractedData.storefront_architecture,
-      interior_layout: extractedData.interior_layout,
-      brand_source: (photos.length > 0 && extractedData.primary_color) ? "photos" : "text_search"
+      storefront_architecture: vis.storefront_architecture,
+      interior_layout: vis.interior_layout,
+
+      brand_source: (photos.length > 0 && vis.primary_color) ? "photos" : "text_search"
     };
 
     const { error: updateError } = await supabase
@@ -264,7 +343,7 @@ export async function discoverAndSaveBrandIdentity(
       .eq("id", userId);
 
     if (updateError) throw updateError;
-    console.log(`--- [BACKGROUND] SUCCESS: Saved via ${updatePayload.brand_source} ---`);
+    console.log(`--- [BACKGROUND] SUCCESS: Brand analysis (${updatePayload.brand_source}) complete for ${businessName} ---`);
 
   } catch (saveErr) {
     console.error("--- [BACKGROUND] SAVE FAILED ---", saveErr);

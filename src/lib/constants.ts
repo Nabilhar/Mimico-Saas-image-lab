@@ -18,7 +18,7 @@ export const NICHE_DATA: Record<string, string[]> = {
   };
 
 export const CATEGORIES = Object.keys(NICHE_DATA);
-export const VOICES = ["The Expert", "The Neighbour", "The Hustler", "The Minimalist"] as const;
+export const VOICES = ["Authoritative & Precise", "Warm & Conversational", "Bold & Direct", "Clean & Understated"] as const;
 export const POST_TYPES = ["5 Tips", "Promotion / offer", "Local event / news", "Myth-busting", "Behind the scenes"] as const;
 
 export interface ColorTheme {
@@ -37,7 +37,9 @@ export interface BusinessVisuals {
 export interface BusinessIdentity {
   color_theme: ColorTheme | null;
   business_visuals: BusinessVisuals | null;
-  storefront_architecture: string | null;
+  storefront_architecture: any | null;
   interior_layout: string | null;
+  brand_source: string | null; 
+  business_description: string | null; 
 }
 

@@ -1,3 +1,5 @@
+//Dashboard Page
+
 "use client";
 import { useUser, useAuth } from "@clerk/nextjs";
 import { useState, useEffect, useCallback, useMemo } from "react";
@@ -9,7 +11,7 @@ import PostActions from "@/components/PostActions";
 import { SavedImage } from "@/components/SavedImage";
 
 export interface Post { id: string; content: string; created_at: string; business_id: string; image_url?: string; }
-interface BusinessData { business_name: string; street: string; city: string; province_state: string; country: string; postal_code: string; category: string; niche: string; voice: string; credits: number; history: Post[]; }
+interface BusinessData { id: string; business_name: string; street: string; city: string; province_state: string; country: string; postal_code: string; category: string; niche: string; voice: string; credits: number; history: Post[]; }
 
 export default function DashboardPage() {
   const { user, isLoaded } = useUser();
@@ -17,6 +19,7 @@ export default function DashboardPage() {
   const router = useRouter();
   
   const [businessData, setBusinessData] = useState<BusinessData | null>(null);
+  const [voice, setVoice] = useState("Warm & Conversational"); 
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("generate");
@@ -27,8 +30,8 @@ export default function DashboardPage() {
   const template = process.env.NEXT_PUBLIC_APP_ENV === 'development'
   ? 'supabase-dev'
   : 'supabase-prod';
+  
   const supabase = useMemo(() => {
-    
     return createClerksupabase(() => getToken({ template}));
   }, []); // Empty dependency array!
 
@@ -54,6 +57,7 @@ export default function DashboardPage() {
 
       if (profileRes.data) {
         const formattedData: BusinessData = {
+          id: user.id,
           business_name: profileRes.data.business_name,
           street: profileRes.data.street || "",
           city: profileRes.data.city || "",
@@ -68,9 +72,27 @@ export default function DashboardPage() {
         };
         setBusinessData(formattedData);
         setPosts(postsRes.data || []);
+
+        if (profileRes.data.voice) {
+          setVoice(profileRes.data.voice);
+        }
       }
+
     } catch (err) { console.error(err); } finally { setLoading(false); }
   }, [user?.id, supabase, router]);
+
+  const updateSavedVoice = async (newVoice: string) => {
+    if (!user?.id || !supabase) return;
+    try {
+      await supabase
+        .from('profiles')
+        .update({ voice: newVoice })
+        .eq('id', user.id);
+      console.log("Voice updated in Supabase:", newVoice);
+    } catch (err) {
+      console.error("Failed to update voice:", err);
+    }
+  };
 
   // 4. Load Trigger
   useEffect(() => {
@@ -177,6 +199,11 @@ export default function DashboardPage() {
                 <GenerateDashboard 
                   supabase={supabase}
                   businessData={businessData}
+                  voice={voice} // Send the current voice state
+                  onVoiceChange={(newVoice) => {
+                    setVoice(newVoice); // Update UI state
+                    updateSavedVoice(newVoice); // Save to DB
+                  }}
                   onGenerateSuccess={(content, url) => savePostToCloud(content, url)}
                   canGenerate={(businessData?.credits ?? 0) > 0}
                   userCredits={businessData?.credits ?? 0}

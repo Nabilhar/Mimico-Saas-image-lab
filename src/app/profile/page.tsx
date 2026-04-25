@@ -1,3 +1,5 @@
+//Profile page
+
 'use client';
 import { useUser, useSession, useAuth } from "@clerk/nextjs";
 import { useState, useEffect, useMemo, useRef } from "react";
@@ -101,6 +103,7 @@ export default function ProfilePage() {
   // ── Form state ────────────────────────────────────────────────────────────
   const [loading, setLoading] = useState(false);
   const [testResult, setTestResult] = useState("");
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const [business_name, setbusiness_name] = useState("");
   const [category, setCategory] = useState("");
   const [niche, setNiche] = useState("");
@@ -127,55 +130,80 @@ export default function ProfilePage() {
   // ── Fetch existing profile ─────────────────────────────────────────────────
   useEffect(() => {
     const fetchProfile = async () => {
-      if (!user?.id || !supabase) return;
+      // Guard: only run if user/supabase ready AND profile not already loaded
+      if (!user?.id || !supabase || profileLoaded) { 
+        console.log("Skipping profile fetch: User not ready, Supabase not ready, or profile already loaded.");
+        return;
+      }
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('business_name, street, city, country, postal_code, province_state, category, niche, voice, credits, business_description, brand_source')
-        .eq('id', user.id)
-        .maybeSingle();
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('business_name, street, city, country, postal_code, province_state, category, niche, voice, credits, business_description, brand_source')
+          .eq('id', user.id)
+          .maybeSingle();
 
-      console.log('Profile fetch:', { data, error });
+        console.log('Profile fetch:', { data, error });
 
-      if (data) {
-        setbusiness_name(data.business_name || "");
-        setStreet(data.street || "");
-        setCity(data.city || "");
-        setProvinceState(data.province_state || "");
-        setCountry(data.country || "Canada");
-        setPostalCode(data.postal_code || "");
-        setCategory(data.category || "");
-        setVoice(data.voice || "");
-        setNiche(data.niche || "");
-        setCredits(data.credits ?? 0);
-        setBusinessDescription(data.business_description || "");
-        setBrandSource(data.brand_source || null);
-      } else {
-        const saved = localStorage.getItem("shoreline_business_profile");
-        if (saved) {
-          const localData = JSON.parse(saved);
-          setbusiness_name(localData.business_name || "");
-          setStreet(localData.street || "");
-          setCity(localData.city || "");
-          setCountry(localData.country || "Canada");
-          setPostalCode(localData.postal_code || "");
-          setCategory(localData.category || "");
-          setVoice(localData.voice || "");
-          setNiche(localData.niche || "");
-          setCredits(localData.credits ?? 0);
+        if (error) { // Handle Supabase errors
+          console.error("Supabase profile fetch error:", error.message);
+          toast.error("Error loading profile: " + error.message);
+          // Don't set profileLoaded to true on error, so it might retry or user can manually save
+        } else if (data) {
+          setbusiness_name(data.business_name || "");
+          setStreet(data.street || "");
+          setCity(data.city || "");
+          setProvinceState(data.province_state || "");
+          setCountry(data.country || "Canada");
+          setPostalCode(data.postal_code || "");
+          setCategory(data.category || "");
+          setVoice(data.voice || ""); 
+          setNiche(data.niche || "");
+          setCredits(data.credits ?? 0);
+          setBusinessDescription(data.business_description || "");
+          setBrandSource(data.brand_source || null);
+          setProfileLoaded(true); // <--- Set true ONLY on successful data load
+        } else {
+          // If no data from Supabase, check local storage (as fallback for initial values)
+          const saved = localStorage.getItem("shoreline_business_profile");
+          if (saved) {
+            const localData = JSON.parse(saved);
+            setbusiness_name(localData.business_name || "");
+            setStreet(localData.street || "");
+            setCity(localData.city || "");
+            setCountry(localData.country || "Canada");
+            setPostalCode(localData.postal_code || "");
+            setCategory(localData.category || "");
+            setVoice(localData.voice || "");
+            setNiche(localData.niche || "");
+            setCredits(localData.credits ?? 0);
+          }
+          setProfileLoaded(true); // <--- Also set true if no data but tried to fetch
         }
+
+      } catch (err) {
+        console.error("Catch block error fetching profile:", err);
+        toast.error("An unexpected error occurred while loading profile.");
+      } finally {
+        // setLoading(false); // Only use if you set setLoading(true) at the start of fetchProfile
       }
     };
+    
+    // Call fetchProfile only when conditions are met and profile is not yet loaded.
+    if (isLoaded && user?.id && supabase && !profileLoaded) {
+      console.log("Attempting to fetch profile...");
+      fetchProfile();
+    }
 
-    if (isLoaded && user) fetchProfile();
-  }, [isLoaded, user, supabase]);
+  }, [isLoaded, user?.id, supabase, profileLoaded]); // <--- CORRECT DEPENDENCY ARRAY
 
-  if (!isLoaded || !user || !session) {
+
+  if (!isLoaded || !user || !session || !profileLoaded) { 
     return <div className="p-10 text-center text-slate-500">Loading Profile...</div>;
   }
 
   const categories = Object.keys(BUSINESS_ARCHETYPES);
-  const voices = ["The Expert", "The Neighbour", "The Hustler", "The Minimalist"];
+  const voices = ["Authoritative & Precise", "Warm & Conversational", "Bold & Direct", "Clean & Understated"];
 
   
   // ── REFINED Save handler for intelligent toasts (More Concise) ──────────
@@ -243,30 +271,33 @@ export default function ProfilePage() {
       }
 
       // Determine if we should show the "Brand analysis started" toast.
-      // This toast now appears on the profile page, before redirect.
-      // Show if:
-      // 1. New photos were successfully uploaded (uploadedPhotoData.length > 0).
-      // 2. OR, no photos were uploaded *this time*, but the current brandSource isn't 'photos' yet.
-      //    (meaning, we are either doing initial discovery or upgrading from text_search).
-      const isNewPhotoVisionAnalysisTriggered = uploadedPhotoData.length > 0;
-      const isInitialTextAnalysisTriggered = selectedPhotoFiles.length === 0 && brandSource !== "photos";
+      // Scenario 1: New photos were successfully uploaded (Will trigger Vision Analysis)
+      const isUpgradingToVision = uploadedPhotoData.length > 0;
       
-      if (isNewPhotoVisionAnalysisTriggered || isInitialTextAnalysisTriggered) {
+      // Scenario 2: No photos uploaded, but we have NO brand data at all (Will trigger initial Text Search)
+      const isFirstTimeDiscovery = uploadedPhotoData.length === 0 && brandSource === null;
+
+      if (isUpgradingToVision || isFirstTimeDiscovery) {
         toast('Brand analysis started in the background! ✨', { icon: '🤖', duration: 5000 });
       }
 
       // 3. Trigger brand discovery API (fire and forget from frontend's await perspective)
       // The backend's /api/discover-brand route *will* await the full analysis.
-      fetch("/api/discover-brand", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          business_id:   user.id,
-          business_name: business_name,
-          address: { street, city, province_state, country, postalCode },
-          photos:        uploadedPhotoData, // Send only successfully uploaded photos
-        }),
-      }).catch((err) => console.error("Discovery API trigger failed (frontend catch):", err));
+      try {
+        await fetch("/api/discover-brand", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            business_id:   user.id,
+            business_name: business_name,
+            address: { street, city, province_state, country, postalCode },
+            photos:        uploadedPhotoData,
+          }),
+        });
+      } catch (aiError) {
+        console.error("AI Brand analysis failed, but profile was saved:", aiError);
+        // We don't show a loud error toast here because the profile IS saved.
+    }
 
 
       // 4. Claim welcome credits (existing logic)
@@ -278,7 +309,7 @@ export default function ProfilePage() {
       }
 
       localStorage.setItem("shoreline_business_profile", JSON.stringify(profileData));
-      toast.success("Profile Saved! Redirecting to dashboard."); 
+      toast.success("Profile Saved Successfully!"); 
       router.push("/dashboard");
 
     } catch (err: any) {

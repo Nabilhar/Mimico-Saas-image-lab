@@ -6,7 +6,7 @@ import Groq from "groq-sdk";
 import { InferenceClient } from "@huggingface/inference";
 import { NextResponse } from "next/server";
 import { createClient } from '@supabase/supabase-js';
-
+import { auth } from "@clerk/nextjs/server";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
@@ -68,25 +68,30 @@ function buildPollinationsUrl(visualDescription: string): string {
 }
 
 export async function POST(req: Request) {
+  // 1. Get Secure ID
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
-    // We now just need the ID to find the cached prompt
-    const { postId, business_id } = await req.json();
+    // 2. Remove business_id from destructuring
+    const { postId } = await req.json();
 
     if (!postId) {
-      console.error("❌ API Error: Missing postId or business_id in request");
       return NextResponse.json({ error: "Missing post ID" }, { status: 400 });
     }
 
+    // 3. Update Profile Query to use userId
     const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('business_name, street, city, province_state, country, postal_code')
-    .eq('id', business_id)
-    .single();
+      .from('profiles')
+      .select('business_name, street, city, province_state, country, postal_code')
+      .eq('id', userId) // <-- Changed from business_id
+      .single();
 
     if (profileError || !profile) {
       return NextResponse.json({ error: "Business profile not found." }, { status: 404 });
     }
-
     const fullAddress = `${profile.street}, ${profile.city}, ${profile.province_state}, ${profile.country} ${profile.postal_code}`;
     const businessName = profile.business_name;
  
@@ -94,6 +99,7 @@ export async function POST(req: Request) {
         .from('community_posts')
         .select('image_prompt')
         .eq('id', postId)
+        .eq('business_id', userId)
         .single();
       
         if (dbError || !post) {

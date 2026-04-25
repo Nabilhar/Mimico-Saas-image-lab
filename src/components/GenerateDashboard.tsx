@@ -1,3 +1,5 @@
+// GenerateDashboard
+
 "use client";
 
 import { useState, useEffect, useRef } from "react"; 
@@ -21,10 +23,12 @@ interface GenerateDashboardProps {
   supabase: any;
   history?: Post[];
   onImageUpdated?: () => Promise<void>;
+  voice: string; 
+  onVoiceChange: (newVoice: string) => void;
 }
 
 // FIX: Added canGenerate here so the component can actually use the value
-export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, userCredits, onDelete, supabase, history, onImageUpdated, businessData }: GenerateDashboardProps) {
+export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, userCredits, onDelete, supabase, history, voice, onImageUpdated, businessData, onVoiceChange }: GenerateDashboardProps) {
   const { user } = useUser();
   const router = useRouter();
 
@@ -37,8 +41,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
   const [postalCode, setPostalCode] = useState("");
   const [category, setCategory] = useState("");
   const [niche, setNiche] = useState("");
-  const [voice, setVoice] = useState("");
-  const [postType, setPostType] = useState("5 Tips");
+  const [postType, setPostType] = useState("Behind the scenes");
   const [promoType, setPromoType] = useState("discount");
   const [eventType, setEventType] = useState("event");
   const [customDetails, setCustomDetails] = useState("")
@@ -83,7 +86,6 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
       setPostalCode(businessData.postal_code || "");
       setCategory(businessData.category || "Food & Beverage");
       setNiche(businessData.niche || "");
-      setVoice(businessData.voice || "The Neighbour");
     }
 
     // 2. Pull the Last Generated Post (Still needed as this is post-specific, not profile-specific)
@@ -209,8 +211,6 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
 
     try {
 
-      const framework  = getFramework(category, postType, voice);
-
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -231,7 +231,6 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
           customDetails, // The raw text from the box
           business_id: user?.id,
           history: history,
-          framework: framework ,
           currentMonth: new Date().toLocaleString("en", { month: "long" })
         }),
       });
@@ -280,7 +279,6 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
               postal_code: postalCode,
               niche,
               voice,          // Added
-              framework: framework ,    // Added
               postType,
               currentMonth: new Date().toLocaleString("en", { month: "long" }),
             }),
@@ -464,7 +462,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Brand Voice</label>
-              <select className="mt-1 w-full p-3 border rounded-xl bg-white focus:ring-2 focus:ring-cyan-100 outline-none transition-all" value={voice} onChange={(e) => setVoice(e.target.value)}>
+              <select className="mt-1 w-full p-3 border rounded-xl bg-white focus:ring-2 focus:ring-cyan-100 outline-none transition-all" value={voice} onChange={(e) => onVoiceChange(e.target.value)}>
                 {VOICES.map(v => <option key={v} value={v}>{v}</option>)}
               </select>
             </div>
@@ -474,16 +472,19 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
               <select 
                 value={postType} 
                 onChange={(e) => {
-                  setPostType(e.target.value);
-                  setCustomDetails(""); 
+                  const newType = e.target.value;
+                  // Only clear if the box is actually empty, 
+                  // or just don't clear it at all so the user doesn't lose data!
+                  setPostType(newType);               
                 }} 
                 className="mt-1 w-full p-3 border rounded-xl bg-white focus:ring-2 focus:ring-cyan-100 outline-none transition-all"
               >
-                <option value="5 Tips">5 Tips</option>
-                <option value="Myth-busting">Myth-busting</option>
                 <option value="Behind the scenes">Behind the scenes</option>
                 <option value="Promotion / offer">Promotion / offer</option>
                 <option value="Local event / news">Local event / news</option>
+                <option value="Myth-busting">Myth-busting</option>
+                <option value="5 Tips">5 Tips</option>
+                
               </select>
             </div>
           </div>

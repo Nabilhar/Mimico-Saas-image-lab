@@ -8,10 +8,11 @@ import {
 import { NextResponse } from "next/server";
 import Groq from "groq-sdk"; // <-- NEW
 import { createClient } from '@supabase/supabase-js';
-import { getFramework, BUSINESS_ARCHETYPES,getFrameworkTipsStructure  } from "@/lib/frameworks";
-import { SEASONALITY_CONTEXT, POST_TYPE_CTA_OVERRIDE, SEASONAL_NICHE_NARRATIVE, getSeason } from "@/lib/frameworks";
-import { getBrandIdentity, discoverAndSaveBrandIdentity } from "@/lib/brandDiscovery";
+import { getFramework, BUSINESS_ARCHETYPES, ANGLE_POOL } from "@/lib/frameworks";
+import { TIP_MODE, POST_TYPE_CTA_OVERRIDE, SEASONAL_NICHE_NARRATIVE, getSeason, NARRATIVE_COMBINATIONS, NarrativeEntry } from "@/lib/frameworks";
+import { getBrandIdentity, discoverAndSaveBrandIdentity, parseBusinessIntel  } from "@/lib/brandDiscovery";
 import { ColorTheme, BusinessVisuals } from '@/lib/constants';
+import { auth } from "@clerk/nextjs/server"; 
 
 // 1. Initialize Groq (The New Engine)
 const groq = new Groq({
@@ -26,117 +27,15 @@ const supabase = createClient(
 );
 
 // ─────────────────────────────────────────────
-// 1. FRAMEWORK AUTO-SELECTION
-// Maps business category + post type → best framework.
-// Three universal overrides run first:
-//   "Myth-busting"      → always PAS  (myth = problem by definition)
-//   "Behind the scenes" → always BAB  (transparency = aspiration)
-//   "The Hustler" voice → always PAS  (urgency is its natural mode)
-// ─────────────────────────────────────────────
-
-
-// ─────────────────────────────────────────────
-// 2. FRAMEWORK PROMPT DEFINITIONS
-// Each block is a precise structural contract for the AI.
-// No framework labels appear in the output —
-// the AI follows the structure invisibly.
-// ─────────────────────────────────────────────
-
-const FRAMEWORK_PROMPTS: Record<string, string> = {
-  PAS: `Use the PAS structure (Problem-Agitate-Solve) — do not label the sections in the post:
-- Open with one sharp sentence naming a pain the reader already feels. Make it specific to someone near this location. No generic openers like "Are you tired of..."
-- Follow with one sentence only on the real cost of ignoring that problem — financial, physical, or emotional. Make the reader feel the consequence.
-- Close by introducing the business as the natural fix. Weave in the local landmark naturally. End with one clear, low-friction CTA.`,
-
-  BAB: `Use the BAB structure (Before-After-Bridge) — do not label the sections in the post:
-- Open with one relatable sentence placing the reader in their ordinary, imperfect reality. Familiar and grounded — not dramatic.
-- Follow with one sensory, specific sentence showing life after engaging with this business — what they see, feel, or can actually do. Not a vague "you'll feel better."
-- Close with 2-3 sentences bridging those two states through the business. Weave the local landmark in naturally as proof of community presence. End with one warm, low-pressure CTA.`,
-
-  AIDA: `Use the AIDA structure (Attention-Interest-Desire-Action) — do not label the sections in the post:
-- Open with one bold, local hook — a surprising neighbourhood fact, a specific location reference, or a strong claim. If it wouldn't stop a scroll, it is not strong enough.
-- Follow with 1-2 sentences on why this matters right now in this community — seasonal, local, timely.
-- Build want through a specific result, proof point, or local credential. Reference the landmark here to anchor credibility.
-- Close with one direct CTA. Pick one action only — DM a keyword, click the link, call, or book. Never two options.`,
-};
-
-// ─────────────────────────────────────────────
 // 3. VOICE DEFINITIONS
 // Matches the exact voice strings sent from the frontend.
 // ─────────────────────────────────────────────
 
 const VOICE_PROMPTS: Record<string, string> = {
-  "The Expert":
-    "Authoritative, factual, confident. Uses industry terms lightly. No exclamation marks. Builds trust through knowledge, not enthusiasm.",
-  "The Neighbour":
-    "Warm, conversational, community-first. Reads like a message from a friend who runs the business. Uses 'we' and 'you' naturally. Never corporate.",
-  "The Hustler":
-    "High-energy, direct, urgent. Short punchy sentences. Bold claims. Drives immediate action. Emphasis used sparingly but powerfully.",
-  "The Minimalist":
-    "Clean, understated, sophisticated. Says more with less. No filler words. Every sentence earns its place.",
-};
-
-const POST_TYPE_PROMPTS: Record<string, any> = {
-
-  
-  "5 Tips": `Write a post that delivers exactly 5 numbered tips. 
-Each tip must be one punchy, actionable sentence — no fluff. 
-The tips should be genuinely useful to someone near this location, 
-not generic advice they could find anywhere. 
-The framework structure applies to how the tips are introduced and closed, 
-not to each individual tip.`,
-
-  "Myth-busting": `Write a post that busts one specific, common misconception 
-about this business or industry. 
-State the myth clearly in the opening (without saying "myth:"). 
-Correct it with confidence and a local proof point. 
-The reader should finish the post thinking "I didn't know that."`,
-
-  "Behind the scenes": `Write a post that pulls back the curtain on one specific, 
-ordinary moment in the business owner's day — 
-a morning routine, a preparation ritual, a small detail most customers never see. 
-Make it feel like a privilege to read. Specific beats generic: 
-"4am sourdough proofing" beats "we work hard every day."`,
-
-
-"Promotion / offer": (promoType: string, details: string, fullAddress: string) => {
-  const strategies = {
-    discount: "Act like a friend giving a neighbour a 'heads up' on a way to save. Focus on the ease of the transaction. Use words like 'lighter on the wallet' or 'a little break'.",
-    freebie: "Act like a generous host. The focus is 100% on hospitality and 'our treat'. It's about a gift, not a transaction. Use words like 'on the house' or 'tucked in for you'.",
-    custom: "Focus on the 'Why now?'. Is it a rainy day special? A celebration of a local milestone? Create a 'just for us' community feeling."
-  };
-  
-  return `
-    [GOAL]: Announce a ${promoType} without sounding like a flyer.
-    [DATA]: ${details}
-    [TONE]: ${strategies[promoType as keyof typeof strategies] || "neighbourly and warm."}
-    [STRICT RULE]: The details "${details}" must be the center of the story, but woven in as a solution to a specific ${fullAddress} moment (e.g., a post-work treat or a weekend reward).
-
-Rules:
-- "CRITICAL: You MUST use the following specific details: '${details}'. If these details are missing from the post, the post is a failure. Do not use generic placeholders like [Insert Date]."
-- The post must make the reader feel like a neighbour getting a genuine heads-up, not a customer seeing an ad.
-- The specific detail (price, date, quantity, condition) must appear naturally in the post body — not just in the CTA.
-- Never say "limited time offer" — if there's a limit, show it ("only until Sunday", "last 10 spots", "this week only").
-- To claim the offer, the reader should just "show this post on their phone" when they arrive. Example : "Just let the team know you're a neighbour and show them this post." 
-    `;
-},
-
-
-"Local event / news": (eventType: string, details: string, fullAddress: string) => {
-    return `
-      [GOAL]: Position the business as the neighbourhood's information hub for this ${eventType}.
-      [DATA]: ${details}
-      [NARRATIVE]: Don't just report the news. Explain why it matters to someone standing in ${fullAddress} right now. 
-      [STRICT RULE]: If it's an event, the call to action should be about 'stopping by on your way to/from' the event.
-    
-    Rules:
-- The promotion details above are real — use them exactly, do not invent numbers or dates.
-- The post must make the reader feel like a neighbour getting a genuine heads-up, not a customer seeing an ad.
-- The specific detail (price, date, quantity, condition) must appear naturally in the post body — not just in the CTA.
-- Never say "limited time offer" — if there's a limit, show it ("only until Sunday", "last 10 spots", "this week only").
-- End with one clear action the reader takes to claim the offer.
-      `;
-  }
+  "Authoritative & Precise": "Authoritative, factual, confident. Light industry terms. No exclamation marks. Trust through knowledge, not enthusiasm. Never use 'excited', 'thrilled', or 'delighted'. This is a style modifier — the post structure is defined separately.",
+  "Warm & Conversational": "Warm, conversational, community-first. Friend-like tone. Use 'we' and 'you'. Non-corporate. Short sentences. Never ramble or hedge. This is a style modifier — the post structure is defined separately.",
+  "Bold & Direct": "High-energy, direct, urgent. Short, punchy sentences. Bold claims. Drives immediate action. Sparse emphasis. This is a style modifier — the post structure is defined separately.",
+  "Clean & Understated": "Clean, understated, sophisticated. Zero filler. Every sentence must earn its place. This is a style modifier — the post structure is defined separately.",
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -147,14 +46,21 @@ async function callAIProvider(provider: string, finalPrompt: string, currentTime
   const fullAddress = `${address.city}, ${address.province_state} ${address.country} ${address.postal_code}`;
 
   if (provider === "groq") {
+
+        // ──────────────────────────────────────────────────────────────
+        console.log("\n\n🚀 === [FULL GROQ PROMPT START] === \n");
+        console.log(finalPrompt);
+        console.log("\n === [FULL GROQ PROMPT END] === \n\n");
+        // ──────────────────────────────────────────────────────────────
+
     console.log("--- Shoreline ENGINE: ROUTING TO GROQ (LLAMA 3) ---");
     const chatCompletion = await groq.chat.completions.create({
       messages: [
         { role: "system", content: `You are a helpful assistant. Follow the user's instructions precisely and output only what is requested.` },
         { role: "user", content: finalPrompt }
       ],
-      model: "compound-beta-mini",
-      temperature: 0.7,
+      model: "llama-3.3-70b-versatile",
+      temperature: 0.9,
     });
     return chatCompletion.choices[0]?.message?.content || "";
   } 
@@ -200,6 +106,7 @@ async function callAIProvider(provider: string, finalPrompt: string, currentTime
 }
 
 
+
 // ─────────────────────────────────────────────
 // 4. PROMPT BUILDER
 // Owner-perspective persona + <research> tags + seasonality
@@ -208,6 +115,7 @@ async function callAIProvider(provider: string, finalPrompt: string, currentTime
 
 function buildPrompt(
   business_name: string,
+  category: string,
   niche: string,
   address: any,
   voice: string,
@@ -224,15 +132,38 @@ function buildPrompt(
 
 ): string {
 
+
   const fullAddress = `${address.street}, ${address.city}, ${address.province_state} ${address.country} ${address.postal_code}`;
-  const rawInstruction = POST_TYPE_PROMPTS[postType] 
+
+  const narrativeKey = `${framework}_${postType}`;
+  const rawNarrative = NARRATIVE_COMBINATIONS[narrativeKey] as NarrativeEntry;
+  const narrative = typeof rawNarrative === "function"
+    ? rawNarrative(
+        postType === "Promotion / offer" ? promoType : eventType,
+        customDetails,
+        fullAddress
+      )
+    : (rawNarrative ?? "Follow the framework structure. Be locally specific.");
+
+    const tipMode = TIP_MODE[category] || "service";
+
+    const tipModeInstruction = postType === "5 Tips"
+      ? (tipMode === "neighbourhood"
+          ? `Tips: practical local life-admin a community expert would share.
+          1 tip max may reference the core service.
+          Only use landmarks in [LOCAL_GROUND_TRUTH] Nearby. Never invent places, routes, or institutions.
+          BAD: "parking near our office" / "explore local shops" / "support local events"
+          GOOD: specific, actionable, locally-grounded knowledge the reader couldn't Google.`
+          : `Tips: Share expert knowledge the owner has earned — as if talking to a curious friend.
+          Teach something real about the craft or trade. The knowledge is the hero.
+          No tip may reference the business's own products, hours, or location.
+          The local connection lives in the Before/Hook and Bridge only — not in the tips.
+          BAD: "visit us on weekends" / "ask about our specials" / "we use fresh ingredients"
+          GOOD: e.g. a physiotherapist saying "most lower back pain starts at the hips, not the spine" — 
+          specific, surprising, earned through experience, no sell required`)
+      : "";
 
   const ctaOverride = POST_TYPE_CTA_OVERRIDE[postType] || "";
-
-  // Check: If it's a function, call it. If it's a string, use it as is.
-  const postSpecificInstructions = typeof rawInstruction === "function"
-    ? rawInstruction(postType === "Promotion / offer" ? promoType : eventType, customDetails, fullAddress)
-    : rawInstruction;
 
   const wordCount = postType === "5 Tips" ? "200-260" : "130-180";
 
@@ -242,9 +173,30 @@ function buildPrompt(
     hour12: true 
   });
 
-  const coreIntel = business_description 
-  ? `[BUSINESS_INTEL]: ${business_description}` 
-  : "[BUSINESS_INTEL]: Use researched neighborhood trends and the business niche.";
+  const intel = parseBusinessIntel(business_description);
+
+  // Angle selection
+  const anglePool = ANGLE_POOL[category]?.[postType];
+  const selectedAngle = anglePool?.length
+  ? anglePool[Math.floor(Math.random() * anglePool.length)]
+  : null;
+
+  const localFacts = intel?.isJson ? `
+  [LOCAL_GROUND_TRUTH]:
+  This is background knowledge — not a checklist.
+  The owner knows this neighbourhood the way a local does.
+  Use only what earns its place — one detail or several, whatever serves the post.
+  If nothing fits naturally, use none.
+  
+  Neighbourhood: ${intel.neighbourhood}
+  Nearby: ${intel.landmarks.join(", ")}
+  Transit: ${intel.transit.join(", ")}
+  Vibe: ${intel.local_trends.join(", ")}
+  Offerings: ${intel.products_services.join(", ")}
+  ` : `[RESEARCH]: Search for "${business_name}" in ${fullAddress} to find relevant local context.`;
+
+  const coreIntel =  `[BUSINESS_SUMMARY]: ${intel?.description || "A local " + niche + " serving the community."}`;
+
 
 // Handle the "New User" scenario: If no colors exist, tell the AI to derive them from research.
   const visualIdentity = `
@@ -267,59 +219,103 @@ function buildPrompt(
     const storefrontCol = businessVisuals?.storefrontColors || "Not provided";
     const interiorCol = businessVisuals?.interiorColors || "Not provided";
 
-    const season = getSeason(month); // Ensure you have a getSeason helper
-    const seasonalNicheGuidance = SEASONAL_NICHE_NARRATIVE[season]?.[niche] || "";
+    const capitalizedMonth = month.charAt(0).toUpperCase() + month.slice(1);
+    const season = getSeason(capitalizedMonth); 
+    const seasonalNicheGuidance = SEASONAL_NICHE_NARRATIVE[season]?.[category] || "";
   
 
     return `
 
-[SYSTEM]: Marketing Master. Persona: Owner of "${business_name}" (${niche}) in ${fullAddress}.
-${coreIntel} 
-[TONE]: ${VOICE_PROMPTS[voice] || "Warm, community-first."}
-[CONTEXT]: Season: ${season} | Month: ${month} | Current local time: ${currentTime}  : The post must be temporally aligned.
-[SEASONAL_GUIDE]: ${seasonalNicheGuidance}
-${visualIdentity}
+  [ROLE]: You are the owner of "${business_name}", a ${niche} located at ${fullAddress}.
+  You are writing a social media post in your own voice — not as a marketer, not as an observer.
+  You speak from experience, not from enthusiasm.
 
-[BANNED_PHRASES]: Never use these words or phrases verbatim:
-"bike-to-work buzz", "stone's throw", "pour our hearts", "passionate about", 
-"quality service", "reach out", "don't hesitate", "pride ourselves", 
-"No cap", "Slay", "It's giving", "That's a wrap", 
-"Are you tired of", "Don't miss out", "Limited time offer"
+  [OBJECTIVE]: Write a post that demonstrates genuine expertise and earns trust through specificity.
+  Not high-converting. Not promotional. Authoritative and local.
 
-[BANNED_OPENING_THEMES]: Do not open with these narrative patterns, 
-even if the exact words differ:
-- The "busy juggling life" opener (e.g., "Juggling work and family...")
-- The "end of a long day" opener (e.g., "After a day like today...", "Finding a moment...")
-- The "I'm always..." self-description opener
-- Previous post openings (do not echo these): ${recentHistory || "None"}
+  [BUSINESS]:
+  Name: ${business_name}
+  Type: ${niche}
+  ${coreIntel}
 
-[TASK]:
-1. [LOCAL_CONTEXT]: Search for "${business_name}" at "${fullAddress}" to find: neighbourhood name, nearby landmarks, local trends, and brand visual vibe] (Max 30 words. Metadata only — stripped before publishing.)
-2. Write a Social Media Post as the busines owner of "${business_name}"
-3. 3-4 Hashtags (neighbourhood, Niche, Broad)
+  [TONE]: ${VOICE_PROMPTS[voice] || "Warm, community-first."}
 
-[POST_SPECIFICS]:
-Type: ${postType}
-Framework: ${framework} (${FRAMEWORK_PROMPTS[framework] || FRAMEWORK_PROMPTS["PAS"]})
-Instruction: ${postSpecificInstructions}
-${postType === "5 Tips" ? `Structure: ${getFrameworkTipsStructure(framework as any)}` : ""}
+  [TIME]: ${currentTime}
 
-[CONSTRAINTS]:
-- Length: ${wordCount} words.
-- POV: 1st Person ("I"/"We").
-- Hook: First sentence must include a natural local keyword/trend.
-- Formatting: Short paragraphs, double spacing between them.
-- CTA: Low-pressure, physically possible for a ${niche}. No "Book now" or "Link in bio" unless naturally woven.
- ${ctaOverride ? `- ${ctaOverride}` : ""}
-- No labels (e.g., no "Problem:", "Tip 1:").
-- No commentary, word counts, or self-evaluation.
-- Max 3 emojis.
+  [SEASONAL_GUIDE]: ${seasonalNicheGuidance}
 
-[OUTPUT_ORDER]: 
-1. The signal: [FINAL_POST_START]
-2. The social media post body
-3. Hashtags
-(Do not include any other symbols, arrows, or labels)
+  ${visualIdentity}
+
+  ${localFacts}
+
+  [TASK]:
+  Angle for this post: "${selectedAngle || "Choose one clear craft or community truth this owner knows deeply."}"
+  Reader perspective: A customer and user — not how to make it yourself/at home.
+  The owner shares what they know as a practitioner. The reader learns what to look for, 
+  choose, or appreciate — not how to replicate it.
+  1. Decide how this angle connects to the post type and voice.
+  2. Check [LOCAL_GROUND_TRUTH] for one detail that sharpens the angle — use it only if it fits naturally.
+  3. Product focus: Pick ONE offering from [LOCAL_GROUND_TRUTH] Offerings that best fits this angle.
+  4. Let the season colour the language.
+  5. Write the post. Add 3-4 hashtags.
+
+  [POST_SPECIFICS]:
+  Type: ${postType}
+  ${tipModeInstruction ? `Tip Mode: ${tipModeInstruction}\n` : ""}
+  ${narrative}
+
+  [HARD CONSTRAINTS]:
+  - ${wordCount} words. 1st person (I/we).
+  - Short paragraphs, double-spaced.
+  - Max 3 emojis in post body only. Never on hashtags.
+  - No competing business references.
+  - No labels (e.g., no "Hook:", "Tip 1:", "Problem:").
+  - No commentary, word counts, or self-evaluation.
+  - ${postType === "Myth-busting" ? "No CTA of any kind — not even a soft one." : `CTA: low-pressure, physically possible for a ${niche}.`}
+  - ${ctaOverride ? ctaOverride : ""}
+
+  [BANNED PHRASES]: "bike-to-work buzz" / "stone's throw" / "pour our hearts" /
+  "passionate about" / "quality service" / "reach out" / "don't hesitate" /
+  "pride ourselves" / "Are you tired of" / "Don't miss out" /
+  "Limited time offer" / "we're here to help" / "feel free to"
+
+  [BANNED OPENERS]: Do not open with these patterns — even if the exact words differ:
+  - "I see people think..." or any observer framing
+  - "As someone who's spent years..." or any credential-first opener
+  - The "busy juggling life" opener
+  - The "end of a long day" opener
+  - The "I'm always..." self-description opener
+  - Any opener where the owner is watching customers from the outside
+  - Do not echo these recent openings: ${recentHistory || "None"}
+
+  [SELF-CHECK — REQUIRED BEFORE OUTPUT]:
+  Verify each item. If any fail — fix before writing output.
+  No invented landmarks — use [LOCAL_GROUND_TRUTH] Nearby only
+
+  Post type: ${postType}
+  ${postType === "5 Tips" ? `
+  - Exactly 5 tips present
+  - No business promotion inside tips
+  - No local references inside tips
+  - Tips are craft or domain-specific — not generic advice
+  - Outro is exactly 1 sentence` : ""}
+  ${postType === "Myth-busting" ? `
+  - Myth is stated as fact — not as "I see people think..."
+  - No CTA of any kind — not even a soft one
+  - Solve stays on craft truth — no business mention` : ""}
+  ${postType === "Behind the scenes" ? `
+  - One specific process detail revealed — not a generic "we work hard"
+  - No CTA unless AIDA framework` : ""}
+  ${postType === "Promotion / offer" ? `
+  - Offer details appear in the body — not only in the CTA
+  - No invented deadline if none was provided
+  - CTA is one action only` : ""}
+  - Word count is within ${wordCount} range
+  - No banned phrases used
+  - No banned opener pattern used
+  - Post is written as the owner — not as a marketer
+
+  [OUTPUT]: <<<POST_BEGIN>>> then post body then hashtags. Nothing else.
 
 `;}
 
@@ -328,6 +324,12 @@ ${postType === "5 Tips" ? `Structure: ${getFrameworkTipsStructure(framework as a
 // ─────────────────────────────────────────────
 
 export async function POST(req: Request) {
+
+  const { userId } = await auth(); // Get the authenticated user's ID from Clerk
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const key = process.env.GEMINI_API_KEY;
   if (!key) {
     return NextResponse.json({ error: "Missing API Key" }, { status: 500 });
@@ -337,7 +339,6 @@ export async function POST(req: Request) {
     const body = await req.json();
     const {
       business_name,
-      business_id,
       category,
       niche,
       voice,
@@ -349,11 +350,6 @@ export async function POST(req: Request) {
       provider: requestedProvider
 
     } = body;
-
-    if (!business_id) {
-      console.error("CRITICAL ERROR: No business_id provided in request body.");
-      return NextResponse.json({ error: "Missing business identity context." }, { status: 400 });
-    }
 
       // --- ADD THIS DEBUG BLOCK ---
       console.log("--- Shoreline MEMORY CHECK ---");
@@ -372,39 +368,37 @@ export async function POST(req: Request) {
     
     const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('business_name, street, city, province_state, country, postal_code, business_description')
-    .eq('id', business_id)
+    .select('business_name, street, city, province_state, country, postal_code, business_description, color_theme, business_visuals,storefront_architecture, interior_layout')
+    .eq('id', userId)
     .single();
 
     if (profileError || !profile) {
       return NextResponse.json({ error: "Business profile not found. Please complete your profile." }, { status: 404 });
     }
 
-        // --- PHASE 1: THE FAST PATH ---
-    // Get existing brand identity from DB (Fast, no search)
-    const brandIdentity = await getBrandIdentity(business_id);
+    // 1. Parse the Librarian data once
+    const intel = parseBusinessIntel(profile.business_description);
 
-    // --- PHASE 2: THE BACKGROUND PATH ---
-    // If identity is missing, trigger the researcher in the background.
-    // NOTICE: We do NOT 'await' this. It runs in parallel.
-    if (!brandIdentity.color_theme || !brandIdentity.business_visuals || !profile.business_description) {
-      console.log("--- MISSING BRAND DATA: Triggering background research ---");
-      discoverAndSaveBrandIdentity(business_id, profile.business_name, {
+    // 2. Check if we are missing visuals OR if the description is still legacy (not JSON)
+    const isStructured = intel?.isJson || false;
+
+    if (!profile.color_theme || !profile.business_visuals || !isStructured) {
+      console.log("--- SINGLE SOURCE CHECK: Triggering background upgrade ---");
+      discoverAndSaveBrandIdentity(userId, profile.business_name, {
         street: profile.street,
         city: profile.city,
         province_state: profile.province_state,
         country: profile.country,
-        postalCode: profile.postal_code
-      })
-        .catch(err => console.error("Background Discovery Error:", err));
+        postalCode: profile.postal_code 
+      }).catch(err => console.error("Background Discovery Error:", err));
     }
 
     const recentHistory = history?.length
     ? history
-        .slice(0, 3) // Just take the last 5 for the AI context
+        .slice(0, 2)
         .map((p: any, i: number) => {
           const firstSentence = (p.content || "").split(/[.!?]/)[0].trim();
-          return `- Post ${i + 1} opening: "${firstSentence}"`;
+          return `- Avoid this opening pattern: "${firstSentence.slice(0, 40)}..."`;
         })
         .join("\n")
     : "No previous posts found.";
@@ -419,6 +413,7 @@ export async function POST(req: Request) {
     // Build the final prompt
     const finalPrompt = buildPrompt(
       profile.business_name,
+      category,
       niche,
       profile,   
       voice,
@@ -429,8 +424,8 @@ export async function POST(req: Request) {
       promoType || "",    // Argument 9
       eventType || "",    // Argument 10
       customDetails || "", // Argument 11
-      brandIdentity.color_theme,
-      brandIdentity.business_visuals,
+      profile.color_theme,   
+      profile.business_visuals,
       profile.business_description
     );
 
@@ -496,7 +491,7 @@ export async function POST(req: Request) {
 
 let content = rawResponse;
 
-const signal = "[FINAL_POST_START]";
+const signal = "<<<POST_BEGIN>>>";
 
 if (content.includes(signal)) {
   // Find the last occurrence of the signal to skip all "thinking" versions
@@ -511,6 +506,8 @@ if (content.includes(signal)) {
 content = content
   .replace(/<[^>]*>/g, "")      // Removes any remaining <tag> markers
   .replace(/\[\d+\]/g, "")      // Removes citations like [1], [2], [3]
+  .replace(/\*\*(.*?)\*\*/g, "$1")  // Remove **bold**
+  .replace(/\*(.*?)\*/g, "$1")      // Remove *italic*
   .replace(/Word Count:\s*\d+/gi, "") // Removes "Word Count: 150"
   .replace(/Keywords?:\s*[\s\S]*?(\n|$)/gi, "") // Removes "Keywords: ..."
   .trim();

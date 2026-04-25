@@ -9,6 +9,7 @@ import { createClient } from '@supabase/supabase-js';
 import { getBrandIdentity } from "@/lib/brandDiscovery";
 import { FRAMEWORK_POST_TYPE_COMBINATIONS, getSeason, SEASONALITY_CONTEXT, SEASONAL_NICHE_CONTEXT } from "@/lib/frameworks";
 import { ColorTheme, BusinessVisuals } from '@/lib/constants';
+import { auth } from "@clerk/nextjs/server";
 
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
@@ -36,50 +37,44 @@ const ARCHITECT_MODE: "GEMINI" | "GROQ" | "GEMMA" = "GEMMA";
 
 const textModel = genAI.getGenerativeModel({ model: "models/gemini-2.5-flash" }, { apiVersion: 'v1beta' });
 
-
 export async function POST(req: Request) {
-      let postId: string | null = null;
-      let generatedPost= "";
-      let business_name= "";
-      let business_id= "";
-      let street= "";
-      let city= "";
-      let province_state= "";
-      let country= "";
-      let postal_code= "";
-      let niche= "";
-      let voice= "";
-      let framework= "";
-      let postType= "";
-      let currentMonth= "";
-  
+  // 1. Authenticate with Clerk
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  let postId: string | null = null;
+
   try {
     const body = await req.json();
-      postId= body.postId;
-      generatedPost= body.generatedPost;
-      business_name= body.business_name; 
-      business_id= body.business_id;
-      street = body.street;
-      city = body.city;
-      province_state = body.province_state;
-      country = body.country;
-      postal_code = body.postal_code;
-      niche= body.niche;
-      voice= body.voice;
-      framework= body.framework;
-      postType= body.postType;
-      currentMonth= body.currentMonth;
-  
-    if (!postId || !business_id) {
-      return NextResponse.json({ error: "Missing ID" }, { status: 400 });
+    const { postId, currentMonth, generatedPost, framework, postType } = body;
+
+    if (!postId) {
+      return NextResponse.json({ error: "Missing Post ID" }, { status: 400 });
     }
 
-    const fullAddress = `${street}, ${city}, ${province_state}, ${country} ${postal_code}`;
+    // 2. Fetch the "Ground Truth" profile using the secure userId
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select(`
+        business_name, street, city, province_state, country, postal_code,
+        niche, voice, business_description, color_theme, business_visuals, 
+        storefront_architecture, interior_layout
+      `)
+      .eq('id', userId)
+      .single();
 
-    // ── FETCH BRAND IDENTITY (The "Fast Path") ─────────────────────────────
-    // getBrandIdentity now returns color_theme, business_visuals,
-    // storefront_architecture, and interior_layout
-    const brandIdentity = await getBrandIdentity(business_id);
+    if (profileError || !profile) {
+      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+    }
+
+    const fullAddress = `${profile.street}, ${profile.city}, ${profile.province_state}, ${profile.country} ${profile.postal_code}`;
+
+    // Map the profile data to variables used later in the script
+    const business_name = profile.business_name;
+    const brandIdentity = profile; 
+    const niche = profile.niche;
 
     // ── CALCULATE STRATEGY & SEASON ────────────────────────────────────────
     const season = getSeason(currentMonth);
@@ -93,7 +88,7 @@ export async function POST(req: Request) {
     const { data: recentPrompts } = await supabase
       .from("community_posts")
       .select("image_prompt")
-      .eq("business_id", business_id)
+      .eq("user_id", userId)
       .neq("image_prompt", "EMPTY")
       .order("created_at", { ascending: false })
       .limit(5);
@@ -149,8 +144,9 @@ export async function POST(req: Request) {
       [FORBIDDEN_VISUALS]:
       ${recentImageHistory ? `STRICTLY FORBIDDEN (Already used):
       ${recentImageHistory}
-      RULE: Choose a completely different subject, setting, or angle. 
+      RULE: Choose a completely different subject, setting, angle, or composition. 
       - If recent = Food/Drink → use Space/Exterior/Details.
+      - If recent = Detail close-up → Wide environmental/Medium scene.
       - If recent = Exterior → use Interior/Texture/Materials.
       - If recent = Waterfront → use Interior warmth/Close-ups.` : "No history. Full creative freedom."}
 
@@ -176,6 +172,7 @@ export async function POST(req: Request) {
       [BRAND_IDENTITY — COLOR & MOOD]:
       ${brandColorBlock}
       RULE: Integrate brand colors naturally into palette, props, and lighting.
+      NO meta-commentary/explaining the reasoning behind a color choice.
       Match vocabulary to mood (e.g., Sophisticated = Elegant; Vibrant = Energetic).
       If values are N/A, derive from niche and season.
 
