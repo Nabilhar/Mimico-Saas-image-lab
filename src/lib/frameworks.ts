@@ -58,7 +58,9 @@
       One sentence on what getting this wrong costs — time, money, or comfort.
     Tips: Exactly 5 numbered tips. Each one punchy, actionable, category-specific.
       Category knowledge only. No specific product mention.
-      No tip uses generic wisdom a non-expert could write, or implies/requires visiting the busines.
+      No tip uses generic wisdom a non-expert could write, or implies/requires visiting the business.
+      No tip describes production, preparation, or storage — write from the customer's side of the experience.
+      Tips teach the reader what to look for, choose, or notice — not how to make or replicate anything.
       Local grounding belongs in the opener and close — not the tips.
     Outro: Exactly one sentence.
       The offering or craft earns its place here — not in the tips.
@@ -486,9 +488,9 @@
 
     "Food & Beverage": {
       "5 Tips": [
-        "The freshness signal that changes how something performs within hours",
-        "What temperature does to texture and flavour before you even notice it",
-        "The difference between artisan and industrial versions after the first use",
+        "The freshness signal a customer can read before the first bite — not how it's stored, but what to look for",
+        "What temperature does to the eating experience — what the customer notices, not what happens in production",
+        "The difference between artisan and industrial versions of the same product — what shows up on the customer's side",
         "The single detail that determines whether two similar products age well or fail early",
         "The combination or pairing that changes how the product is experienced",
         "The storage mistake that silently degrades quality before it becomes obvious",

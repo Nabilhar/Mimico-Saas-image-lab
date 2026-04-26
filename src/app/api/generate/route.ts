@@ -155,7 +155,9 @@ function buildPrompt(
           GOOD: specific, actionable, locally-grounded knowledge the reader couldn't Google.`
           : `Tips: Share expert knowledge the owner has earned — as if talking to a curious friend.
           Teach something real about the craft or trade. The knowledge is the hero.
-          No tip may reference the business's own products, hours, or location.
+          No tip instructs the reader how to make, produce, or store something at home.
+          Tips are written from the customer's perspective — what to look for, choose, or appreciate.
+          Not how to replicate the work. Not what happens inside the process.
           The local connection lives in the Before/Hook and Bridge only — not in the tips.
           BAD: "visit us on weekends" / "ask about our specials" / "we use fresh ingredients"
           GOOD: e.g. a physiotherapist saying "most lower back pain starts at the hips, not the spine" — 
@@ -255,6 +257,8 @@ function buildPrompt(
   1. Decide how this angle connects to the post type and voice.
   2. Check [LOCAL_GROUND_TRUTH] for one detail that sharpens the angle — use it only if it fits naturally.
   3. Product focus: Pick ONE offering from [LOCAL_GROUND_TRUTH] Offerings that best fits this angle.
+     Do not default to the most common or obvious offering. If multiple fit — choose the least recently used per [VARIETY RULES].
+     The offering grounds the post — it is not the subject of any tip.
   4. Let the season colour the language.
   5. Write the post. Add 3-4 hashtags.
 
@@ -285,6 +289,8 @@ function buildPrompt(
   - The "end of a long day" opener
   - The "I'm always..." self-description opener
   - Any opener where the owner is watching customers from the outside
+  - "As I reflect..." or any introspective lead-in before stating the truth
+  - "I realize that many people..." or any variation of observing what others get wrong
   - Do not echo these recent openings: ${recentHistory || "None"}
 
   [VARIETY RULES]:
@@ -294,8 +300,13 @@ function buildPrompt(
   If all landmarks have been used recently — use none.
 
   [SELF-CHECK — REQUIRED BEFORE OUTPUT]:
-  Verify each item. If any fail — fix before writing output.
-  No invented landmarks — use [LOCAL_GROUND_TRUTH] Nearby only
+  - Verify each item. If any fail — fix before writing output.
+  - No invented landmarks — use [LOCAL_GROUND_TRUTH] Nearby only.
+  - No tip instructs the reader how to make, or store something at home.
+  - Opener is not observer framing — the owner is sharing a truth, not watching customers.
+  - State the truth directly — no wind-up, no setup about what others believe
+  - Outro is not observer framing — owner is present in the community, not watching it from outside
+  - CTA close is warm and specific — not a tagline or brand slogan
 
   Post type: ${postType}
   ${postType === "5 Tips" ? `
@@ -315,12 +326,12 @@ function buildPrompt(
   - Offer details appear in the body — not only in the CTA
   - No invented deadline if none was provided
   - CTA is one action only` : ""}
-  - Word count is within ${wordCount} range
-  - No banned phrases used
-  - No banned opener pattern used
-  - No Products/offerings from [VARIETY RULES] used
-  - No Landmarks from [VARIETY RULES] used
-  - Post is written as the owner — not as a marketer
+  - Word count is within ${wordCount} range.
+  - No banned phrases used.
+  - No banned opener pattern used.
+  - No Products/offerings from [VARIETY RULES] used.
+  - No Landmarks from [VARIETY RULES] used.
+  - Post is written as the owner — not as a marketer.
 
   [OUTPUT]: <<<POST_BEGIN>>> then post body then hashtags. Nothing else.
 
