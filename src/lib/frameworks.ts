@@ -172,7 +172,7 @@
   
       "BAB_Promotion / offer": (promoType: string, details: string, fullAddress: string): string => {
     const strategies: Record<string, string> = {
-      discount: "Before: The small sting of full price on a regular habit.\nAfter: Same habit, lighter on the wallet.",
+      discount: "Before: A grounded, specific moment the reader recognises — the quiet cost of a regular habit at full price. Do not use 'small sting' — find a fresh way to land the same truth.\nAfter: Same moment, lighter on the wallet.",
       freebie:  "Before: A regular visit.\nAfter: They leave with something they didn't expect. 'On the house.'",
       custom:   "Before: An ordinary moment in the neighbourhood.\nAfter: That moment becomes a small celebration.",
     };
@@ -181,6 +181,7 @@
     Bridge: The natural connection between Before and After.
       ${details} — woven naturally into the body, not dropped in the CTA.
       No manufactured urgency. The offer arrives as a pleasant surprise.
+      Weather and local details belong in the close — not mid-paragraph breaking the offer description.
     CTA: Invite them to show this post in person.
       Warm, specific to the offer. No links. One action only.
     Rule: No "limited time offer" anywhere in the post.
@@ -521,13 +522,13 @@
   
     "Health & Wellness": {
       "5 Tips": [
-        "The body signal that is commonly misread — and what it actually indicates",
-        "What happens when a recurring issue is ignored over time",
-        "The recovery mistake that quietly slows progress more than people realize",
-        "How movement patterns compound into long-term physical limitations",
-        "The first window of action that determines recovery outcomes",
-        "The hydration or sleep factor that most people underestimate until it affects performance",
-        "The difference between short-term relief and structural improvement",
+        "Pain at the site is rarely where the problem lives — the source is almost always upstream",
+        "Resting a recurring issue makes it quieter, not smaller — movement is usually the medicine",
+        "Recovery slows down the moment people stop the thing that was working, not when they start something new",
+        "Most movement compensation patterns start at the foot or hip — not where the discomfort appears",
+        "The 48-hour window after an acute issue is when the most consequential decisions get made",
+        "Dehydration shows up in performance and recovery long before it shows up as thirst",
+        "Short-term relief and structural improvement feel identical for the first two weeks — then they diverge",
       ],
       "Myth-busting": [
         "The 'no pain no gain' assumption — pain is a warning signal, not a progress indicator",
@@ -585,13 +586,13 @@
   
     "Beauty & Personal Care": {
       "5 Tips": [
-        "The layering mistake that cancels out product effectiveness",
-        "What skin or hair actually does during seasonal transitions",
-        "The tool or technique error that changes expected results",
-        "How ingredient order determines product performance",
-        "The difference between surface improvement and underlying change",
-        "What professional treatments achieve that at-home routines cannot",
-        "The timing error that slows visible results significantly",
+        "Layering actives on top of each other without waiting cancels both — skin can only absorb one thing at a time",
+        "Skin purges in spring because cell turnover accelerates — it looks worse before it looks better, and that's the treatment working",
+        "The tool matters as much as the product — a dirty applicator reintroduces exactly what the product was removing",
+        "Vitamin C goes on before moisturizer or it oxidizes before it penetrates — order is chemistry, not preference",
+        "Surface improvement and structural improvement feel identical for the first month — then one fades and one compounds",
+        "Professional treatments work at a depth home routines physically cannot reach — not because the ingredients differ, but because the delivery does",
+        "Applying treatment too close to sun exposure doesn't just reduce results — it can reverse them",
       ],
       "Myth-busting": [
         "The 'more product equals better results' assumption — concentration matters more than volume",

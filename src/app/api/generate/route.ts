@@ -27,6 +27,36 @@ const supabase = createClient(
 );
 
 // ─────────────────────────────────────────────
+// WEATHER FETCHER
+// ─────────────────────────────────────────────
+const WMO_CODES: Record<number, string> = {
+  0: "clear skies",
+  1: "mostly clear", 2: "partly cloudy", 3: "overcast",
+  45: "foggy", 48: "icy fog",
+  51: "light drizzle", 53: "drizzle", 55: "heavy drizzle",
+  61: "light rain", 63: "rain", 65: "heavy rain",
+  71: "light snow", 73: "snow", 75: "heavy snow", 77: "snow grains",
+  80: "rain showers", 81: "heavy rain showers", 82: "violent rain showers",
+  85: "snow showers", 86: "heavy snow showers",
+  95: "thunderstorm", 96: "thunderstorm with hail", 99: "thunderstorm with heavy hail",
+};
+
+async function fetchWeather(lat: number, lng: number, city: string): Promise<string> {
+  try {
+    const res = await fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true&temperature_unit=celsius`
+    );
+    const data = await res.json();
+    const cw = data.current_weather;
+    const description = WMO_CODES[cw.weathercode] ?? "variable conditions";
+    const temp = Math.round(cw.temperature);
+    return `${temp}°C, ${description} in ${city}`;
+  } catch {
+    return "";
+  }
+}
+
+// ─────────────────────────────────────────────
 // 3. VOICE DEFINITIONS
 // Matches the exact voice strings sent from the frontend.
 // ─────────────────────────────────────────────
@@ -53,23 +83,27 @@ async function callAIProvider(provider: string, finalPrompt: string, currentTime
         console.log("\n === [FULL GROQ PROMPT END] === \n\n");
         // ──────────────────────────────────────────────────────────────
 
-    console.log("--- Shoreline ENGINE: ROUTING TO GROQ (LLAMA 3) ---");
+        console.log(`--- PROMPT LENGTH: ${finalPrompt.length} characters, ~${Math.round(finalPrompt.length / 4)} tokens ---`);
     const chatCompletion = await groq.chat.completions.create({
       messages: [
         { role: "system", content: `You are a helpful assistant. Follow the user's instructions precisely and output only what is requested.` },
         { role: "user", content: finalPrompt }
       ],
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-120b",
       temperature: 0.9,
+      max_tokens: 3000,
     });
-    return chatCompletion.choices[0]?.message?.content || "";
+    const groqContent = chatCompletion.choices[0]?.message?.content;
+    console.log("--- GROQ FINISH REASON:", chatCompletion.choices[0]?.finish_reason);
+    console.log("--- GROQ CONTENT:", groqContent);
+    return groqContent || "";
   } 
   
   if (provider === "gemma") {
     console.log("--- Shoreline ENGINE: ROUTING TO GEMMA 4 (26B MoE) ---");
     const tools = [{ googleSearch: {} }] as any;
     const model = genAI.getGenerativeModel({ 
-      model: "models/gemma-4-26b-a4b-it", 
+      model: "models/gemma-4-31b-it",
       tools: tools 
     }, { apiVersion: 'v1beta' });
 
@@ -81,7 +115,6 @@ async function callAIProvider(provider: string, finalPrompt: string, currentTime
       generationConfig: {
         temperature: 1.0,
         maxOutputTokens: 6000,
-        thinkingConfig: { includeThoughts: true, thinkingLevel: "medium" }, // Optimized to medium for speed
       } as any,
     });
     return result.response.text();
@@ -95,7 +128,7 @@ async function callAIProvider(provider: string, finalPrompt: string, currentTime
     
     const result = await model.generateContent({
       contents: [{ role: "user", parts: [{ text: finalPrompt }] }],
-      generationConfig: { temperature: 0.8, maxOutputTokens: 1000 },
+      generationConfig: { temperature: 0.8, maxOutputTokens: 8000 },
       // ... safety settings
     });
 
@@ -127,7 +160,8 @@ function buildPrompt(
   colorTheme: ColorTheme | null,
   businessVisuals: BusinessVisuals | null,
   business_description: string | null,
-  varietyRules: string 
+  varietyRules: string,
+  currentWeather: string
 
 ): string {
 
@@ -153,15 +187,14 @@ function buildPrompt(
           Only use landmarks in [LOCAL_GROUND_TRUTH] Nearby. Never invent places, routes, or institutions.
           BAD: "parking near our office" / "explore local shops" / "support local events"
           GOOD: specific, actionable, locally-grounded knowledge the reader couldn't Google.`
-          : `Tips: Share expert knowledge the owner has earned — as if talking to a curious friend.
-          Teach something real about the craft or trade. The knowledge is the hero.
-          No tip instructs the reader how to make, produce, or store something at home.
-          Tips are written from the customer's perspective — what to look for, choose, or appreciate.
-          Not how to replicate the work. Not what happens inside the process.
-          The local connection lives in the Before/Hook and Bridge only — not in the tips.
-          BAD: "visit us on weekends" / "ask about our specials" / "we use fresh ingredients"
-          GOOD: e.g. a physiotherapist saying "most lower back pain starts at the hips, not the spine" — 
-          specific, surprising, earned through experience, no sell required`)
+          : `Tips: Share real craft knowledge freely — the kind any expert would teach a curious friend.
+          Any aspect of the craft is fair game: technique, ingredients, what separates good from great.
+          The only rule: no tip sells or promotes this business.
+          No treatment names, service names, or product lines this business offers.
+          No "come visit us", no "ask about our specials", no soft sells of any kind.
+          HARD CHECK before writing each tip: Could this tip appear on any expert's blog
+          without mentioning this business? If no — rewrite it until yes.
+          Local grounding belongs in the opener and close only — not the tips.`)
       : "";
 
   const ctaOverride = POST_TYPE_CTA_OVERRIDE[postType] || "";
@@ -177,7 +210,9 @@ function buildPrompt(
   const intel = parseBusinessIntel(business_description);
 
   // Angle selection
-  const anglePool = ANGLE_POOL[category]?.[postType];
+  const anglePool = postType === "Promotion / offer"
+  ? null
+  : ANGLE_POOL[category]?.[postType];
   const selectedAngle = anglePool?.length
   ? anglePool[Math.floor(Math.random() * anglePool.length)]
   : null;
@@ -230,6 +265,8 @@ function buildPrompt(
   [ROLE]: You are the owner of "${business_name}", a ${niche} located at ${fullAddress}.
   You are writing a social media post in your own voice — not as a marketer, not as an observer.
   You speak from experience, not from enthusiasm.
+  Every sentence is a statement of craft truth — not a report on what you've noticed, seen, or observed.
+  You do not watch your customers. You know your craft. Speak from that knowledge directly.
 
   [OBJECTIVE]: Write a post that demonstrates genuine expertise and earns trust through specificity.
   Not high-converting. Not promotional. Authoritative and local.
@@ -241,8 +278,6 @@ function buildPrompt(
 
   [TONE]: ${VOICE_PROMPTS[voice] || "Warm, community-first."}
 
-  [TIME]: ${currentTime}
-
   [SEASONAL_GUIDE]: ${seasonalNicheGuidance}
 
   ${visualIdentity}
@@ -250,16 +285,24 @@ function buildPrompt(
   ${localFacts}
 
   [TASK]:
-  Angle for this post: "${selectedAngle || "Choose one clear craft or community truth this owner knows deeply."}"
-  Reader perspective: A customer and user — not how to make it yourself/at home.
-  The owner shares what they know as a practitioner. The reader learns what to look for, 
-  choose, or appreciate — not how to replicate it.
+  ${selectedAngle
+    ? `Angle for this post: "${selectedAngle}"
+  This angle is the opening truth — not a topic to introduce. Start from it directly.`
+    : `Angle for this post: Let the offer or event in [POST_SPECIFICS] drive the opening naturally.`
+  }
   1. Decide how this angle connects to the post type and voice.
   2. Check [LOCAL_GROUND_TRUTH] for one detail that sharpens the angle — use it only if it fits naturally.
   3. Product focus: Pick ONE offering from [LOCAL_GROUND_TRUTH] Offerings that best fits this angle.
      Do not default to the most common or obvious offering. If multiple fit — choose the least recently used per [VARIETY RULES].
      The offering grounds the post — it is not the subject of any tip.
-  4. Let the season colour the language.
+  4. Let the season, time of day, and current weather colour the language and energy of the post.
+     Current time: ${currentTime}
+     Morning (6am-11am): fresh, anticipatory, the day is just starting.
+     Midday (11am-2pm): grounded, present, active.
+     Afternoon (2pm-6pm): reflective, winding toward evening.
+     Evening (6pm+): warm, slower, end-of-day ease.
+     ${currentWeather ? `Current weather: ${currentWeather} — let this ground one moment in the post naturally. One touch only.` : ""}
+     One touch only — don't overwrite the craft truth with atmosphere.
   5. Write the post. Add 3-4 hashtags.
 
   [POST_SPECIFICS]:
@@ -283,14 +326,7 @@ function buildPrompt(
   "Limited time offer" / "we're here to help" / "feel free to"
 
   [BANNED OPENERS]: Do not open with these patterns — even if the exact words differ:
-  - "I see people think..." or any observer framing
-  - "As someone who's spent years..." or any credential-first opener
-  - The "busy juggling life" opener
-  - The "end of a long day" opener
-  - The "I'm always..." self-description opener
-  - Any opener where the owner is watching customers from the outside
-  - "As I reflect..." or any introspective lead-in before stating the truth
-  - "I realize that many people..." or any variation of observing what others get wrong
+  - Any opener where the first sentence is about the owner — not about the subject matter
   - Do not echo these recent openings: ${recentHistory || "None"}
 
   [VARIETY RULES]:
@@ -300,13 +336,11 @@ function buildPrompt(
   If all landmarks have been used recently — use none.
 
   [SELF-CHECK — REQUIRED BEFORE OUTPUT]:
-  - Verify each item. If any fail — fix before writing output.
   - No invented landmarks — use [LOCAL_GROUND_TRUTH] Nearby only.
-  - No tip instructs the reader how to make, or store something at home.
-  - Opener is not observer framing — the owner is sharing a truth, not watching customers.
-  - State the truth directly — no wind-up, no setup about what others believe or do.
-  - Outro is not observer framing — owner is present in the community, not watching it from outside.
+  - Opener and outro state craft truth directly — no observer framing, no routine lead-ins.
   - CTA close is warm and specific — not a tagline or brand slogan.
+  - Outro does not name specific services, or product lines.
+  - Outro does not invite a consultation, appointment, or booking — that is a CTA, not a close.
 
   Post type: ${postType}
   ${postType === "5 Tips" ? `
@@ -325,12 +359,10 @@ function buildPrompt(
   ${postType === "Promotion / offer" ? `
   - Offer details appear in the body — not only in the CTA.
   - No invented deadline if none was provided.
-  - CTA is one action only` : ""}
+  - CTA is one action only.  
+  - The offer is the hero — other services may provide context in one sentence but are never described or pitched.` : ""}
   - Word count is within ${wordCount} range.
   - No banned phrases used.
-  - No banned opener pattern used.
-  - No Products/offerings from [VARIETY RULES] used.
-  - No Landmarks from [VARIETY RULES] used.
   - Post is written as the owner — not as a marketer.
 
   [OUTPUT]: <<<POST_BEGIN>>> then post body then hashtags. Nothing else.
@@ -483,6 +515,22 @@ export async function POST(req: Request) {
     // Inject current month for seasonality
     const month = new Date().toLocaleString("en", { month: "long" });
 
+    // Fetch weather for the business location
+    let currentWeather = "";
+    try {
+      const geoRes = await fetch(
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(profile.city)}&count=1&language=en&format=json`
+      );
+      const geoData = await geoRes.json();
+      const loc = geoData.results?.[0];
+      if (loc) {
+        currentWeather = await fetchWeather(loc.latitude, loc.longitude, profile.city);
+        console.log(`--- WEATHER: ${currentWeather} ---`);
+      }
+    } catch {
+      console.warn("Weather fetch failed — continuing without it.");
+    }
+
     // Build the final prompt
     const finalPrompt = buildPrompt(
       profile.business_name,
@@ -500,7 +548,8 @@ export async function POST(req: Request) {
       profile.color_theme,   
       profile.business_visuals,
       profile.business_description,
-      varietyRules
+      varietyRules,
+      currentWeather
     );
 
     // ── MOCK MODE (delete before going to production) ─────
@@ -531,6 +580,9 @@ export async function POST(req: Request) {
       const providerToUse = requestedProvider || process.env.AI_PROVIDER || "gemini";
       console.log(`--- Shoreline MODE: TOGGLE [Using ${providerToUse}] ---`);
       rawResponse = await callAIProvider(providerToUse, finalPrompt, currentTime, profile);
+      console.log("--- RAW RESPONSE ---");
+      console.log(rawResponse);
+      console.log("--- END RAW RESPONSE ---");
     } else {
       // LAB/PRODUCTION MODE: Robust Fallback Chain
       console.log("--- Shoreline MODE: FALLBACK CHAIN ---");
@@ -550,6 +602,18 @@ export async function POST(req: Request) {
       }
 
       if (!success) throw new Error("All AI providers failed to generate content.");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // RESPONSE VALIDATION
+    // ─────────────────────────────────────────────────────────────────────────────
+    if (!rawResponse || rawResponse.trim().length < 100) {
+      console.error("--- RESPONSE TOO SHORT OR EMPTY — ABORTING ---");
+      console.error(`Raw response length: ${rawResponse?.length ?? 0} characters`);
+      return NextResponse.json(
+        { error: "Generation failed — response was empty or too short. No credits were used for this request. Please try again." },
+        { status: 500 }
+      );
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -596,6 +660,16 @@ content = content
 
 // Step D: Final Cleanup of Triple Newlines
 content = content.replace(/\n{3,}/g, "\n\n").trim();
+
+// Final content validation
+if (!content || content.trim().length < 80) {
+  console.error("--- CLEANED CONTENT TOO SHORT — ABORTING ---");
+  console.error(`Cleaned content: "${content}"`);
+  return NextResponse.json(
+    { error: "Generation failed — post content was incomplete. Please try again." },
+    { status: 500 }
+  );
+}
 
 console.log("--- GENERATION SUCCESSFUL ---");
 return NextResponse.json({ content, framework });

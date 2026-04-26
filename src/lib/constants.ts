@@ -1,10 +1,10 @@
 //lib/constants
 
 export const NICHE_DATA: Record<string, string[]> = {
-    "Health & Wellness": ["Dentist", "Physiotherapist", "Chiropractor", "Optometrist", "Pharmacist", "Family doctor", "Naturopath", "Massage therapist", "Nutritionist / dietitian", "Mental health therapist", "Acupuncturist", "Hearing clinic", "Orthodontist", "Dermatologist", "Medical aesthetics clinic"],
+    "Health & Wellness": ["Dentist", "Physiotherapist", "Chiropractor", "Optometrist", "Pharmacist", "Family doctor", "Naturopath", "Massage therapist", "Nutritionist / dietitian", "Mental health therapist", "Acupuncturist", "Hearing clinic", "Orthodontist", "Dermatologist"],
     "Home Services": ["Plumber", "Electrician", "HVAC / furnace repair", "Roofer", "Landscaper / lawn care", "Pest control", "House cleaner", "Painter", "General contractor", "Window & door installer", "Flooring installer", "Interior designer", "Moving company", "Home inspector", "Security systems"],
     "Food & Beverage": ["Café / coffee shop", "Restaurant", "Bakery", "Food truck", "Catering company", "Meal prep service", "Juice bar", "Butcher / deli", "Specialty grocery", "Dessert shop", "Brewery / winery", "Pizza shop", "Sushi / Asian restaurant", "Breakfast diner", "Vegan / health food café"],
-    "Beauty & Personal Care": ["Hair salon", "Barbershop", "Nail salon", "Spa", "Waxing studio", "Eyebrow / lash studio", "Tattoo studio", "Tanning salon", "Makeup artist", "Esthetics school", "Permanent makeup clinic", "Microblading studio"],
+    "Beauty & Personal Care": ["Hair salon", "Barbershop", "Nail salon", "Spa", "Medical aesthetics clinic", "Waxing studio", "Eyebrow / lash studio", "Tattoo studio", "Tanning salon", "Makeup artist", "Esthetics school", "Permanent makeup clinic", "Microblading studio"],
     "Fitness & Recreation": ["Gym / fitness centre", "Yoga studio", "Pilates studio", "Boxing gym", "Crossfit / HIIT studio", "Personal trainer", "Dance studio", "Martial arts school", "Swimming school", "Rock climbing gym", "Cycling studio", "Golf course / driving range"],
     "Professional Services": ["Lawyer / law firm", "Accountant / CPA", "Financial advisor", "Insurance broker", "Mortgage broker", "Immigration consultant", "Business consultant", "Marketing agency", "Bookkeeper", "HR consultant", "IT support / MSP", "Notary public"],
     "Real Estate & Property": ["Realtor / real estate agent", "Property manager", "Condo management company", "Stager", "Home builder", "Real estate photographer", "Surveyor"],
