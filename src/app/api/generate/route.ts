@@ -304,16 +304,16 @@ function buildPrompt(
   - No invented landmarks — use [LOCAL_GROUND_TRUTH] Nearby only.
   - No tip instructs the reader how to make, or store something at home.
   - Opener is not observer framing — the owner is sharing a truth, not watching customers.
-  - State the truth directly — no wind-up, no setup about what others believe
-  - Outro is not observer framing — owner is present in the community, not watching it from outside
-  - CTA close is warm and specific — not a tagline or brand slogan
+  - State the truth directly — no wind-up, no setup about what others believe or do.
+  - Outro is not observer framing — owner is present in the community, not watching it from outside.
+  - CTA close is warm and specific — not a tagline or brand slogan.
 
   Post type: ${postType}
   ${postType === "5 Tips" ? `
-  - Exactly 5 tips present
-  - No business promotion inside tips
-  - No local references inside tips
-  - Tips are craft or domain-specific — not generic advice
+  - Exactly 5 tips present.
+  - No business promotion inside tips.
+  - No local references inside tips.
+  - Tips are craft or domain-specific — not generic advice.
   - Outro is exactly 1 sentence` : ""}
   ${postType === "Myth-busting" ? `
   - Myth is stated as fact — not as "I see people think..."
@@ -323,8 +323,8 @@ function buildPrompt(
   - One specific process detail revealed — not a generic "we work hard"
   - No CTA unless AIDA framework` : ""}
   ${postType === "Promotion / offer" ? `
-  - Offer details appear in the body — not only in the CTA
-  - No invented deadline if none was provided
+  - Offer details appear in the body — not only in the CTA.
+  - No invented deadline if none was provided.
   - CTA is one action only` : ""}
   - Word count is within ${wordCount} range.
   - No banned phrases used.
@@ -469,11 +469,11 @@ export async function POST(req: Request) {
 
     const varietyRules = [
       uniqueUsedOfferings.length
-        ? `- Products/offerings to avoid: ${uniqueUsedOfferings.join(", ")}`
-        : "- No recent product patterns to avoid.",
+        ? `  - Products/offerings to avoid: ${uniqueUsedOfferings.join(", ")}`
+        : "  - No recent product patterns to avoid.",
       uniqueUsedLandmarks.length
-        ? `- Landmarks to avoid: ${uniqueUsedLandmarks.join(", ")}`
-        : "- No recent landmark patterns to avoid.",
+        ? `  - Landmarks to avoid: ${uniqueUsedLandmarks.join(", ")}`
+        : "  - No recent landmark patterns to avoid.",
     ].join("\n");
 
     // Auto-select framework — user never has to choose
