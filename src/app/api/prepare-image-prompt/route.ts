@@ -6,9 +6,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import Groq from "groq-sdk";
 import { NextResponse } from "next/server";
 import { createClient } from '@supabase/supabase-js';
-import { getBrandIdentity } from "@/lib/brandDiscovery";
 import { FRAMEWORK_POST_TYPE_COMBINATIONS, getSeason, SEASONALITY_CONTEXT, SEASONAL_NICHE_CONTEXT } from "@/lib/frameworks";
-import { ColorTheme, BusinessVisuals } from '@/lib/constants';
 import { auth } from "@clerk/nextjs/server";
 
 
@@ -36,6 +34,39 @@ const supabase = createClient(
 const ARCHITECT_MODE: "GEMINI" | "GROQ" | "GEMMA" = "GEMMA";
 
 const textModel = genAI.getGenerativeModel({ model: "models/gemini-2.5-flash" }, { apiVersion: 'v1beta' });
+
+const VOICE_VISUAL_MAP: Record<string, string> = {
+  "Authoritative & Precise": 
+    "Tight composition. Minimal props — only what earns its place. Precise, controlled lighting. No warmth padding. Every element is intentional.",
+  "Warm & Conversational": 
+    "Wider scene with breathing room. Human presence welcome if it serves the hero. Soft natural light. Props that suggest lived-in familiarity — a worn edge, a fingerprint on glass.",
+  "Bold & Direct": 
+    "High contrast. Single strong subject, nothing competing. Punchy framing — close or dramatic angle. Light is decisive, not ambient.",
+  "Clean & Understated": 
+    "Generous negative space. Minimal palette — two tones maximum. Flat even light, no harsh shadows. Restraint over richness. If in doubt, remove an element.",
+};
+
+const POST_TYPE_VISUAL_INTENT: Partial<Record<string, string>> = {
+  "Promotion / offer": 
+    "This image supports a promotional offer. The visual job is 'reason to visit' — warm, inviting, specific to the offer. The hero should feel like something worth showing at a counter. Abundance and welcome over craft precision. The viewer should feel they'd be missing out by not going.",
+  "Local event / news":
+    "This image supports a local event or news post. The visual job is 'community energy' — the neighbourhood is alive, something is happening. Favour wider scenes over close-ups. If the setting can hint at the street, the season, or the community context — use it. The business is part of the neighbourhood, not separate from it.",
+  "Behind the scenes":
+    "This image reveals process. The visual job is 'earned trust' — show one specific step that customers never see but immediately recognise as real craft. Raw materials, mid-process moments, tools in use. Not a finished product shot.",
+  "Myth-busting":
+    "This image supports a myth correction. The visual job is 'truth revealed' — the hero should be the real thing, not the assumed thing. Precise and authoritative. No warmth padding. The image should make the viewer feel they're seeing something they got wrong.",
+  "5 Tips":
+    "This image supports educational content. The visual job is 'craft knowledge made visible' — one specific detail that embodies the tips. Not generic. Specific enough that it could only illustrate this post.",
+};
+
+// Extract and store composition type when saving the prompt
+const detectComposition = (prompt: string): string => {
+  const lower = prompt.toLowerCase();
+  if (lower.includes("wide") || lower.includes("environmental") || lower.includes("exterior") || lower.includes("street")) return "Wide";
+  if (lower.includes("medium scene") || lower.includes("medium shot") || lower.includes("mid-shot")) return "Medium";
+  if (lower.includes("close-up") || lower.includes("detail") || lower.includes("macro")) return "Detail";
+  return "Unknown";
+};
 
 export async function POST(req: Request) {
   // 1. Authenticate with Clerk
@@ -78,30 +109,6 @@ export async function POST(req: Request) {
     const niche = profile.niche;
     const voice = profile.voice;
 
-    const VOICE_VISUAL_MAP: Record<string, string> = {
-      "Authoritative & Precise": 
-        "Tight composition. Minimal props — only what earns its place. Precise, controlled lighting. No warmth padding. Every element is intentional.",
-      "Warm & Conversational": 
-        "Wider scene with breathing room. Human presence welcome if it serves the hero. Soft natural light. Props that suggest lived-in familiarity — a worn edge, a fingerprint on glass.",
-      "Bold & Direct": 
-        "High contrast. Single strong subject, nothing competing. Punchy framing — close or dramatic angle. Light is decisive, not ambient.",
-      "Clean & Understated": 
-        "Generous negative space. Minimal palette — two tones maximum. Flat even light, no harsh shadows. Restraint over richness. If in doubt, remove an element.",
-    };
-
-    const POST_TYPE_VISUAL_INTENT: Partial<Record<string, string>> = {
-      "Promotion / offer": 
-        "This image supports a promotional offer. The visual job is 'reason to visit' — warm, inviting, specific to the offer. The hero should feel like something worth showing at a counter. Abundance and welcome over craft precision. The viewer should feel they'd be missing out by not going.",
-      "Local event / news":
-        "This image supports a local event or news post. The visual job is 'community energy' — the neighbourhood is alive, something is happening. Favour wider scenes over close-ups. If the setting can hint at the street, the season, or the community context — use it. The business is part of the neighbourhood, not separate from it.",
-      "Behind the scenes":
-        "This image reveals process. The visual job is 'earned trust' — show one specific step that customers never see but immediately recognise as real craft. Raw materials, mid-process moments, tools in use. Not a finished product shot.",
-      "Myth-busting":
-        "This image supports a myth correction. The visual job is 'truth revealed' — the hero should be the real thing, not the assumed thing. Precise and authoritative. No warmth padding. The image should make the viewer feel they're seeing something they got wrong.",
-      "5 Tips":
-        "This image supports educational content. The visual job is 'craft knowledge made visible' — one specific detail that embodies the tips. Not generic. Specific enough that it could only illustrate this post.",
-    };
-
     // ── CALCULATE STRATEGY & SEASON ────────────────────────────────────────
     const season = getSeason(currentMonth);
     const combinationKey = `${body.framework}_${body.postType}`;
@@ -114,7 +121,7 @@ export async function POST(req: Request) {
     const { data: recentPrompts } = await supabase
       .from("community_posts")
       .select("image_prompt, composition_type") 
-      .eq("user_id", userId)
+      .eq("business_id", userId)
       .neq("image_prompt", "EMPTY")
       .order("created_at", { ascending: false })
       .limit(3);
@@ -167,27 +174,16 @@ export async function POST(req: Request) {
     // ── ARCHITECT PROMPT ───────────────────────────────────────────────────
     const architectPrompt = `
       [SYSTEM]: Expert AI Image Prompt Engineer. Specialization: Hyper-local commercial/lifestyle photography for FLUX.1-schnell.
-           
-      [FORBIDDEN_VISUALS]:
-      ${recentImageHistory ? `STRICTLY FORBIDDEN (Already used):
-      ${recentImageHistory}
-
-      COMPOSITION RULE: Recent compositions used are listed in brackets above [Wide/Medium/Detail].
-      - If last 2 were Detail → use Wide or Medium this time.
-      - If last 2 were Wide → use Detail or Medium this time.
-      - Never use the same composition 3 times in a row.
-      SUBJECT RULE:
-      - If recent = Food/Drink → use Space/Exterior/Details.
-      - If recent = Detail close-up → Wide environmental/Medium scene.
-      - If recent = Exterior → use Interior/Texture/Materials.
-      - If recent = Waterfront → use Interior warmth/Close-ups.` : "No history. Full creative freedom."}
-
-      [RESEARCH_GOALS]:
-      Use Google Search for "${business_name}" at "${fullAddress}". Identify:
-      1. New, seasonal, or trending products/offerings.
-      2. Buzz-worthy branding details (limited packaging, staff uniforms, decor updates).
-      3. Local landmarks or neighbourhood context visible from the business.
-      (Brand Identity blocks below take priority. Search only fills gaps or adds novelty.)
+      
+      [SUBJECT EXTRACTION — DO THIS FIRST]:
+      Before choosing any composition or setting, read the post content carefully and identify:
+      1. The specific craft truth or angle the post is built around — this becomes the image hero.
+        Not a generic representation of the business. The specific thing the post is about.
+        Example: post about espresso extraction time → hero is the pour, not a generic café shot.
+        Example: post about dry skin in February → hero is a skincare texture detail, not a spa interior.
+      2. The single product, material, or process moment that best embodies that truth.
+      3. Whether a human presence serves the hero or distracts from it — if distraction, shoot without people.
+      The craft truth extracted here must drive every subsequent decision: subject, setting, composition, lighting.
 
       [ANALYSIS]:
       Post Content: "${generatedPost}"
@@ -207,21 +203,11 @@ export async function POST(req: Request) {
       This defines what the image needs to DO — not what it looks like, but what job it performs.
       Let this govern the emotional register of the shot alongside the voice and craft truth.
 
-      [SUBJECT EXTRACTION — DO THIS FIRST]:
-      Before choosing any composition or setting, read the post content carefully and identify:
-      1. The specific craft truth or angle the post is built around — this becomes the image hero.
-        Not a generic representation of the business. The specific thing the post is about.
-        Example: post about espresso extraction time → hero is the pour, not a generic café shot.
-        Example: post about dry skin in February → hero is a skincare texture detail, not a spa interior.
-      2. The single product, material, or process moment that best embodies that truth.
-      3. Whether a human presence serves the hero or distracts from it — if distraction, shoot without people.
-      The craft truth extracted here must drive every subsequent decision: subject, set
-
       [SEASONAL_CONTEXT]:
       Season: ${season} | Time: ${currentMonth}, ${currentTime}
       - Elements: ${seasonInfo?.visual_elements}
       - Time of Day: ${seasonInfo?.time_of_day_guidance}
-      - Current Weather: ${currentWeather ? `Current weather: ${currentWeather} — let this shape the lighting and atmosphere of the image. One touch only.` : ""}
+      - Weather: ${currentWeather || "Not available"} — one atmospheric touch only, no more.
       - Niche Insight: ${seasonalNicheContext}
 
       [BRAND_IDENTITY — COLOR & MOOD]:
@@ -242,14 +228,36 @@ export async function POST(req: Request) {
       If values say "Infer", use the business type + neighbourhood + niche to construct
       a believable real-world setting. Never use a generic or imaginary space.
 
+      [FORBIDDEN_VISUALS]:
+      ${recentImageHistory ? `STRICTLY FORBIDDEN (Already used):
+      ${recentImageHistory}
+
+      COMPOSITION RULE: Recent compositions used are listed in brackets above [Wide/Medium/Detail].
+      - If last 2 were Detail → use Wide or Medium this time.
+      - If last 2 were Wide → use Detail or Medium this time.
+      - Never use the same composition 3 times in a row.
+      SUBJECT RULE:
+      - If recent = Food/Drink → use Space/Exterior/Details.
+      - If recent = Detail close-up → Wide environmental/Medium scene.
+      - If recent = Exterior → use Interior/Texture/Materials.
+      - If recent = Waterfront → use Interior warmth/Close-ups.` : "No history. Full creative freedom."}
+
+      [RESEARCH_GOALS]:
+      Search "${business_name}" at "${fullAddress}" for: current or seasonal offerings, 
+      recent branding details, and any local landmarks visible from the business.
+      Brand Identity blocks below take priority — search only fills gaps or adds novelty.
+
       [ENGINEERING_SPEC]:
-      PALETTE RULE: [BRAND_IDENTITY — STRUCTURE & SPACE] is your palette — draw only what serves this specific shot. A close-up needs none of the architecture. An exterior needs none of the interior. Every prompt should feel like a different photograph of the same business.
+      PALETTE RULE: [BRAND_IDENTITY — COLOR & MOOD] defines the palette. 
+        Draw only what serves this specific shot — a close-up needs none of the architecture, 
+        an exterior needs none of the interior details. Every prompt should feel like 
+        a different photograph of the same business.
       Write a 60-70 words prompt for FLUX.1-schnell following this sequence:
       1. COMPOSITION: Select one (Wide environmental / Medium scene / Detail close-up). Pick one, do not label it; just apply it.
       2. SUBJECT: The hero element identified in [SUBJECT EXTRACTION]. 
-          Ground it in the specific craft truth from the post — not a generic business shot.
-          Use researched details from [RESEARCH_GOALS] to add specificity (seasonal product, current offering, real detail).
-          No legible faces. If human present, they support the hero — never dominate the frame.
+        Ground it in the specific craft truth from the post — not a generic business shot.
+        Use researched details from [RESEARCH_GOALS] to add specificity (seasonal product, current offering, real detail).
+        No legible faces. If human present, they support the hero — never dominate the frame.
       3. SETTING: Physical space grounded in [BRAND_IDENTITY — STRUCTURE & SPACE]. Architecture, materials, spatial feel.
       4. LIGHTING: Exact light quality for ${currentMonth} at ${currentTime} in ${fullAddress}. Use ${seasonInfo?.lighting_mood}.
       5. MOOD + IMPERFECTION: Emotional tone from post + one subtle realistic flaw (condensation ring, scuff on brick, steam curl) to remove "AI sheen."
@@ -326,18 +334,8 @@ export async function POST(req: Request) {
       console.error("⚠️ Architect generated an empty or too-short prompt.");
       cleanDescription = "Cinematic lifestyle photography, high quality, detailed.";
     }
-
-    // Extract and store composition type when saving the prompt
-    const detectComposition = (prompt: string): string => {
-      const lower = prompt.toLowerCase();
-      if (lower.includes("wide") || lower.includes("environmental") || lower.includes("exterior") || lower.includes("street")) return "Wide";
-      if (lower.includes("medium scene") || lower.includes("medium shot") || lower.includes("mid-shot")) return "Medium";
-      if (lower.includes("close-up") || lower.includes("detail") || lower.includes("macro")) return "Detail";
-      return "Unknown";
-    };
     
     const detectedComposition = detectComposition(cleanDescription);
-    console.log("🎨 Composition detected:", detectedComposition);
     
     // ── SAVE TO SUPABASE ───────────────────────────────────────────────────
     const { error: rpcError } = await supabase.rpc('update_post_image_prompt', {
