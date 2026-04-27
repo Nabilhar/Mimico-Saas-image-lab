@@ -14,6 +14,10 @@
     "Retail":                 "lifestyle",
     "Pets":                   "lifestyle",
     "Events & Hospitality":   "lifestyle",
+    "Interior designer":      "lifestyle",
+    "Dermatologist ":         "lifestyle",
+
+    "Furniture store":        "considered-purchase",
     "Professional Services":  "considered-purchase",
     "Real Estate & Property": "considered-purchase",
     "Education & Childcare":  "considered-purchase",
@@ -53,15 +57,12 @@
  
       "PAS_5 Tips": `
     Intro: Open with one craft or trade truth the reader gets wrong in their own experience.
-      Ground it in one offering from [LOCAL_GROUND_TRUTH] Offerings if it fits naturally.
       The owner is sharing a truth — not watching customers make mistakes.
       One sentence on what getting this wrong costs — time, money, or comfort.
     Tips: Exactly 5 numbered tips. Each one punchy, actionable, category-specific.
-      Category knowledge only. No specific product mention.
-      No tip uses generic wisdom a non-expert could write, or implies/requires visiting the business.
-      No tip describes production, preparation, or storage — write from the customer's side of the experience.
-      Tips teach the reader what to look for, choose, or notice — not how to make or replicate anything.
-      Local grounding belongs in the opener and close — not the tips.
+      Real craft knowledge — the kind any expert would teach a curious friend.
+      The only rule: no tip sells or promotes this business.
+      Local grounding belongs in the opener and close — not the tips
     Outro: Exactly one sentence.
       The offering or craft earns its place here — not in the tips.
       Landmark if natural. No emoji pile. No second or third sentence.
@@ -103,7 +104,7 @@
         return `
         Hook: A local moment, season, or community truth that makes this offer 
           feel like it arrived at exactly the right time.
-          Not a pain the owner observes — a moment the reader recognises.
+          Offer: ${details} — woven naturally into the body, not dropped in the CTA.
         Agitate: One sentence. The subtle cost of missing this — 
           not dramatic, not manufactured urgency.
         Solve: ${strategies[promoType] || "Neighbourly and warm."}
@@ -118,9 +119,9 @@
       },
         
       "PAS_Local event / news": (eventType: string, details: string, fullAddress: string): string => `
-    Hook: One craft or community truth the owner knows deeply —
-      relevant to this moment, season, or neighbourhood energy.
-      Not something the owner observes. A truth the reader recognises.
+    Hook: The craft truth from [TASK] angle — stated directly, not introduced.
+      Relevant to this moment, season, or neighbourhood energy.
+      Not something the owner observes. A truth earned through practice.
     Agitate: One sentence on the cost of overlooking this in daily life.
     Solve: The payoff. Delivered with authority.
       No CTA pressure — the knowledge is enough.
@@ -136,6 +137,8 @@
       an ordinary imperfect moment they'd recognise as their own.
       Not something the owner observes. Not dramatic.
     Tips: Exactly 5 numbered tips. Each one punchy, actionable, category-specific.
+      Real craft knowledge — the kind any expert would teach a curious friend.
+      The only rule: no tip sells or promotes this business.
       Local grounding belongs in the Before and Bridge — not the tips.
     After + Bridge: Exactly one sentence. Sensory and specific.
       The expertise lands the business naturally — don't force it.
@@ -192,9 +195,9 @@
       },
   
       "BAB_Local event / news": (eventType: string, details: string, fullAddress: string): string => `
-    Before: The reader's ordinary moment — before knowing this craft or trade truth.
-      Specific and grounded. Not something the owner observes.
-      A reality the reader lives.
+    Before: The craft truth from [TASK] angle lands here — 
+      as a grounded reality the reader lives, not something the owner observes.
+      Specific and sensory.
     After: What shifts once they know it.
       Specific and sensory — not abstract.
     Bridge: The owner as the local expert who carries this knowledge.
@@ -214,6 +217,8 @@
     Interest: One sentence connecting this claim to the reader's daily reality.
       Local grounding lives here if natural — not in the tips.
     Tips: Exactly 5 numbered tips. Each one punchy, actionable, category-specific.
+      Real craft knowledge — the kind any expert would teach a curious friend.
+      The only rule: no tip sells or promotes this business.
       Local grounding belongs in the Attention and close — not the tips.
     Desire + Action: Exactly one sentence. Specific result or proof point.
       The expertise lands the business naturally — don't force it.
@@ -269,7 +274,7 @@
       to why this offer lands now specifically.
       No invented context. Use only [LOCAL_GROUND_TRUTH].
     ${strategies[promoType] || "Desire: Make it feel worth acting on."}
-      ${details} — woven naturally into the body, not dropped in the CTA.
+      Offer: ${details} — woven naturally into the body, not dropped in the CTA.
     Action: Invite them to show this post in person.
       Warm, specific to the offer. No links. One action only.
     Rule: No "limited time offer" anywhere in the post.
@@ -280,8 +285,7 @@
       },
   
       "AIDA_Local event / news": (eventType: string, details: string, fullAddress: string): string => `
-    Attention: One bold craft or community truth —
-      specific to this owner's expertise and this moment.
+    Attention: The craft truth from [TASK] angle — bold, specific, stated directly.
       A claim the reader feels, not a scene the owner observes.
     Interest: Why this detail matters right now.
       Local grounding lives here if natural — season, neighbourhood energy, community context.
@@ -307,6 +311,11 @@
     "Pets":                   "service",
     "Trades & Industrial":    "service",
     "Events & Hospitality":   "service",
+    "Marketing agency":       "service",
+    "Business consultant":    "service",
+    "IT consulting":          "service",  
+    "HR consultant":          "service",
+    "Driving school":         "service",
     "Professional Services":  "neighbourhood",
     "Real Estate & Property": "neighbourhood",
     "Education & Childcare":  "neighbourhood",

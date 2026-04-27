@@ -8,7 +8,7 @@ import {
 import { NextResponse } from "next/server";
 import Groq from "groq-sdk"; // <-- NEW
 import { createClient } from '@supabase/supabase-js';
-import { getFramework, BUSINESS_ARCHETYPES, ANGLE_POOL } from "@/lib/frameworks";
+import { getFramework, BUSINESS_ARCHETYPES } from "@/lib/frameworks";
 import { TIP_MODE, POST_TYPE_CTA_OVERRIDE, SEASONAL_NICHE_NARRATIVE, getSeason, NARRATIVE_COMBINATIONS, NarrativeEntry } from "@/lib/frameworks";
 import { getBrandIdentity, discoverAndSaveBrandIdentity, parseBusinessIntel  } from "@/lib/brandDiscovery";
 import { ColorTheme, BusinessVisuals } from '@/lib/constants';
@@ -86,7 +86,7 @@ async function callAIProvider(provider: string, finalPrompt: string, currentTime
         console.log(`--- PROMPT LENGTH: ${finalPrompt.length} characters, ~${Math.round(finalPrompt.length / 4)} tokens ---`);
     const chatCompletion = await groq.chat.completions.create({
       messages: [
-        { role: "system", content: `You are a helpful assistant. Follow the user's instructions precisely and output only what is requested.` },
+        { role: "system", content: `Output only what is requested. No preamble.` },
         { role: "user", content: finalPrompt }
       ],
       model: "openai/gpt-oss-120b",
@@ -178,7 +178,7 @@ function buildPrompt(
       )
     : (rawNarrative ?? "Follow the framework structure. Be locally specific.");
 
-    const tipMode = TIP_MODE[category] || "service";
+    const tipMode = TIP_MODE[niche] || TIP_MODE[category] || "service";
 
     const tipModeInstruction = postType === "5 Tips"
       ? (tipMode === "neighbourhood"
@@ -209,13 +209,8 @@ function buildPrompt(
 
   const intel = parseBusinessIntel(business_description);
 
-  // Angle selection
-  const anglePool = postType === "Promotion / offer"
-  ? null
-  : ANGLE_POOL[category]?.[postType];
-  const selectedAngle = anglePool?.length
-  ? anglePool[Math.floor(Math.random() * anglePool.length)]
-  : null;
+  // Angle selection — dynamic for most post types, null for Promotion
+  const selectedAngle = postType === "Promotion / offer" ? null : true;
 
   const localFacts = intel?.isJson ? `
   [LOCAL_GROUND_TRUTH]:
@@ -286,9 +281,13 @@ function buildPrompt(
 
   [TASK]:
   ${selectedAngle
-    ? `Angle for this post: "${selectedAngle}"
-  This angle is the opening truth — not a topic to introduce. Start from it directly.`
-    : `Angle for this post: Let the offer or event in [POST_SPECIFICS] drive the opening naturally.`
+    ? `Angle for this post: You are a ${niche} owner with years of craft knowledge.
+  Choose one specific truth from your trade that a curious customer would genuinely learn from —
+  something earned through years of practice, not something they could Google easily.
+  Specific to ${niche}. Not generic wellness or food advice.
+  This is your opening statement. Start the post from it directly. Do not introduce it — state it.
+  The opening sentence is about the craft or trade — not about what clients do or expect.`
+    : `Angle for this post: Let the offer in [POST_SPECIFICS] drive the opening naturally.`
   }
   1. Decide how this angle connects to the post type and voice.
   2. Check [LOCAL_GROUND_TRUTH] for one detail that sharpens the angle — use it only if it fits naturally.
@@ -672,7 +671,7 @@ if (!content || content.trim().length < 80) {
 }
 
 console.log("--- GENERATION SUCCESSFUL ---");
-return NextResponse.json({ content, framework });
+return NextResponse.json({ content, framework, currentWeather });
 
 } catch (error: any) {
 console.error("--- Shoreline ENGINE CRASH REPORT ---");

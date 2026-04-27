@@ -45,7 +45,8 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
   const [promoType, setPromoType] = useState("discount");
   const [eventType, setEventType] = useState("event");
   const [customDetails, setCustomDetails] = useState("")
-  
+  const [currentWeather, setCurrentWeather] = useState("");
+
   // Generation States
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -231,6 +232,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
           customDetails, // The raw text from the box
           business_id: user?.id,
           history: history,
+          currentWeather,
           currentMonth: new Date().toLocaleString("en", { month: "long" })
         }),
       });
@@ -254,6 +256,9 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
         
         setContent(cleanPost);
 
+        const weather = data.currentWeather || "";
+        setCurrentWeather(weather);
+
         // --- THE FIX: Capture the ID ---
         if (onGenerateSuccess) {
           // Assuming your parent function returns the ID from the Supabase insert
@@ -270,6 +275,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
             body: JSON.stringify({ 
               postId: generatedUuid,
               generatedPost: cleanPost,
+              currentWeather: weather, 
               business_name,
               business_id: user?.id,
               street,
