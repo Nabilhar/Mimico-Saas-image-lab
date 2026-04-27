@@ -2,6 +2,7 @@
 
  export type Framework = "PAS" | "BAB" | "AIDA";
  export type PurchaseType = "pain-driven" | "lifestyle" | "considered-purchase";
+ 
 
  export const BUSINESS_ARCHETYPES: Record<string, PurchaseType> = {
     "Health & Wellness":      "pain-driven",
@@ -82,7 +83,7 @@
     Voice note: The [TONE] definition above governs personality.
     PAS governs structure only.`,
     
-      "PAS_Behind the scenes": `
+      "PAS_Behind the Scenes": `
     Hook: One specific, ordinary moment in the business day — 
       a detail most customers never think about but immediately recognise as true.
       Not something the owner observes about customers. Something that happens inside the work.
