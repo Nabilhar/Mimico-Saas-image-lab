@@ -41,5 +41,11 @@ export interface BusinessIdentity {
   interior_layout: string | null;
   brand_source: string | null; 
   business_description: string | null; 
+  _stored_business_name?: string | null;
+  _stored_street?: string | null;
+  _stored_city?: string | null;
+  last_analyzed_business_name?: string | null;
+  last_analyzed_street?: string | null;
+  last_analyzed_city?: string | null;
 }
 

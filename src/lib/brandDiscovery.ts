@@ -52,7 +52,20 @@ async function urlToGenerativePart(url: string, mimeType: string) {
 export async function getBrandIdentity(userId: string): Promise<BusinessIdentity> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('color_theme, business_visuals, storefront_architecture, interior_layout, brand_source, business_description')
+    .select(`
+      color_theme,
+      business_visuals,
+      storefront_architecture,
+      interior_layout,
+      brand_source,
+      business_description,
+      business_name,
+      street,
+      city,
+      last_analyzed_business_name,
+      last_analyzed_street,
+      last_analyzed_city
+    `)
     .eq('id', userId)
     .maybeSingle();
 
@@ -75,6 +88,12 @@ export async function getBrandIdentity(userId: string): Promise<BusinessIdentity
     interior_layout: data?.interior_layout || null,
     brand_source: data?.brand_source || null,
     business_description: data?.business_description || null,
+    _stored_business_name: data?.business_name || null,
+    _stored_street: data?.street || null,
+    _stored_city: data?.city || null,
+    last_analyzed_business_name: data?.last_analyzed_business_name || null,
+    last_analyzed_street: data?.last_analyzed_street || null,
+    last_analyzed_city: data?.last_analyzed_city || null,
   };
 }
 
@@ -142,7 +161,7 @@ async function analyzePhotosWithGemini(
     [CONTEXT]: Business: "${businessName}" | Address: "${fullAddress}" | Photos: ${photoContext}
 
     [RESEARCH_TASK]:
-    1. Use googleSearch to cross-reference this business across Yelp, social media, and its official website.
+    1. Use googleSearch to cross-reference this business across, its official website, Yelp reviews, and social media.
     2. Identify the business, who they are, what they do, who they serve, what makes them distinct.
     3. Identify the "Hero" offerings (the 5 most mentioned or distinct products/services).
     4. Verify the exact neighbourhood name and 5 physical landmarks within walking distance.
@@ -176,8 +195,8 @@ async function analyzePhotosWithGemini(
         "logo_colors": "S1: exact colors seen in logo",
         "storefront_colors": "S1: exterior/signage colors and facade materials",
         "storefront_architecture": {
-          "building": "S1: type, material, window/door style, scale",
-          "features": "S2: patio, seating, visible landmarks, location type"
+          "building": "S1: e.g. single-storey stucco, floor-to-ceiling windows, red door",
+          "features": "S2: e.g. covered patio with 6 chairs, corner unit, street-level signage"
         },
         "interior_colors": "S1: colors, lighting warmth, surface materials",
         "interior_layout": "S1: spatial arrangement (counter, ceiling, seating, floor)",
@@ -248,8 +267,8 @@ async function analyzeWithTextSearch(
         "logo_colors": "colors likely used in logo",
         "storefront_colors": "typical facade colors for this business",
         "storefront_architecture": {
-          "building": "estimated building style/materials",
-          "features": "seating, patio, or location type"
+          "building": "e.g. 2-storey brick Victorian, large picture windows, black awning",
+          "features": "e.g. sidewalk patio with 4 tables, bike rack, corner lot"
         },
         "interior_colors": "estimated interior palette",
         "interior_layout": "estimated spatial arrangement"
@@ -288,14 +307,18 @@ export async function discoverAndSaveBrandIdentity(
   console.log(`--- [BACKGROUND] BRAND DISCOVERY STARTED FOR: ${businessName} ---`);
 
   const fullAddressString = `${address.street}, ${address.city}, ${address.province_state}, ${address.country} ${address.postalCode}`;
+  
   let extractedData: any = null;
+  let visionSucceeded = false;
 
   // 1. Try Vision Path if photos exist
   if (photos.length > 0) {
     try {
       extractedData = await analyzePhotosWithGemini(photos, businessName, fullAddressString);
+      visionSucceeded = true; 
     } catch (visionErr) {
       console.warn("⚠️ Vision Path failed. Falling back to Text Search.", visionErr);
+      visionSucceeded = false;
       // Fall through to Path B
     }
   }
@@ -334,7 +357,25 @@ export async function discoverAndSaveBrandIdentity(
       storefront_architecture: vis.storefront_architecture,
       interior_layout: vis.interior_layout,
 
-      brand_source: (photos.length > 0 && vis.primary_color) ? "photos" : "text_search"
+      brand_source: (() => {
+        if (!visionSucceeded || photos.length === 0) return "text_search";
+        const visualFields = [
+          vis.primary_color,
+          vis.secondary_color,
+          vis.logo_colors,
+          vis.storefront_colors,
+          vis.interior_colors,
+          vis.interior_layout,
+        ];
+        const blindCount = visualFields.filter(
+          (f) => !f || f.trim().toLowerCase().startsWith("not visible")
+        ).length;
+        return blindCount >= 2 ? "text_search" : "photos";
+      })(),
+
+      last_analyzed_business_name: businessName,
+      last_analyzed_street: address.street,
+      last_analyzed_city: address.city,
     };
 
     const { error: updateError } = await supabase

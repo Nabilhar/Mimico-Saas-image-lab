@@ -28,26 +28,51 @@ export async function POST(req: Request) {
         console.log(`--- [Discovery API] Current brandSource: '${currentBrandSource}', New photos uploaded: ${uploadedPhotos.length} ---`);
     
         // **Step 3: Implement Condition 4: If brand_source is 'null' (First Time)**
-        if (currentBrandSource === null) {
-          console.log(`--- [Discovery API] Condition 4 met: brand_source is null. Triggering discovery. ---`);
+        const hasNeverAnalyzed =
+          !currentBrandSource ||
+          !currentBrandIdentity.last_analyzed_business_name ||
+          !currentBrandIdentity.last_analyzed_city ||
+          !currentBrandIdentity.last_analyzed_street;
+
+        const nameChanged =
+        (currentBrandIdentity.last_analyzed_business_name || "") !==
+        (business_name || "");
+
+        const cityChanged =
+          (currentBrandIdentity.last_analyzed_city || "") !==
+          (address.city || "");
+
+        const streetChanged =
+          (currentBrandIdentity.last_analyzed_street || "") !==
+          (address.street || "");
+      
+        if (hasNeverAnalyzed) {
+          console.log(
+            `--- [Discovery API] First-time or missing analysis photos. Triggering discovery. ---`
+          );
           shouldTriggerDiscovery = true;
-        } 
-        // **Step 4: Implement Condition 1 and Condition 2 (Don't Trigger)**
-        else if (currentBrandSource === "photos" && uploadedPhotos.length === 0) {
-          console.log(`--- [Discovery API] Condition 1 met: Brand already 'photos' and no new uploads. Skipping. ---`);
-          shouldTriggerDiscovery = false; // Explicitly set, though default is false
-        } 
-        else if (currentBrandSource === "text_search" && uploadedPhotos.length === 0) {
-          console.log(`--- [Discovery API] Condition 2 met: Brand already 'text_search' and no new uploads. Skipping. ---`);
-          shouldTriggerDiscovery = false; // Explicitly set
         }
-        // **Step 5: Implement Condition 3 and Condition 5 (Trigger)**
-        // If none of the 'skip' conditions (null, or no-new-photos while already analyzed) were met,
-        // and new photos *were* uploaded, then we trigger discovery.
+
         else if (uploadedPhotos.length > 0) {
           console.log(`--- [Discovery API] Condition 3 or 5 met: New photos uploaded. Triggering discovery. ---`);
           shouldTriggerDiscovery = true;
         }
+        
+        // **Step 4: Stale data check — fires for BOTH photos and text_search**
+        else if (uploadedPhotos.length === 0) {
+
+          if (nameChanged || cityChanged || streetChanged) {
+            console.log(`---[Discovery API] Identity change detected with no new photos. Resetting and re-discovering brand context. source was: '${currentBrandSource}' ---`);
+            shouldTriggerDiscovery = true;
+          } else {
+            console.log(`--- [Discovery API] No changes detected. Brand source '${currentBrandSource}' is current. Skipping. ---`);
+            shouldTriggerDiscovery = false;
+          }
+        }
+        // **Step 5: Implement Condition 3 and Condition 5 (Trigger)**
+        // If none of the 'skip' conditions (null, or no-new-photos while already analyzed) were met,
+        // and new photos *were* uploaded, then we trigger discovery.
+
     
     
         // --- Execute discoverAndSaveBrandIdentity based on the flag ---

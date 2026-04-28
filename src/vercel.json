@@ -1,0 +1,7 @@
+{
+    "functions": {
+      "app/api/discover-brand/route.ts": {
+        "maxDuration": 60
+      }
+    }
+  }

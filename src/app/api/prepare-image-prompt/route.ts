@@ -233,9 +233,9 @@ export async function POST(req: Request) {
       ${recentImageHistory}
 
       COMPOSITION RULE: Recent compositions used are listed in brackets above [Wide/Medium/Detail].
-      - If last 2 were Detail → use Wide or Medium this time.
-      - If last 2 were Wide → use Detail or Medium this time.
-      - Never use the same composition 3 times in a row.
+      - If last one is Detail → use Wide or Medium this time.
+      - If last one is Wide → use Detail or Medium this time.
+      - Never use the same composition 2 times in a row.
       SUBJECT RULE:
       - If recent = Food/Drink → use Space/Exterior/Details.
       - If recent = Detail close-up → Wide environmental/Medium scene.

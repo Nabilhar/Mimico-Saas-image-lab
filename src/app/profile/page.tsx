@@ -213,6 +213,8 @@ export default function ProfilePage() {
 
     setLoading(true); // Start loading immediately for profile save + photo uploads
 
+    const statusToast = toast.loading("Saving profile settings...");
+
     const uploadedPhotoData: UploadedPhoto[] = []; // Collects URLs of *successfully* uploaded photos
 
     try {
@@ -246,6 +248,9 @@ export default function ProfilePage() {
       ].filter((p) => p.file !== null) as { file: File; label: string }[];
 
       if (selectedPhotoFiles.length > 0) {
+
+        toast.loading("Uploading brand photos...", { id: statusToast });
+
         for (const { file, label } of selectedPhotoFiles) {
           const fileExt = file.name.split('.').pop();
           const filePath = `${user.id}/${label}-${Date.now()}.${fileExt}`; 
@@ -276,12 +281,29 @@ export default function ProfilePage() {
       
       // Scenario 2: No photos uploaded, but we have NO brand data at all (Will trigger initial Text Search)
       const isFirstTimeDiscovery = uploadedPhotoData.length === 0 && brandSource === null;
+      
 
-      if (isUpgradingToVision || isFirstTimeDiscovery) {
-        toast('Brand analysis started in the background! ✨', { icon: '🤖', duration: 5000 });
+      // 3. Claim welcome credits (existing logic)
+      const { data: creditData, error: creditError } = await supabase.rpc('claim_welcome_credits');
+      if (creditError) {
+        console.error("Credit claim error:", creditError);
+      } else if (creditData?.success) {
+        toast.success("Welcome! 15 free credits have been added to your account! 🚀");
       }
 
-      // 3. Trigger brand discovery API (fire and forget from frontend's await perspective)
+      //Update toast for the AI Phase
+      let aiMessage = "🔄 Updating brand context...";
+        if (isUpgradingToVision) {
+          aiMessage = "🤖 AI is analyzing your photos for a custom identity... (30s)";
+        } else if (isFirstTimeDiscovery) {
+          aiMessage = "🔍 AI is researching your business for initial setup... (30s)";
+        } else {
+          aiMessage = "⚡ Updating research for your new business details... (30s)";
+        }
+        
+        toast.loading(aiMessage, { id: statusToast });
+
+      // 4. Trigger brand discovery API (fire and forget from frontend's await perspective)
       // The backend's /api/discover-brand route *will* await the full analysis.
       try {
         await fetch("/api/discover-brand", {
@@ -294,27 +316,26 @@ export default function ProfilePage() {
             photos:        uploadedPhotoData,
           }),
         });
-      } catch (aiError) {
-        console.error("AI Brand analysis failed, but profile was saved:", aiError);
-        // We don't show a loud error toast here because the profile IS saved.
-    }
 
+          // Discovery complete — safe to redirect
+          localStorage.setItem("shoreline_business_profile", JSON.stringify(profileData));
+          toast.success("Identity captured! Opening dashboard...", { id: statusToast });
+          setTimeout(() => router.push("/dashboard"), 1000);
 
-      // 4. Claim welcome credits (existing logic)
-      const { data: creditData, error: creditError } = await supabase.rpc('claim_welcome_credits');
-      if (creditError) {
-        console.error("Credit claim error:", creditError);
-      } else if (creditData?.success) {
-        toast.success("Welcome! 15 free credits have been added to your account! 🚀");
-      }
-
-      localStorage.setItem("shoreline_business_profile", JSON.stringify(profileData));
-      toast.success("Profile Saved Successfully!"); 
-      router.push("/dashboard");
+        } catch (aiError) {
+          console.error("AI Brand analysis failed:", aiError);
+          // Profile is saved — redirect anyway but set expectations
+          localStorage.setItem("shoreline_business_profile", JSON.stringify(profileData));
+          toast("Profile saved. Brand colours will be estimated from web research.", { 
+            icon: "⚡", 
+            duration: 5000 
+          });
+          setTimeout(() => router.push("/dashboard"), 1000);
+        }
 
     } catch (err: any) {
       console.error("Save failed:", err.message);
-      toast.error("Save Error: " + err.message);
+      toast.error("Save Error: " + err.message, { id: statusToast });
     } finally {
       setLoading(false); // Frontend tasks are done, backend analysis is running asynchronously.
     }

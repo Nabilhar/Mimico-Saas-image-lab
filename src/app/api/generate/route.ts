@@ -304,9 +304,9 @@ function buildPrompt(
 
       1. Decide how this angle connects to the post type and voice.
       2. Check [LOCAL_GROUND_TRUTH] for one detail that sharpens the angle — use only if natural.
-      3. Anchor the post in one specific offering.
-        Mention it once, naturally.
-        It supports the insight — it is not the focus of the post.
+      3. Product focus: Pick ONE offering from [LOCAL_GROUND_TRUTH] Offerings that best fits this angle. 
+         If multiple offerings fit — choose one not shown in [VARIETY RULES]. 
+         The offering grounds the post — it is not the subject of any tip. 
       4. Let the season, time of day, and current weather colour the language and energy of the post.
         Current time: ${currentTime}
         Morning (6am-11am): fresh, anticipatory
