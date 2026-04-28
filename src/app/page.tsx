@@ -174,7 +174,7 @@ export default function Home() {
                   <h3 className="text-xl font-semibold text-slate-900">Choose Your Niche</h3>
                 </div>
                 <p className="text-slate-600 mb-3 flex-grow">
-                  Select your industry (e.g.,Restaurant, Real Estate, Chiropractor,Dentist, Café, Salon). We immediately understand your customers, tone, and what matters in your neighbourhood.
+                  Select your industry (e.g.,Restaurant, Real Estate, Chiropractor,Dentist, Café, Salon). Add the address, upload a photo of your storefront / logo and the AI learns your exact colors, style, and neighbourhood — so every post and image feels like it came from your business specifically.
                 </p>
                 <div className="flex flex-col gap-1 text-sm font-semibold text-cyan-800">
                   <span>✓ Built specifically for local businesses</span>
@@ -209,7 +209,7 @@ export default function Home() {
                   <h3 className="text-xl font-semibold text-slate-900">Generate & Share Instantly</h3>
                 </div>
                 <p className="text-slate-600 mb-3 flex-grow">
-                Create a post for this exact moment and share it in seconds with your prefered social media platform. No templates. No batching. No pre-written content.
+                Create a post for this exact moment, copy and share it in seconds with your prefered social media platform. No templates. No batching. No pre-written content.
                 </p>
                 <div className="flex flex-col gap-1 text-sm font-semibold text-cyan-800">
                   <span>✓ Ready in 30 seconds</span>
@@ -230,7 +230,8 @@ export default function Home() {
                   
                   <div>
                     <div className="text-slate-600 mb-4 space-y-2">
-                      <p>We notify you when it's time to post—based on your custom schedule.</p>
+                      <p>Set your schedule once and Shoreline exports it directly to your calendar.</p>
+                      <p>Your calendar app reminds you when it's time to post.</p>
                       <p>Tap the alert, generate a fresh post and share it while it still matters.</p>
                     </div>
                     <div className="flex flex-col gap-2 text-sm font-semibold text-cyan-800">
@@ -485,7 +486,7 @@ We are in the office if you want to sit down and look at the actual numbers.
                 <CardContent>
                   <p className="text-3xl font-bold mb-2">50% <span className="text-lg text-slate-600">off</span></p>
                   <p className="text-slate-600 text-sm">
-                    Get 50% off credit prices for your entire first year.
+                    Get 50% off credit prices for your first 6 months.
                   </p>
                   <div className="mt-4 pt-4 border-t border-blue-200">
                     <p className="text-xs text-slate-600">Spots filled: <strong>12 / 50</strong></p>
@@ -502,7 +503,7 @@ We are in the office if you want to sit down and look at the actual numbers.
                 <CardContent>
                   <p className="text-3xl font-bold mb-2">25% <span className="text-lg text-slate-600">off</span></p>
                   <p className="text-slate-600 text-sm">
-                    Get 25% off credit prices for your entire first year.
+                    Get 25% off credit prices for your first 6 months.
                   </p>
                   <div className="mt-4 pt-4 border-t border-slate-200">
                     <p className="text-xs text-slate-600">Spots filled: <strong>0 / 50</strong></p>
@@ -519,51 +520,84 @@ We are in the office if you want to sit down and look at the actual numbers.
             <div className="mb-12">
               <h2 className="text-3xl font-bold mb-4 text-slate-900">Simple, Transparent Pricing</h2>
               <div className="text-slate-600 max-w-2xl space-y-2">
-                <p>Pay only for what you use. No subscriptions, no minimums.</p>
-                <p>Beta pricing coming soon — join the waitlist to lock in your early rate.</p>
+                <p>No subscriptions. Buy credits, use them when you post.</p>
+                <p>Early adopter pricing active now — 50% off your first 6 months.</p>
+              </div>
             </div>
-          </div>
 
-          <div className="grid md:grid-cols-2 gap-8 max-w-2xl">
-            <Card className="border-slate-200">
-              <CardHeader>
-                <CardTitle>Text Post</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold mb-2">1 <span className="text-lg text-slate-600">credit</span></p>
-                <p className="text-slate-600 text-sm mb-4">
-                  5 tips, myth-busting, community spotlights, and more.
-                </p>
-                <p className="text-xs text-slate-500">Caption + hashtags</p>
-              </CardContent>
-            </Card>
-            <Card className="border-slate-200">
-              <CardHeader>
-                <CardTitle>AI Image</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold mb-2">2 <span className="text-lg text-slate-600">credits</span></p>
-                <p className="text-slate-600 text-sm mb-4">
-                  Custom AI-generated image to match your post.
-                </p>
-                <p className="text-xs text-slate-500">Image only</p>
-              </CardContent>
-            </Card>
-            <Card className="border-slate-200 md:col-span-2">
-              <CardHeader>
-                <CardTitle>Text + AI Image</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold mb-2">3 <span className="text-lg text-slate-600">credits</span></p>
-                <p className="text-slate-600 text-sm mb-4">
-                  Complete package: post + custom AI-generated image.
-                </p>
-                <p className="text-xs text-slate-500">Most popular • Caption + hashtags + image</p>
-              </CardContent>
-            </Card>
-          </div>
+            {/* Plan cards */}
+            <div className="grid md:grid-cols-3 gap-4 mb-6">
+
+              {/* Starter */}
+              <div className="flex flex-col gap-2 p-5 rounded-2xl border border-slate-200 bg-white">
+                <span className="text-[11px] font-semibold px-2 py-1 rounded-md bg-cyan-50 text-cyan-800 w-fit">Starter</span>
+                <p className="text-sm font-semibold text-slate-900 mt-1">75 credits / month</p>
+                <p className="text-sm text-slate-500 leading-relaxed">Up to 15 complete posts. Perfect for posting a few times a week.</p>
+                <div className="flex items-baseline gap-2 mt-1">
+                  <span className="text-sm text-slate-400 line-through">$49</span>
+                  <span className="text-2xl font-bold text-slate-900">$25</span>
+                  <span className="text-sm text-slate-500">/mo</span>
+                </div>
+                <span className="text-[11px] font-semibold text-cyan-700">50% off — first 6 months</span>
+                <hr className="border-slate-100 my-1" />
+                <div className="flex justify-between text-sm text-slate-500"><span>Complete posts</span><span className="font-semibold text-slate-900">up to 15</span></div>
+                <div className="flex justify-between text-sm text-slate-500"><span>Cost per post</span><span className="font-semibold text-slate-900">$1.66</span></div>
+              </div>
+
+              {/* Daily — featured */}
+              <div className="flex flex-col gap-2 p-5 rounded-2xl border-2 border-blue-600 bg-white">
+                <span className="text-[11px] font-semibold px-2 py-1 rounded-md bg-cyan-700 text-white w-fit">Most popular</span>
+                <p className="text-sm font-semibold text-slate-900 mt-1">160 credits / month</p>
+                <p className="text-sm text-slate-500 leading-relaxed">Up to 32 complete posts. One post every day, with room to spare.</p>
+                <div className="flex items-baseline gap-2 mt-1">
+                  <span className="text-sm text-slate-400 line-through">$89</span>
+                  <span className="text-2xl font-bold text-slate-900">$45</span>
+                  <span className="text-sm text-slate-500">/mo</span>
+                </div>
+                <span className="text-[11px] font-semibold text-cyan-700">50% off — first 6 months</span>
+                <hr className="border-slate-100 my-1" />
+                <div className="flex justify-between text-sm text-slate-500"><span>Complete posts</span><span className="font-semibold text-slate-900">up to 32</span></div>
+                <div className="flex justify-between text-sm text-slate-500"><span>Cost per post</span><span className="font-semibold text-slate-900">$1.40</span></div>
+              </div>
+
+              {/* Growth */}
+              <div className="flex flex-col gap-2 p-5 rounded-2xl border border-slate-200 bg-white">
+                <span className="text-[11px] font-semibold px-2 py-1 rounded-md bg-cyan-50 text-cyan-800 w-fit">Growth</span>
+                <p className="text-sm font-semibold text-slate-900 mt-1">350 credits / month</p>
+                <p className="text-sm text-slate-500 leading-relaxed">Up to 70 complete posts. For businesses posting multiple times a day.</p>
+                <div className="flex items-baseline gap-2 mt-1">
+                  <span className="text-sm text-slate-400 line-through">$169</span>
+                  <span className="text-2xl font-bold text-slate-900">$85</span>
+                  <span className="text-sm text-slate-500">/mo</span>
+                </div>
+                <span className="text-[11px] font-semibold text-cyan-700">50% off — first 6 months</span>
+                <hr className="border-slate-100 my-1" />
+                <div className="flex justify-between text-sm text-slate-500"><span>Complete posts</span><span className="font-semibold text-slate-900">up to 70</span></div>
+                <div className="flex justify-between text-sm text-slate-500"><span>Cost per post</span><span className="font-semibold text-slate-900">$1.21</span></div>
+              </div>
+
+            </div>
+
+            {/* How credits work */}
+            <div className="bg-slate-50 rounded-2xl p-5">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-3">How credits work</p>
+              <div className="flex justify-between items-center text-sm text-slate-500 py-1">
+                <span>Text post (caption + hashtags)</span>
+                <span className="text-xs font-semibold px-2 py-1 rounded-full border border-slate-200 bg-white text-slate-700">2 credits</span>
+              </div>
+              <div className="flex justify-between items-center text-sm text-slate-500 py-1">
+                <span>Matching AI image</span>
+                <span className="text-xs font-semibold px-2 py-1 rounded-full border border-slate-200 bg-white text-slate-700">3 credits</span>
+              </div>
+              <div className="flex justify-between items-center text-sm font-semibold text-slate-900 py-1 mt-2 pt-3 border-t border-slate-200">
+                <span>Complete post (text + image)</span>
+                <span className="text-xs font-semibold px-2 py-1 rounded-full bg-cyan-700 text-white">5 credits</span>
+              </div>
+            </div>
+
           </div>
         </section>
+        
 
       {/* CTA Section */}
       <section id="cta" className="bg-slate-50 py-16 md:py-24 border-b">

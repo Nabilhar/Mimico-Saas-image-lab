@@ -173,105 +173,69 @@ export async function POST(req: Request) {
 
     // ── ARCHITECT PROMPT ───────────────────────────────────────────────────
     const architectPrompt = `
-      [SYSTEM]: Expert AI Image Prompt Engineer. Specialization: Hyper-local commercial/lifestyle photography for FLUX.1-schnell.
-      
+      [SYSTEM]: Expert image prompt engineer for FLUX.1-schnell. Hyper-local commercial/lifestyle photography.
+
       [SUBJECT EXTRACTION — DO THIS FIRST]:
-      Before choosing any composition or setting, read the post content carefully and identify:
-      1. The specific craft truth or angle the post is built around — this becomes the image hero.
-        Not a generic representation of the business. The specific thing the post is about.
-        Example: post about espresso extraction time → hero is the pour, not a generic café shot.
-        Example: post about dry skin in February → hero is a skincare texture detail, not a spa interior.
+      Read the post and identify:
+      1. The specific craft truth the post is built around — this is the image hero.
+        Not a generic business shot. The specific thing the post is about.
+        Example: espresso extraction post → hero is the pour, not a café interior.
+        Example: dry skin post → hero is a skincare texture, not a spa room.
       2. The single product, material, or process moment that best embodies that truth.
-      3. Whether a human presence serves the hero or distracts from it — if distraction, shoot without people.
-      The craft truth extracted here must drive every subsequent decision: subject, setting, composition, lighting.
+      3. Whether human presence serves the hero or distracts — if distraction, no people.
+      Every subsequent decision flows from this extraction.
 
       [ANALYSIS]:
-      Post Content: "${generatedPost}"
-      Business: ${business_name} (${niche})
-      Location: ${fullAddress}
+      Post: "${generatedPost}"
+      Business: ${business_name} (${niche}) | ${fullAddress}
       Visual Strategy: ${visualStrategy}
 
-      [VOICE — VISUAL REGISTER]:
-      The text post was written in "${voice}" voice. 
-      ${VOICE_VISUAL_MAP[voice] || "Clean and intentional. Every element earns its place."}
-      Let this govern the visual energy of the image — not the subject, not the setting, but how the shot feels.
-      A Bold & Direct voice calls for a different frame than a Warm & Conversational one, even if the subject is identical.
+      [VOICE]:
+      "${voice}" — ${VOICE_VISUAL_MAP[voice] || "Clean and intentional. Every element earns its place."}
 
       [POST TYPE — VISUAL JOB]:
-      Post type: ${postType}
-      ${POST_TYPE_VISUAL_INTENT[postType] || "Create a compelling visual that supports the post content."}
-      This defines what the image needs to DO — not what it looks like, but what job it performs.
-      Let this govern the emotional register of the shot alongside the voice and craft truth.
+      ${postType}: ${POST_TYPE_VISUAL_INTENT[postType] || "Create a compelling visual that supports the post content."}
 
       [SEASONAL_CONTEXT]:
-      Season: ${season} | Time: ${currentMonth}, ${currentTime}
-      - Elements: ${seasonInfo?.visual_elements}
-      - Time of Day: ${seasonInfo?.time_of_day_guidance}
-      - Weather: ${currentWeather || "Not available"} — one atmospheric touch only, no more.
-      - Niche Insight: ${seasonalNicheContext}
+      ${season} | ${currentMonth} | ${currentTime}
+      Elements: ${seasonInfo?.visual_elements}
+      Lighting: ${seasonInfo?.time_of_day_guidance}
+      Weather: ${currentWeather || "N/A"} — one atmospheric touch only.
+      Niche: ${seasonalNicheContext}
 
-      [BRAND_IDENTITY — COLOR & MOOD]:
+      [BRAND — COLOR & MOOD]:
       ${brandColorBlock}
-      RULE: Integrate brand colors naturally into palette, props, and lighting.
-      NO meta-commentary/explaining the reasoning behind a color choice.
-      Match vocabulary to mood (e.g., Sophisticated = Elegant; Vibrant = Energetic).
-      If values are N/A, derive from niche and season.
+      Integrate colors into palette, props, lighting. No color commentary. Derive from niche/season if N/A.
 
-      [BRAND_IDENTITY — STRUCTURE & SPACE]:
+      [BRAND — STRUCTURE & SPACE]:
       ${brandStructureBlock}
-      RULE: Use "Storefront Structure" as the physical architecture for exterior shots
-      (building type, facade material, window/door style, scale).
-      Use "Location Features" to add contextual setting details when relevant
-      Use "Interior Layout" as the spatial blueprint for interior shots
-      (counter position, ceiling height, seating arrangement, floor material).
-      These are not suggestions — they are the GROUND TRUTH of this physical space.
-      If values say "Infer", use the business type + neighbourhood + niche to construct
-      a believable real-world setting. Never use a generic or imaginary space.
+      Exterior shots: use Storefront Structure for architecture and Location Features for context.
+      Interior shots: use Interior Layout as spatial blueprint.
+      These are ground truth — not suggestions. If "Infer", construct from business type and niche.
 
-      [FORBIDDEN_VISUALS]:
-      ${recentImageHistory ? `STRICTLY FORBIDDEN (Already used):
+      [FORBIDDEN]:
+      ${recentImageHistory ? `Already used — strictly forbidden:
       ${recentImageHistory}
 
-      COMPOSITION RULE: Recent compositions used are listed in brackets above [Wide/Medium/Detail].
-      - If last one is Detail → use Wide or Medium this time.
-      - If last one is Wide → use Detail or Medium this time.
-      - Never use the same composition 2 times in a row.
-      SUBJECT RULE:
-      - If recent = Food/Drink → use Space/Exterior/Details.
-      - If recent = Detail close-up → Wide environmental/Medium scene.
-      - If recent = Exterior → use Interior/Texture/Materials.
-      - If recent = Waterfront → use Interior warmth/Close-ups.` : "No history. Full creative freedom."}
+      Composition: if last was Detail → Wide or Medium. If last was Wide → Detail or Medium. Never repeat same composition twice in a row.
+      Subject: Food/Drink → Space or Exterior. Detail close-up → Wide or Medium. Exterior → Interior or Texture. Waterfront → Interior or Close-up.` : "No history. Full creative freedom."}
 
-      [RESEARCH_GOALS]:
-      Search "${business_name}" at "${fullAddress}" for: current or seasonal offerings, 
-      recent branding details, and any local landmarks visible from the business.
-      Brand Identity blocks below take priority — search only fills gaps or adds novelty.
+      [RESEARCH]:
+      Search "${business_name}" at "${fullAddress}" for seasonal offerings, branding details, visible landmarks.
+      Brand Identity blocks take priority — search fills gaps only.
 
-      [ENGINEERING_SPEC]:
-      PALETTE RULE: [BRAND_IDENTITY — COLOR & MOOD] defines the palette. 
-        Draw only what serves this specific shot — a close-up needs none of the architecture, 
-        an exterior needs none of the interior details. Every prompt should feel like 
-        a different photograph of the same business.
-      Write a 60-70 words prompt for FLUX.1-schnell following this sequence:
-      1. COMPOSITION: Select one (Wide environmental / Medium scene / Detail close-up). Pick one, do not label it; just apply it.
-      2. SUBJECT: The hero element identified in [SUBJECT EXTRACTION]. 
-        Ground it in the specific craft truth from the post — not a generic business shot.
-        Use researched details from [RESEARCH_GOALS] to add specificity (seasonal product, current offering, real detail).
-        No legible faces. If human present, they support the hero — never dominate the frame.
-      3. SETTING: Physical space grounded in [BRAND_IDENTITY — STRUCTURE & SPACE]. Architecture, materials, spatial feel.
-      4. LIGHTING: Exact light quality for ${currentMonth} at ${currentTime} in ${fullAddress}. Use ${seasonInfo?.lighting_mood}.
-      5. MOOD + IMPERFECTION: Emotional tone from post + one subtle realistic flaw (condensation ring, scuff on brick, steam curl) to remove "AI sheen."
-      6. TECHNICAL: End exactly with: "Shot on Sony A7, f/1.8, shallow depth of field, 1:1 square crop, no watermark, no legible text."
+      [SPEC]:
+      Write a 60-70 word prompt for FLUX.1-schnell in this sequence:
+      1. Composition: Wide environmental / Medium scene / Detail close-up — apply, don't label.
+      2. Subject: Hero from [SUBJECT EXTRACTION]. Grounded in craft truth. Specific detail from research. No legible faces — people are secondary, never dominating.
+      3. Setting: Physical space from [BRAND — STRUCTURE & SPACE].
+      4. Lighting: ${currentMonth}, ${currentTime}, ${fullAddress}. Use ${seasonInfo?.lighting_mood}.
+      5. Mood + one imperfection (condensation ring, scuff on brick, steam curl) to remove AI sheen.
+      6. End with: "Shot on Sony A7, f/1.8, shallow depth of field, 1:1 square crop, no watermark, no legible text."
 
-      [INCLUDE ONLY IF RELEVANT]:
-      - PEOPLE: Candid, secondary, never dominating, if partial: upper body minimum. No front-facing/legible faces. Never isolated body parts.
-      - STOREFRONT & SIGNAGE: Always secondary. Never the hero of the shot. If exterior scene, storefront and signage may appear to anchor the setting and add realism — but pushed to mid or background, slightly out of focus.
+      Storefront/signage: secondary only, mid/background, slightly out of focus if exterior.
 
-      [OUTPUT_RULES]:
-      - NO legible text, logos, or readable signage on any surface.
-      - NO labels, NO preamble, NO commentary.
-      - OUTPUT ONLY the final prompt.
-      - CRITICAL: Always start the final image prompt with "<<<PROMPT_BEGIN>>>".
+      [OUTPUT]: <<<PROMPT_BEGIN>>> then prompt only. No labels, no preamble, no commentary.
     `;
   
     let visualDescription = "";

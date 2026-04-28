@@ -157,50 +157,45 @@ async function analyzePhotosWithGemini(
   : "No photos provided";
 
   const textPrompt = `
+
     [ROLE]: Brand Analyst
-    [CONTEXT]: Business: "${businessName}" | Address: "${fullAddress}" | Photos: ${photoContext}
+    [CONTEXT]: "${businessName}" | ${fullAddress} | Photos: ${photoContext}
 
-    [RESEARCH_TASK]:
-    1. Use googleSearch to cross-reference this business across, its official website, Yelp reviews, and social media.
-    2. Identify the business, who they are, what they do, who they serve, what makes them distinct.
-    3. Identify the "Hero" offerings (the 5 most mentioned or distinct products/services).
-    4. Verify the exact neighbourhood name and 5 physical landmarks within walking distance.
-    5. Identify nearby transit (bus/subway/train) and 2 current local vibe trends (e.g., "active waterfront," "weekend brunch crowd").
+    [TASK]:
+    1. googleSearch: cross-reference official website, Yelp, and social media.
+    2. Identify the business's unique value proposition and who they serve.
+    3. Extract the 5 most distinct products/services ("Hero" offerings).
+    4. Verify exact neighbourhood name and 5 walking-distance landmarks.
+    5. Identify 2 nearby transit routes and 2 current local vibe trends.
 
-    [DATA_SOURCES]:
-    - S1 (Photos): Authoritative for all visual assets. If a detail is missing, use "Not visible in photos".
-    - S2 (Search): Use [RESEARCH_TASK] as authoritative for names, landmarks, and service lists, use "None identified".
+    [SOURCES]:
+    - S1 (Photos): Authoritative for all visuals. Missing detail → "Not visible in photos".
+    - S2 (Search): Authoritative for names, landmarks, services. Missing → "None identified".
 
-    [OUTPUT_RULES]:
-    - Return ONLY a raw JSON object. 
-    - No preamble, no markdown fences, no conversation.
-    - Keep the 'description' focused on the unique value proposition.
-    - Strict adherence to the following schema:
+    [OUTPUT]: Raw JSON only. No preamble, no markdown, no conversation.
 
     {
-      "physical_details":{
-        "description": "S2: 2-3 sentence business description. Who they do, who they serve, what makes them distinct.",
+      "physical_details": {
+        "description": "S2: 2-3 sentence unique value proposition.",
         "neighbourhood": "S2: exact neighbourhood name",
-        "landmarks": S2: ["5 verified landmarks"],
-        "transit": S2: ["2 verified routes"],
-        "local_trends": S2: ["2 local trends/vibes"],
-        "products_services": S2: ["5 'hero' products or services"]
+        "landmarks": ["S2: 5 verified landmarks"],
+        "transit": ["S2: 2 verified routes"],
+        "local_trends": ["S2: 2 local trends"],
+        "products_services": ["S2: 5 hero offerings"]
       },
-
       "visuals": {
         "primary_color": "S1: dominant brand color from logo",
         "secondary_color": "S1: supporting color from logo/storefront",
         "accent_color": "S1: contrast or highlight color",
-        "theme_description": "S1: 1-sentence summary of visual palette and mood",
-        "logo_colors": "S1: exact colors seen in logo",
+        "theme_description": "S1: 1-sentence palette and mood summary",
+        "logo_colors": "S1: exact colors in logo",
         "storefront_colors": "S1: exterior/signage colors and facade materials",
         "storefront_architecture": {
           "building": "S1: e.g. single-storey stucco, floor-to-ceiling windows, red door",
           "features": "S2: e.g. covered patio with 6 chairs, corner unit, street-level signage"
         },
         "interior_colors": "S1: colors, lighting warmth, surface materials",
-        "interior_layout": "S1: spatial arrangement (counter, ceiling, seating, floor)",
-
+        "interior_layout": "S1: spatial arrangement (counter, ceiling, seating, floor)"
       }
     }
 
@@ -236,23 +231,20 @@ async function analyzeWithTextSearch(
   );
 
   const prompt = `
-    [TASK]: Research and estimate visual brand identity for "${businessName}" at "${fullAddress}".
+    [TASK]: Research and estimate brand identity for "${businessName}" at "${fullAddress}".
 
-    [RESEARCH_REQUIREMENTS]:
-    1. Cross-reference Yelp, social media, and the official website.
-    2. Identify the core "Hero" offerings (top 5 products/services).
-    3. Identify 5 physical landmarks within walking distance.
-    4. Find the neighbourhood name, 2 transit routes, and 2 local vibe trends.
-    5. Based on the business type and web presence, infer the visual brand (colors and style).
-    6. If data is missing, use "Thematic Inference": provide professional estimates based on the business type and neighbourhood vibe.
+    1. Cross-reference official website, Yelp, and social media.
+    2. Extract top 5 hero products/services.
+    3. Identify 5 walking-distance landmarks.
+    4. Find exact neighbourhood name, 2 transit routes, 2 local vibe trends.
+    5. Infer visual brand from web presence and business type.
+      If data is missing — estimate from business type and neighbourhood vibe.
 
-    [OUTPUT]: 
-    - Return ONLY a raw JSON object. No preamble, no markdown, no conversation.
-    - Structure exactly as follows:
+    [OUTPUT]: Raw JSON only. No preamble, no markdown.
 
-   {
+    {
       "physical_details": {
-        "description": "2-3 sentence overview of what they do and who they serve.",
+        "description": "2-3 sentence unique value proposition.",
         "neighbourhood": "exact neighbourhood name",
         "landmarks": ["5 verified landmarks"],
         "transit": ["2 verified routes"],
@@ -271,9 +263,11 @@ async function analyzeWithTextSearch(
           "features": "e.g. sidewalk patio with 4 tables, bike rack, corner lot"
         },
         "interior_colors": "estimated interior palette",
-        "interior_layout": "estimated spatial arrangement"
+        "interior_layout": "estimated spatial arrangement (counter, ceiling, seating, floor)"
       }
     }
+
+    Output ONLY the JSON object. No preamble, no conversation.
   `;
 
   const result = await model.generateContent(prompt);

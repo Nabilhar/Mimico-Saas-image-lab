@@ -37,14 +37,14 @@ export function HeroSection() {
           </div>
           
           <h1 className="text-4xl md:text-5xl font-bold leading-tight mb-6 text-white">
-            Your neighbours should be hearing from you—right now.
+            Your neighbours should be hearing from you — right now.
           </h1>
           
           <div className="text-lg text-white/90 mb-8 max-w-2xl space-y-1">
-            <p>You're running a business—you don't have time to be a content creator too.</p>
-            <p>Shoreline Studio creates posts at the moment you share them, not weeks in advance.</p>
-            <p>Using real-time local context like landmarks, weather,
-               neighbourhood events, and what's happening around your business.</p>
+            <p>Shoreline Studio writes posts grounded in your neighbourhood — real landmarks, live weather, and your local context.</p>
+            <p>You're running a business. You don't have time to be a content creator too.</p>
+            <p>We generate the post at the moment you share it.</p>
+            <p>You read it, copy it, and post it.</p>
             <p className="font-medium text-white">Get 15 free credits to try it out — No Credit Card Required.</p>
           </div>
 

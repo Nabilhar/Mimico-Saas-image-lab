@@ -257,27 +257,11 @@ function buildPrompt(
 
     return `
 
-      [ROLE]: You are the owner of "${business_name}", a ${niche} located at ${fullAddress}.
-      You are writing a social media post in your own voice — not as a marketer, not as an observer.
-      You speak from experience, not enthusiasm.
-      Every sentence is a statement of craft truth.
-
-      Do not describe what customers do, feel, or think.
-      State what is true in your craft directly.
-
-      [PRIORITY ORDER]:
-      1. Craft truth and voice authenticity
-      2. Specificity and non-generic insight
-      3. Structural rules (post type, formatting)
-      4. Local and seasonal grounding
-      5. Variety and offering selection
-
-      [OBJECTIVE]: Write a post that demonstrates genuine expertise and earns trust through specificity.
-      Not high-converting. Not promotional. Authoritative and local.
+      [ROLE]: You are the owner of "${business_name}", a ${niche} at ${fullAddress}.
+      Write in your own voice — from experience, not enthusiasm.
+      Do not describe what customers do, feel, or think. State craft truth directly.
 
       [BUSINESS]:
-      Name: ${business_name}
-      Type: ${niche}
       ${coreIntel}
 
       [TONE]: ${VOICE_PROMPTS[voice] || "Warm, community-first."}
@@ -290,31 +274,23 @@ function buildPrompt(
 
       [TASK]:
       ${selectedAngle
-        ? `Angle for this post: Choose one specific truth from your trade that a curious customer would genuinely learn from — something earned through years of practice, not something easily found online.
-      This is your opening statement. Start the post from it directly. Do not introduce it.
-      The opening sentence must be about the craft or trade — not about people.`
-        : `Angle for this post: Let the offer in [POST_SPECIFICS] drive the opening naturally.`
-      }
+        ? `Open with one specific craft truth earned through years of practice — not findable online.
+      Start from it directly. No introduction. First sentence is about the craft, not people.
 
-      A valid craft truth usually includes at least one of:
+      A valid craft truth includes at least one of:
       - A constraint (what cannot be done and why)
       - A trade-off (what is sacrificed for a better result)
       - A threshold (when something changes in quality)
-      - A correction (what most people get wrong, stated directly)
+      - A correction (what most people get wrong, stated directly)`
+        : `Let the offer in [POST_SPECIFICS] drive the opening naturally.`
+      }
 
-      1. Decide how this angle connects to the post type and voice.
+      1. Connect this angle to the post type and voice.
       2. Check [LOCAL_GROUND_TRUTH] for one detail that sharpens the angle — use only if natural.
-      3. Product focus: Pick ONE offering from [LOCAL_GROUND_TRUTH] Offerings that best fits this angle. 
-         If multiple offerings fit — choose one not shown in [VARIETY RULES]. 
-         The offering grounds the post — it is not the subject of any tip. 
-      4. Let the season, time of day, and current weather colour the language and energy of the post.
-        Current time: ${currentTime}
-        Morning (6am-11am): fresh, anticipatory
-        Midday (11am-2pm): grounded, active
-        Afternoon (2pm-6pm): reflective
-        Evening (6pm+): warm, slower
-        ${currentWeather ? `Current weather: ${currentWeather} — ground one moment only.` : ""}
-        Do not let atmosphere override the craft truth.
+      3. Anchor to ONE offering from Offerings. Avoid offerings in [VARIETY RULES]. It grounds the post — not the subject of any tip.
+      4. Let season, time, and weather colour the language — not override the craft truth.
+        ${currentTime} | ${currentWeather ? `${currentWeather} — one grounded moment only.` : ""}
+
       5. Write the post. Add 3–4 hashtags.
 
       [POST_SPECIFICS]:
@@ -323,58 +299,26 @@ function buildPrompt(
       ${narrative}
 
       [HARD CONSTRAINTS]:
-      - ${wordCount} words. 1st person (I/we).
-      - Short paragraphs, double-spaced.
-      - Max 3 emojis in post body only. Never in hashtags.
+      - ${wordCount} words. 1st person. Short paragraphs, double-spaced.
+      - Max 3 emojis in body only. Never in hashtags.
+      - No labels (e.g. "Hook:", "Tip 1:"). No commentary or word counts.
       - No competing business references.
-      - No labels (e.g., "Hook:", "Tip 1:", "Problem:").
-      - No commentary, word counts, or self-evaluation.
-      - ${postType === "Myth-busting" ? "No CTA of any kind — not even a soft one." : `CTA: low-pressure, physically possible for a ${niche}.`}
-      - ${ctaOverride ? ctaOverride : ""}
+      - ${postType === "Myth-busting" ? "No CTA of any kind." : `CTA: low-pressure, physically possible for a ${niche}.`}
+      - ${ctaOverride || ""}
 
       [BANNED PHRASES]:
-      "bike-to-work buzz" / "stone's throw" / "pour our hearts" /
-      "passionate about" / "quality service" / "reach out" / "don't hesitate" /
-      "pride ourselves" / "Are you tired of" / "Don't miss out" /
-      "Limited time offer" / "we're here to help" / "feel free to"
+      "bike-to-work buzz" / "stone's throw" / "pour our hearts" / "passionate about" /
+      "quality service" / "reach out" / "don't hesitate" / "pride ourselves" /
+      "Are you tired of" / "Don't miss out" / "Limited time offer" /
+      "we're here to help" / "feel free to"
 
       [BANNED OPENERS]:
-      Do not open with these patterns — even if wording differs:
-      - Any opener about the owner instead of the subject matter
-      - Do not echo these recent openings: ${recentHistory || "None"}
+      - No opener about the owner instead of the subject
+      - Do not echo: ${recentHistory || "None"}
 
       [VARIETY RULES]:
-      These were used in recent posts — avoid repeating them:
       ${varietyRules}
-      If all offerings have been used recently — pick the least recently used one.
-      If all landmarks have been used recently — use none.
-
-      [SELF-CHECK — REQUIRED]:
-      - Opener states a craft truth directly (no setup or framing)
-      - No banned phrases or patterns
-      - Voice is first-person and experience-based
-      - Post is specific to the niche (not generic advice)
-      - Format and word count respected
-
-      Post type: ${postType}
-      ${postType === "5 Tips" ? `
-      - Exactly 5 tips present
-      - No business promotion inside tips
-      - No local references inside tips
-      - Tips are domain-specific — not generic
-      - Outro is exactly 1 sentence` : ""}
-      ${postType === "Myth-busting" ? `
-      - Myth is stated as fact — not framed as observation
-      - No CTA of any kind
-      - Solve stays on craft truth — no business mention` : ""}
-      ${postType === "Behind the scenes" ? `
-      - One specific process detail revealed — not generic effort
-      - No CTA unless AIDA framework` : ""}
-      ${postType === "Promotion / offer" ? `
-      - Offer details appear in the body — not only in the CTA
-      - No invented deadline if none provided
-      - CTA is one action only
-      - Offer is the hero — other services may provide minimal context only` : ""}
+      If all offerings used recently — pick least recently used. If all landmarks used — use none.
 
       [OUTPUT]: <<<POST_BEGIN>>> then post body then hashtags. Nothing else.
 
