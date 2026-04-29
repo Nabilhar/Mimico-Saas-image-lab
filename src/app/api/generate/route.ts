@@ -599,6 +599,8 @@ if (content.includes(signal)) {
 content = content
   .replace(/<[^>]*>/g, "")      // Removes any remaining <tag> markers
   .replace(/\[\d+\]/g, "")      // Removes citations like [1], [2], [3]
+  .replace(/^>+\s*/gm, "")  // strips >> or >>> at the start of any line
+  .replace(/\s*>+$/gm, "")  // strips >> or >>> at the end of any line
   .replace(/\*\*(.*?)\*\*/g, "$1")  // Remove **bold**
   .replace(/\*(.*?)\*/g, "$1")      // Remove *italic*
   .replace(/Word Count:\s*\d+/gi, "") // Removes "Word Count: 150"

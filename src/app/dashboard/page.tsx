@@ -103,7 +103,7 @@ export default function DashboardPage() {
   const savePostToCloud = useCallback(async (newContent: string, imageUrl?: string) => {
     if (!user?.id || !businessData || !supabase) return;
   
-    const cost = 1 + (imageUrl ? 2 : 0);
+    const cost = 2 + (imageUrl ? 3 : 0);
   
     try {
       const { data: rpcResult, error: rpcError } = await supabase
@@ -173,7 +173,7 @@ export default function DashboardPage() {
               
               <div 
                 className={`w-2 h-2 rounded-full animate-pulse transition-colors duration-500 ${
-                  (businessData?.credits ?? 0) < 3 
+                  (businessData?.credits ?? 0) < 5 
                     ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]' 
                     : 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.3)]'
                 }`}

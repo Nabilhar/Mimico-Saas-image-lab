@@ -301,7 +301,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
   } 
 
   const handleGenerateClick = () => {
-    if (userCredits < 1) {
+    if (userCredits < 2) {
       // Redirect to the Home page, specifically to the #cta section
       router.push("/#cta");
     } else {
@@ -316,8 +316,8 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
       return;
     }
   
-    if (userCredits < 2) {
-      toast.error("Not enough credits! You need 2 credits for image generation.");
+    if (userCredits < 3) {
+      toast.error("Not enough credits! You need 3 credits for image generation.");
       return;
     }
   
@@ -438,6 +438,9 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
   
     pollForImage();
   };
+
+  const isDetailsRequired = postType === "Promotion / offer" || postType === "Local event / news";
+  const isDetailsMissing = isDetailsRequired && customDetails.trim().length === 0;
   
   return (
 
@@ -519,6 +522,11 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
                   placeholder="e.g., 20% off all curries until Friday..."
                   className="w-full p-3 border rounded-xl border-slate-200 min-h-[100px] outline-none focus:ring-2 focus:ring-cyan-100 transition-all"
                 />
+                  {customDetails.trim().length === 0 && (
+                    <p className="text-[10px] text-amber-600 font-semibold ml-1">
+                      Required to generate this post type
+                    </p>
+                  )}
               </div>
             </div>
           )}
@@ -547,6 +555,11 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
                   placeholder="e.g., The Mimico Waterfront Festival is happening this Saturday!"
                   className="w-full p-3 border rounded-xl border-slate-200 min-h-[100px] outline-none focus:ring-2 focus:ring-cyan-100 transition-all"
                 />
+                  {customDetails.trim().length === 0 && (
+                    <p className="text-[10px] text-amber-600 font-semibold ml-1">
+                      Required to generate this post type
+                    </p>
+)}
               </div>
             </div>
           )}
@@ -620,22 +633,26 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
 
       {/* BUTTON SECTION */}
       <div className="max-w-2xl mx-auto w-full px-4 sm:px-0">
-        <button 
-          onClick={handleGenerateClick} // <--- Use the new wrapper function
-          disabled={loading} // <--- ONLY disable if loading
+      <button 
+          onClick={handleGenerateClick}
+          disabled={loading || isDetailsMissing}
           className={`w-full mt-8 font-bold py-4 rounded-2xl text-md transition-all shadow-xl active:scale-[0.98] ${
             loading 
               ? 'bg-slate-400 text-white cursor-wait shadow-none' 
-              : userCredits < 1 
-                ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-amber-500/40' // Styling for "Join Waitlist" state
-                : 'bg-cyan-800 text-white hover:bg-cyan-900 shadow-cyan-900/30' // Styling for "Generate" state
+              : isDetailsMissing
+                ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                : userCredits < 2
+                  ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-amber-500/40'
+                  : 'bg-cyan-800 text-white hover:bg-cyan-900 shadow-cyan-900/30'
           }`}
         >
           {loading 
             ? "Analyzing Shoreline Data..." 
-            : userCredits < 1 
-              ? "Join Waitlist for more Credits" // <--- Updated text
-              : "Generate Local Post (1 Credit)"}
+            : isDetailsMissing
+              ? postType === "Promotion / offer" ? "Add offer details to generate" : "Add event details to generate"
+              : userCredits < 2 
+                ? "Join Waitlist for more Credits"
+                : "Generate Local Post (2 Credits)"}
         </button>
 
 
@@ -754,13 +771,13 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
                 <button 
                   onClick={handleGenerateImage}
                   // COMBINED LOGIC: Disable if loading, if no ID exists yet, OR if they are broke
-                  disabled={loading || isGeneratingImage || !lastPostId || userCredits < 2} 
+                  disabled={loading || isGeneratingImage || !lastPostId || userCredits < 3} 
                   className={`flex flex-col items-center text-center group/btn active:scale-95 transition-all ${
-                    (userCredits < 2 || loading || isGeneratingImage || !lastPostId) ? 'opacity-50 cursor-not-allowed' : ''
+                    (userCredits < 3 || loading || isGeneratingImage || !lastPostId) ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                 >
                   <div className={`w-16 h-16 rounded-2xl bg-white shadow-sm border flex items-center justify-center mb-4 transition-all ${
-                    userCredits < 2 
+                    userCredits < 3 
                       ? 'border-slate-100' 
                       : 'border-slate-200 group-hover/btn:border-cyan-300 group-hover/btn:shadow-md'
                   }`}>
@@ -768,18 +785,18 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
                     {(loading || isGeneratingImage) ? (
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-cyan-600"></div>
                     ) : (
-                      <svg className={`w-8 h-8 ${userCredits < 2 ? 'text-slate-200' : 'text-slate-400 group-hover/btn:text-cyan-600'} transition-colors`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className={`w-8 h-8 ${userCredits < 3 ? 'text-slate-200' : 'text-slate-400 group-hover/btn:text-cyan-600'} transition-colors`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
                     )}
                   </div>
                   
-                  <span className={`text-sm font-bold ${userCredits < 2 ? 'text-slate-400' : 'text-slate-900 group-hover/btn:text-cyan-700'}`}>
-                    {isGeneratingImage ? "Designing..." : userCredits < 2 ? "Fill up credits" : "Generate Matching Image"}
+                  <span className={`text-sm font-bold ${userCredits < 3 ? 'text-slate-400' : 'text-slate-900 group-hover/btn:text-cyan-700'}`}>
+                    {isGeneratingImage ? "Designing..." : userCredits < 3 ? "Fill up credits" : "Generate Matching Image"}
                   </span>
                   
                   <p className="text-[10px] text-slate-400 mt-1 uppercase font-black tracking-widest">
-                    {userCredits < 2 ? "Requires 2 Credits" : "Costs 2 Credits"}
+                    {userCredits < 3 ? "Requires 3 Credits" : "Costs 3 Credits"}
                   </p>
                 </button>
               )}

@@ -127,6 +127,7 @@ export async function POST(req: Request) {
     const finalDescription = postPrompt 
     const cleanDescription = `Professional photography of ${finalDescription} for  ${businessName} in ${fullAddress}.`;
 
+    const IMAGE_ENGINE_MODE = process.env.IMAGE_ENGINE_MODE || "FALLBACK";
 
     let hostedUrl: string | null = null;
     let finalProvider = "UNKNOWN";
@@ -154,82 +155,94 @@ export async function POST(req: Request) {
           ---------------------------------------------------------------*/
 
 
-        // ── PROVIDER : HUGGING FACE SDK ───────────────────────────
-    // Uses your free monthly credits (~200-300 images/month on free tier)
-    if (!hostedUrl) {
-      try {
-        console.log("Trying Hugging Face SDK...");
+    // ─────────────────────────────────────────────────────────────────────────────
+    // IMAGE PROVIDER CALLER
+    // ─────────────────────────────────────────────────────────────────────────────
+    async function callImageProvider(provider: string, prompt: string): Promise<string | null> {
+
+      if (provider === "huggingface") {
+        console.log("--- Image ENGINE: HUGGING FACE (FLUX.1-schnell) ---");
         const response: any = await hf.textToImage({
           model: "black-forest-labs/FLUX.1-schnell",
-          inputs: cleanDescription,
-          parameters: {
-            num_inference_steps: 4,
-          },
+          inputs: prompt,
+          parameters: { num_inference_steps: 4 },
         });
+        const blob = typeof response === 'string'
+          ? await fetch(response).then(r => r.blob())
+          : response;
+        return await uploadToSupabase(blob, "HUGGING_FACE");
+      }
 
-        let finalBlob: Blob;
-
-        // If HF returned a string (URL or Base64), fetch it into a Blob
-        if (typeof response === 'string') {
-          console.log("HF returned a string/URL, converting to blob...");
-          const res = await fetch(response);
-          finalBlob = await res.blob();
-        } else {
-          finalBlob = response;
+      if (provider === "cloudflare") {
+        console.log("--- Image ENGINE: CLOUDFLARE (SDXL) ---");
+        const cloudflareApiUrl = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/ai/run/@cf/stabilityai/stable-diffusion-xl-base-1.0`;
+        const response = await fetch(cloudflareApiUrl, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            prompt,
+            num_inference_steps: 25,
+            guidance_scale: 7.5,
+          }),
+          signal: AbortSignal.timeout(60000),
+        });
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Cloudflare failed: ${response.status} - ${errorText}`);
         }
+        const rawBlob = await response.blob();
+        const blob = new Blob([rawBlob], { type: 'image/png' });
+        return await uploadToSupabase(blob, "CLOUDFLARE_SDXL");
+      }
 
-        hostedUrl = await uploadToSupabase(finalBlob, "HUGGING_FACE");
-        if (hostedUrl) finalProvider = "HUGGING_FACE";
-        else console.warn("HF succeeded but Supabase upload failed");
+      if (provider === "pollinations") {
+        console.log("--- Image ENGINE: POLLINATIONS (unhosted fallback) ---");
+        return buildPollinationsUrl(prompt); // returns URL directly, not uploaded
+      }
 
+      throw new Error(`Unsupported image provider: ${provider}`);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // THE ROUTER
+    // ─────────────────────────────────────────────────────────────────────────────
+    if (IMAGE_ENGINE_MODE === "TOGGLE") {
+      // DEV MODE: Use exactly what IMAGE_PROVIDER env var says
+      const providerToUse = process.env.IMAGE_PROVIDER || "huggingface";
+      console.log(`--- Image MODE: TOGGLE [Using ${providerToUse}] ---`);
+      try {
+        const result = await callImageProvider(providerToUse, cleanDescription);
+        if (result) {
+          hostedUrl = result;
+          finalProvider = providerToUse.toUpperCase();
+        }
       } catch (e) {
-        console.warn("Hugging Face SDK failed:", e);
+        console.error(`TOGGLE provider ${providerToUse} failed:`, e);
+      }
+
+    } else {
+      // PROD MODE: Fallback chain
+      console.log("--- Image MODE: FALLBACK CHAIN ---");
+      const fallbackChain = ["huggingface", "cloudflare"];
+
+      for (const provider of fallbackChain) {
+        try {
+          const result = await callImageProvider(provider, cleanDescription);
+          if (result) {
+            hostedUrl = result;
+            finalProvider = provider.toUpperCase();
+            break;
+          }
+        } catch (e) {
+          console.warn(`Image provider ${provider} failed. Moving to next...`);
+        }
       }
     }
 
-    // ── PROVIDER 2: CLOUD FLARE SDK ───────────────────────────
-    // Uses your free monthly credits (~100-300 images/month on free tier)
-    if (!hostedUrl) {
-      try {
-          console.log("Trying Cloudflare Workers AI (SDXL)...");
-          // *** MODEL ID CHANGED TO SDXL ***
-          const cloudflareApiUrl = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/ai/run/@cf/stabilityai/stable-diffusion-xl-base-1.0`;
-
-          const response = await fetch(cloudflareApiUrl, {
-              method: "POST",
-              headers: {
-                  "Authorization": `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
-                  "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                  prompt: cleanDescription,
-                  num_inference_steps: 25, // Good range for SDXL (typically 20-50)
-                  guidance_scale: 7.5,    // Standard for SDXL
-                  // SDXL on Cloudflare typically returns a PNG by default, no need for output_format
-              }),
-              signal: AbortSignal.timeout(60000), // SDXL can take up to 60s
-          });
-
-          if (!response.ok) {
-              const errorText = await response.text();
-              console.error(`Cloudflare AI (SDXL) failed response: ${errorText}`); // Log full error
-              throw new Error(`Cloudflare AI fetch failed (SDXL): ${response.status} - ${errorText}`);
-          }
-
-          // Cloudflare's SDXL model typically returns the image directly as a binary blob
-          const rawBlob = await response.blob();
-          const blob = new Blob([rawBlob], { type: 'image/png' });
-          hostedUrl = await uploadToSupabase(blob, "CLOUDFLARE_SDXL");
-          if (hostedUrl) finalProvider = "CLOUDFLARE_SDXL";
-          else console.warn("Cloudflare AI (SDXL) succeeded but Supabase upload failed");
-
-      } catch (e) {
-          console.warn("Cloudflare Workers AI (SDXL) failed:", e);
-      }
-     }
-
-    // ── 3 LAST RESORT: POLLINATIONS URL (not hosted) ─────────────
-    // Image loads in browser but won't persist reliably in library
+    // ── LAST RESORT: POLLINATIONS (unhosted) ──────────────────────────────────
     if (!hostedUrl) {
       console.error("❌ All hosted providers failed. Returning Pollinations URL directly.");
       const pollinationsUrl = buildPollinationsUrl(cleanDescription);
@@ -241,7 +254,7 @@ export async function POST(req: Request) {
       });
     }
 
-    // ── SUCCESS ────────────────────────────────────────────────
+    // ── SUCCESS ────────────────────────────────────────────────────────────────
     return NextResponse.json({
       url: hostedUrl,
       debugPrompt: cleanDescription,

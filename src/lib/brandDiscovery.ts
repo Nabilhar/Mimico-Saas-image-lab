@@ -207,11 +207,18 @@ async function analyzePhotosWithGemini(
 
   const jsonMatch = responseText.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
-    throw new Error(`[Gemini Vision] No JSON in response. Raw: ${responseText.slice(0, 300)}`);
+    throw new Error(`[Gemini Text] No JSON in response. Raw: ${responseText.slice(0, 300)}`);
   }
-
-  console.log("[Gemini Vision] Analysis complete ✅");
-  return JSON.parse(jsonMatch[0]);
+  
+  let parsed: any;
+  try {
+    parsed = JSON.parse(jsonMatch[0]);
+  } catch (parseErr) {
+    // Log the exact failure point for debugging
+    console.error(`[Gemini Text] JSON parse failed. Raw extract:`, jsonMatch[0].slice(0, 500));
+    throw new Error(`[Gemini Text] Invalid JSON returned by model: ${(parseErr as Error).message}`);
+  }
+  return parsed;
 }
 
 // ---------------------------------------------------------------------------
@@ -277,9 +284,16 @@ async function analyzeWithTextSearch(
   if (!jsonMatch) {
     throw new Error(`[Gemini Text] No JSON in response. Raw: ${responseText.slice(0, 300)}`);
   }
-
-  console.log("[Gemini Text] Fallback analysis complete ✅");
-  return JSON.parse(jsonMatch[0]);
+  
+  let parsed: any;
+  try {
+    parsed = JSON.parse(jsonMatch[0]);
+  } catch (parseErr) {
+    // Log the exact failure point for debugging
+    console.error(`[Gemini Text] JSON parse failed. Raw extract:`, jsonMatch[0].slice(0, 500));
+    throw new Error(`[Gemini Text] Invalid JSON returned by model: ${(parseErr as Error).message}`);
+  }
+  return parsed;
 }
 
 // ---------------------------------------------------------------------------
@@ -382,6 +396,15 @@ export async function discoverAndSaveBrandIdentity(
 
   } catch (saveErr) {
     console.error("--- [BACKGROUND] SAVE FAILED ---", saveErr);
+      await supabase
+      .from("profiles")
+      .update({
+        last_analyzed_business_name: businessName,
+        last_analyzed_street: address.street,
+        last_analyzed_city: address.city,
+      })
+      .eq("id", userId);
+
     throw saveErr;
   }
 }
