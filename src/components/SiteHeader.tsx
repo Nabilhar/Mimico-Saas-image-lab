@@ -1,3 +1,5 @@
+// components/SiteHeader.tsx
+
 import Link from "next/link";
 import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 
@@ -13,6 +15,7 @@ export function SiteHeader() {
         </Link>
         
         <nav className="hidden sm:flex items-center gap-6 text-sm font-medium text-slate-600">
+
           <Show when="signed-in">
               <Link href="/" className="transition hover:text-cyan-800">
                 Home
@@ -25,6 +28,11 @@ export function SiteHeader() {
                 Dashboard
               </Link>
           </Show>
+
+          <Link href="/contact" className="transition hover:text-cyan-800">
+            Contact
+          </Link>
+          
         </nav>
 
           {/* Logic for the User Avatar / Sign In button */}

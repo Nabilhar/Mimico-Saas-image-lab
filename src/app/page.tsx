@@ -624,8 +624,11 @@ We are in the office if you want to sit down and look at the actual numbers.
                 />
               </div>
 
+            
+
               {/* Structured Address Section */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Structured Address Made simle 
                 <div className="md:col-span-2">
                   <Label htmlFor="street" className="text-sm font-medium text-slate-900">
                     Street Address
@@ -667,6 +670,7 @@ We are in the office if you want to sit down and look at the actual numbers.
                     required
                   />
                 </div>
+                ------------------------------------*/}
 
                 <div>
                   <Label htmlFor="country" className="text-sm font-medium text-slate-900">
