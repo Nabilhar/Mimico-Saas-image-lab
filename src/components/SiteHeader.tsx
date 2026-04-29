@@ -7,33 +7,34 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/80 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-        <Link href="/" className="flex items-baseline gap-2">
+        <Link href="/" className="flex items-baseline gap-2 shrink-0">
           <span className="text-lg font-bold tracking-tight text-slate-900">
             Shoreline Studio
           </span>
           <span className="hidden text-sm text-slate-500 sm:inline">Toronto, ON</span>
         </Link>
-        
-        <nav className="hidden sm:flex items-center gap-6 text-sm font-medium text-slate-600">
 
+        <div className="flex items-center gap-6"> 
+
+        <nav className="hidden sm:flex items-center gap-6 text-sm font-medium text-slate-600">
           <Show when="signed-in">
               <Link href="/" className="transition hover:text-cyan-800">
                 Home
               </Link>
-          
               <Link href="/profile" className="transition hover:text-cyan-800">
                 Business Profile
               </Link>
               <Link href="/dashboard" className="transition hover:text-cyan-800">
                 Dashboard
               </Link>
-          </Show>
-
-          <Link href="/contact" className="transition hover:text-cyan-800">
-            Contact
-          </Link>
-          
+          </Show>         
         </nav>
+
+
+        {/* --- CONTACT BUTTON (Visible on ALL screen sizes, positioned to the right) --- */}
+        <Link href="/contact" className="text-sm font-medium text-slate-600 hover:text-cyan-800 transition">
+          Contact
+        </Link>
 
           {/* Logic for the User Avatar / Sign In button */}
           {/* --- CASE 1: USER IS LOGGED OUT --- */}
@@ -58,6 +59,7 @@ export function SiteHeader() {
                 <UserButton />
               </div>
             </Show>
+        </div>
       </div>
     </header>
   );
