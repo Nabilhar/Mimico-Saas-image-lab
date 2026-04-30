@@ -45,7 +45,7 @@ export function HeroSection() {
             <p>You're running a business. You don't have time to be a content creator too.</p>
             <p>We generate the post at the moment you share it.</p>
             <p>You read it, copy it, and post it.</p>
-            <p className="font-medium text-white">Get 15 free credits to try it out — No Credit Card Required.</p>
+            <p className="font-medium text-white">Get 25 free credits to try it out — No Credit Card Required.</p>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4 items-start">
