@@ -288,7 +288,7 @@ export default function ProfilePage() {
       if (creditError) {
         console.error("Credit claim error:", creditError);
       } else if (creditData?.success) {
-        toast.success("Welcome! 15 free credits have been added to your account! 🚀");
+        toast.success("Welcome! 25 free credits have been added to your account! 🚀");
       }
 
       //Update toast for the AI Phase

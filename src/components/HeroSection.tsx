@@ -53,7 +53,7 @@ export function HeroSection() {
               <div className="flex flex-col gap-2 w-full sm:w-auto">
                 <SignUpButton mode="modal" fallbackRedirectUrl="/dashboard">
                   <button className="rounded-lg bg-white hover:bg-white/90 px-8 py-3 text-lg font-semibold text-cyan-800 shadow-lg transition">
-                    Claim Your Free 15 Credits
+                    Claim Your Free 25 Credits
                   </button>
                 </SignUpButton>
                 <span className="text-sm text-white/80 font-medium px-1">
