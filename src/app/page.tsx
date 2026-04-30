@@ -681,128 +681,616 @@ We are in the office if you want to sit down and look at the actual numbers.
                       <SelectValue placeholder="Select country" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Canada">Canada 🇨🇦</SelectItem>
-                      <SelectItem value="USA">USA 🇺🇸</SelectItem>
-                      <SelectItem value="Afghanistan">Afghanistan 🇦🇫</SelectItem>
-                      <SelectItem value="Albania">Albania 🇦🇱</SelectItem>
-                      <SelectItem value="Algeria">Algeria 🇩🇿</SelectItem>
-                      <SelectItem value="Andorra">Andorra 🇦🇩</SelectItem>
-                      <SelectItem value="Angola">Angola 🇦🇴</SelectItem>
-                      <SelectItem value="Argentina">Argentina 🇦🇷</SelectItem>
-                      <SelectItem value="Armenia">Armenia 🇦🇲</SelectItem>
-                      <SelectItem value="Australia">Australia 🇦🇺</SelectItem>
-                      <SelectItem value="Austria">Austria 🇦🇹</SelectItem>
-                      <SelectItem value="Azerbaijan">Azerbaijan 🇦🇿</SelectItem>
-                      <SelectItem value="Bahamas">Bahamas 🇧🇸</SelectItem>
-                      <SelectItem value="Bahrain">Bahrain 🇧🇭</SelectItem>
-                      <SelectItem value="Bangladesh">Bangladesh 🇧🇩</SelectItem>
-                      <SelectItem value="Barbados">Barbados 🇧🇧</SelectItem>
-                      <SelectItem value="Belarus">Belarus 🇧🇾</SelectItem>
-                      <SelectItem value="Belgium">Belgium 🇧🇪</SelectItem>
-                      <SelectItem value="Belize">Belize 🇧🇿</SelectItem>
-                      <SelectItem value="Benin">Benin 🇧🇯</SelectItem>
-                      <SelectItem value="Bhutan">Bhutan 🇧🇹</SelectItem>
-                      <SelectItem value="Bolivia">Bolivia 🇧🇴</SelectItem>
-                      <SelectItem value="Bosnia and Herzegovina">Bosnia and Herzegovina 🇧🇦</SelectItem>
-                      <SelectItem value="Botswana">Botswana 🇧🇼</SelectItem>
-                      <SelectItem value="Brazil">Brazil 🇧🇷</SelectItem>
-                      <SelectItem value="Brunei">Brunei 🇧🇳</SelectItem>
-                      <SelectItem value="Bulgaria">Bulgaria 🇧🇬</SelectItem>
-                      <SelectItem value="Burkina Faso">Burkina Faso 🇧🇫</SelectItem>
-                      <SelectItem value="Burundi">Burundi 🇧🇮</SelectItem>
-                      <SelectItem value="Cambodia">Cambodia 🇰🇭</SelectItem>
-                      <SelectItem value="Cameroon">Cameroon 🇨🇲</SelectItem>
-                      <SelectItem value="Cape Verde">Cape Verde 🇨🇻</SelectItem>
-                      <SelectItem value="Central African Republic">Central African Republic 🇨🇫</SelectItem>
-                      <SelectItem value="Chad">Chad 🇹🇩</SelectItem>
-                      <SelectItem value="Chile">Chile 🇨🇱</SelectItem>
-                      <SelectItem value="China">China 🇨🇳</SelectItem>
-                      <SelectItem value="Colombia">Colombia 🇨🇴</SelectItem>
-                      <SelectItem value="Comoros">Comoros 🇰🇲</SelectItem>
-                      <SelectItem value="Congo">Congo 🇨🇬</SelectItem>
-                      <SelectItem value="Costa Rica">Costa Rica 🇨🇷</SelectItem>
-                      <SelectItem value="Croatia">Croatia 🇭🇷</SelectItem>
-                      <SelectItem value="Cuba">Cuba 🇨🇺</SelectItem>
-                      <SelectItem value="Cyprus">Cyprus 🇨🇾</SelectItem>
-                      <SelectItem value="Czech Republic">Czech Republic 🇨🇿</SelectItem>
-                      <SelectItem value="Denmark">Denmark 🇩🇰</SelectItem>
-                      <SelectItem value="Djibouti">Djibouti 🇩🇯</SelectItem>
-                      <SelectItem value="Dominica">Dominica 🇩🇲</SelectItem>
-                      <SelectItem value="Dominican Republic">Dominican Republic 🇩🇴</SelectItem>
-                      <SelectItem value="Ecuador">Ecuador 🇪🇨</SelectItem>
-                      <SelectItem value="Egypt">Egypt 🇪🇬</SelectItem>
-                      <SelectItem value="El Salvador">El Salvador 🇸🇻</SelectItem>
-                      <SelectItem value="Equatorial Guinea">Equatorial Guinea 🇬🇶</SelectItem>
-                      <SelectItem value="Eritrea">Eritrea 🇪🇷</SelectItem>
-                      <SelectItem value="Estonia">Estonia 🇪🇪</SelectItem>
-                      <SelectItem value="Eswatini">Eswatini 🇸🇿</SelectItem>
-                      <SelectItem value="Ethiopia">Ethiopia 🇪🇹</SelectItem>
-                      <SelectItem value="Fiji">Fiji 🇫🇯</SelectItem>
-                      <SelectItem value="Finland">Finland 🇫🇮</SelectItem>
-                      <SelectItem value="France">France 🇫🇷</SelectItem>
-                      <SelectItem value="Gabon">Gabon 🇬🇦</SelectItem>
-                      <SelectItem value="Gambia">Gambia 🇬🇲</SelectItem>
-                      <SelectItem value="Georgia">Georgia 🇬🇪</SelectItem>
-                      <SelectItem value="Germany">Germany 🇩🇪</SelectItem>
-                      <SelectItem value="Ghana">Ghana 🇬🇭</SelectItem>
-                      <SelectItem value="Greece">Greece 🇬🇷</SelectItem>
-                      <SelectItem value="Grenada">Grenada 🇬🇩</SelectItem>
-                      <SelectItem value="Guatemala">Guatemala 🇬🇹</SelectItem>
-                      <SelectItem value="Guinea">Guinea 🇬🇳</SelectItem>
-                      <SelectItem value="Guyana">Guyana 🇬🇾</SelectItem>
-                      <SelectItem value="Haiti">Haiti 🇭🇹</SelectItem>
-                      <SelectItem value="Honduras">Honduras 🇭🇳</SelectItem>
-                      <SelectItem value="Hungary">Hungary 🇭🇺</SelectItem>
-                      <SelectItem value="Iceland">Iceland 🇮🇸</SelectItem>
-                      <SelectItem value="India">India 🇮🇳</SelectItem>
-                      <SelectItem value="Indonesia">Indonesia 🇮🇩</SelectItem>
-                      <SelectItem value="Iran">Iran 🇮🇷</SelectItem>
-                      <SelectItem value="Iraq">Iraq 🇮🇶</SelectItem>
-                      <SelectItem value="Ireland">Ireland 🇮🇪</SelectItem>
-                      <SelectItem value="Israel">Israel 🇮🇱</SelectItem>
-                      <SelectItem value="Italy">Italy 🇮🇹</SelectItem>
-                      <SelectItem value="Jamaica">Jamaica 🇯🇲</SelectItem>
-                      <SelectItem value="Japan">Japan 🇯🇵</SelectItem>
-                      <SelectItem value="Jordan">Jordan 🇯🇴</SelectItem>
-                      <SelectItem value="Kazakhstan">Kazakhstan 🇰🇿</SelectItem>
-                      <SelectItem value="Kenya">Kenya 🇰🇪</SelectItem>
-                      <SelectItem value="Korea, South">South Korea 🇰🇷</SelectItem>
-                      <SelectItem value="Kuwait">Kuwait 🇰🇼</SelectItem>
-                      <SelectItem value="Latvia">Latvia 🇱🇻</SelectItem>
-                      <SelectItem value="Lebanon">Lebanon 🇱🇧</SelectItem>
-                      <SelectItem value="Libya">Libya 🇱🇾</SelectItem>
-                      <SelectItem value="Lithuania">Lithuania 🇱🇹</SelectItem>
-                      <SelectItem value="Luxembourg">Luxembourg 🇱🇺</SelectItem>
-                      <SelectItem value="Malaysia">Malaysia 🇲🇾</SelectItem>
-                      <SelectItem value="Maldives">Maldives 🇲🇻</SelectItem>
-                      <SelectItem value="Mexico">Mexico 🇲🇽</SelectItem>
-                      <SelectItem value="Monaco">Monaco 🇲🇨</SelectItem>
-                      <SelectItem value="Morocco">Morocco 🇲🇦</SelectItem>
-                      <SelectItem value="Netherlands">Netherlands 🇳🇱</SelectItem>
-                      <SelectItem value="New Zealand">New Zealand 🇳🇿</SelectItem>
-                      <SelectItem value="Nigeria">Nigeria 🇳🇬</SelectItem>
-                      <SelectItem value="Norway">Norway 🇳🇴</SelectItem>
-                      <SelectItem value="Pakistan">Pakistan 🇵🇰</SelectItem>
-                      <SelectItem value="Peru">Peru 🇵🇪</SelectItem>
-                      <SelectItem value="Philippines">Philippines 🇵🇭</SelectItem>
-                      <SelectItem value="Poland">Poland 🇵🇱</SelectItem>
-                      <SelectItem value="Portugal">Portugal 🇵🇹</SelectItem>
-                      <SelectItem value="Qatar">Qatar 🇶🇦</SelectItem>
-                      <SelectItem value="Romania">Romania 🇷🇴</SelectItem>
-                      <SelectItem value="Russia">Russia 🇷🇺</SelectItem>
-                      <SelectItem value="Saudi Arabia">Saudi Arabia 🇸🇦</SelectItem>
-                      <SelectItem value="Singapore">Singapore 🇸🇬</SelectItem>
-                      <SelectItem value="South Africa">South Africa 🇿🇦</SelectItem>
-                      <SelectItem value="Spain">Spain 🇪🇸</SelectItem>
-                      <SelectItem value="Sweden">Sweden 🇸🇪</SelectItem>
-                      <SelectItem value="Switzerland">Switzerland 🇨🇭</SelectItem>
-                      <SelectItem value="Thailand">Thailand 🇹🇭</SelectItem>
-                      <SelectItem value="Turkey">Turkey 🇹🇷</SelectItem>
-                      <SelectItem value="Ukraine">Ukraine 🇺🇦</SelectItem>
-                      <SelectItem value="United Arab Emirates">United Arab Emirates 🇦🇪</SelectItem>
-                      <SelectItem value="United Kingdom">United Kingdom 🇬🇧</SelectItem>
-                      <SelectItem value="Vietnam">Vietnam 🇻🇳</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
+                      <SelectItem value="Canada">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-ca"></span> Canada
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="USA">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-us"></span> USA
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Afghanistan">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-af"></span> Afghanistan
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Albania">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-al"></span> Albania
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Algeria">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-dz"></span> Algeria
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Andorra">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-ad"></span> Andorra
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Angola">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-ao"></span> Angola
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Argentina">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-ar"></span> Argentina
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Armenia">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-am"></span> Armenia
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Australia">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-au"></span> Australia
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Austria">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-at"></span> Austria
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Azerbaijan">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-az"></span> Azerbaijan
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Bahamas">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-bs"></span> Bahamas
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Bahrain">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-bh"></span> Bahrain
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Bangladesh">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-bd"></span> Bangladesh
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Barbados">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-bb"></span> Barbados
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Belarus">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-by"></span> Belarus
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Belgium">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-be"></span> Belgium
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Belize">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-bz"></span> Belize
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Benin">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-bj"></span> Benin
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Bhutan">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-bt"></span> Bhutan
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Bolivia">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-bo"></span> Bolivia
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Bosnia and Herzegovina">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-ba"></span> Bosnia and Herzegovina
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Botswana">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-bw"></span> Botswana
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Brazil">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-br"></span> Brazil
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Brunei">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-bn"></span> Brunei
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Bulgaria">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-bg"></span> Bulgaria
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Burkina Faso">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-bf"></span> Burkina Faso
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Burundi">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-bi"></span> Burundi
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Cambodia">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-kh"></span> Cambodia
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Cameroon">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-cm"></span> Cameroon
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Cape Verde">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-cv"></span> Cape Verde
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Central African Republic">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-cf"></span> Central African Republic
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Chad">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-td"></span> Chad
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Chile">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-cl"></span> Chile
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="China">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-cn"></span> China
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Colombia">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-co"></span> Colombia
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Comoros">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-km"></span> Comoros
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Congo">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-cg"></span> Congo
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Costa Rica">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-cr"></span> Costa Rica
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Croatia">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-hr"></span> Croatia
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Cuba">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-cu"></span> Cuba
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Cyprus">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-cy"></span> Cyprus
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Czech Republic">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-cz"></span> Czech Republic
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Denmark">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-dk"></span> Denmark
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Djibouti">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-dj"></span> Djibouti
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Dominica">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-dm"></span> Dominica
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Dominican Republic">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-do"></span> Dominican Republic
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Ecuador">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-ec"></span> Ecuador
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Egypt">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-eg"></span> Egypt
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="El Salvador">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-sv"></span> El Salvador
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Equatorial Guinea">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-gq"></span> Equatorial Guinea
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Eritrea">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-er"></span> Eritrea
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Estonia">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-ee"></span> Estonia
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Eswatini">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-sz"></span> Eswatini
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Ethiopia">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-et"></span> Ethiopia
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Fiji">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-fj"></span> Fiji
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Finland">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-fi"></span> Finland
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="France">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-fr"></span> France
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Gabon">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-ga"></span> Gabon
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Gambia">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-gm"></span> Gambia
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Georgia">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-ge"></span> Georgia
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Germany">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-de"></span> Germany
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Ghana">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-gh"></span> Ghana
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Greece">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-gr"></span> Greece
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Grenada">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-gd"></span> Grenada
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Guatemala">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-gt"></span> Guatemala
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Guinea">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-gn"></span> Guinea
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Guyana">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-gy"></span> Guyana
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Haiti">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-ht"></span> Haiti
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Honduras">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-hn"></span> Honduras
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Hungary">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-hu"></span> Hungary
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Iceland">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-is"></span> Iceland
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="India">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-in"></span> India
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Indonesia">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-id"></span> Indonesia
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Iran">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-ir"></span> Iran
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Iraq">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-iq"></span> Iraq
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Ireland">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-ie"></span> Ireland
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Israel">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-il"></span> Israel
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Italy">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-it"></span> Italy
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Jamaica">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-jm"></span> Jamaica
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Japan">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-jp"></span> Japan
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Jordan">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-jo"></span> Jordan
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Kazakhstan">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-kz"></span> Kazakhstan
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Kenya">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-ke"></span> Kenya
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Korea, South">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-kr"></span> South Korea
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Kuwait">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-kw"></span> Kuwait
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Latvia">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-lv"></span> Latvia
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Lebanon">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-lb"></span> Lebanon
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Libya">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-ly"></span> Libya
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Lithuania">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-lt"></span> Lithuania
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Luxembourg">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-lu"></span> Luxembourg
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Malaysia">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-my"></span> Malaysia
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Maldives">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-mv"></span> Maldives
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Mexico">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-mx"></span> Mexico
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Monaco">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-mc"></span> Monaco
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Morocco">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-ma"></span> Morocco
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Netherlands">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-nl"></span> Netherlands
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="New Zealand">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-nz"></span> New Zealand
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Nigeria">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-ng"></span> Nigeria
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Norway">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-no"></span> Norway
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Pakistan">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-pk"></span> Pakistan
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Peru">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-pe"></span> Peru
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Philippines">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-ph"></span> Philippines
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Poland">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-pl"></span> Poland
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Portugal">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-pt"></span> Portugal
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Qatar">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-qa"></span> Qatar
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Romania">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-ro"></span> Romania
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Russia">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-ru"></span> Russia
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Saudi Arabia">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-sa"></span> Saudi Arabia
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Singapore">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-sg"></span> Singapore
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="South Africa">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-za"></span> South Africa
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Spain">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-es"></span> Spain
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Sweden">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-se"></span> Sweden
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Switzerland">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-ch"></span> Switzerland
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Thailand">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-th"></span> Thailand
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Turkey">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-tr"></span> Turkey
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Ukraine">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-ua"></span> Ukraine
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="United Arab Emirates">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-ae"></span> United Arab Emirates
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="United Kingdom">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-gb"></span> United Kingdom
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Vietnam">
+                        <span className="flex items-center gap-2">
+                          <span className="fi fi-vn"></span> Vietnam
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Other">
+                        <span className="flex items-center gap-2">
+                          Other
+                        </span>
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
