@@ -19,6 +19,18 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
+// NEW: Initialize DeepInfra client (using Groq SDK's OpenAI-compatible interface)
+const deepinfraClient = new Groq({
+  apiKey: process.env.DEEPINFRA_API_KEY,
+  baseURL: "https://api.deepinfra.com/v1/openai", // DeepInfra's OpenAI-compatible endpoint
+});
+
+// NEW: Initialize OpenRouter client (using Groq SDK's OpenAI-compatible interface)
+const openrouterClient = new Groq({
+  apiKey: process.env.OPENROUTER_API_KEY,
+  baseURL: "https://openrouter.ai/api/v1", // OpenRouter's OpenAI-compatible endpoint
+});
+
 // 2. Initialize Gemini (The Original Engine)
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 const supabase = createClient(
@@ -98,6 +110,113 @@ async function callAIProvider(provider: string, finalPrompt: string, currentTime
     console.log("--- GROQ CONTENT:", groqContent);
     return groqContent || "";
   } 
+
+    // ───────────────────────────────────────────────────────────────────────────
+  // NEW CLAUDE PROVIDER
+  // ───────────────────────────────────────────────────────────────────────────
+
+  if (provider === "anthropic") {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": process.env.ANTHROPIC_API_KEY!,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 3000,
+        messages: [
+          { role: "user", content: finalPrompt }
+        ],
+        system: "Output only what is requested. No preamble.",
+      }),
+    });
+  
+    const raw = await response.text();
+    const data = JSON.parse(raw);
+    if (data.error) throw new Error(`Anthropic error: ${data.error.message}`);
+    
+    const content = data.content[0]?.text;
+    console.log("--- ANTHROPIC FINISH REASON:", data.stop_reason);
+    return content || "";
+  }
+
+    // ───────────────────────────────────────────────────────────────────────────
+  // NEW DEEPINFRA PROVIDER
+  // ───────────────────────────────────────────────────────────────────────────
+  if (provider === "deepinfra") {
+    console.log(`--- Shoreline ENGINE: ROUTING TO DEEPINFRA (gpt-oss-120b) ---`);
+    
+    const response = await fetch("https://api.deepinfra.com/v1/openai/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${process.env.DEEPINFRA_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "openai/gpt-oss-120b",
+        messages: [
+          { role: "system", content: "Output only what is requested. No preamble." },
+          { role: "user", content: finalPrompt }
+        ],
+        temperature: 0.9,
+        max_tokens: 3000,
+      }),
+    });
+  
+    const data = await response.json();
+    console.log("--- DEEPINFRA FINISH REASON:", data.choices[0]?.finish_reason);
+    const content = data.choices[0]?.message?.content;
+    console.log("--- DEEPINFRA CONTENT:", content);
+    return content || "";
+  }
+
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // NEW OPENROUTER PROVIDER
+  // ───────────────────────────────────────────────────────────────────────────
+  if (provider === "openrouter") {
+    console.log(`--- Shoreline ENGINE: ROUTING TO OPENROUTER ---`);
+    console.log(`--- PROMPT LENGTH: ${finalPrompt.length} characters, ~${Math.round(finalPrompt.length / 4)} tokens ---`);
+  
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        "HTTP-Referer": "https://shorlinestudio.ca", // OpenRouter requires this
+        "X-Title": "Shoreline",                   // Optional but recommended
+      },
+      body: JSON.stringify({
+        model: "anthropic/claude-haiku-4.5",
+        messages: [
+          { role: "system", content: "Output only what is requested. No preamble." },
+          { role: "user", content: finalPrompt }
+        ],
+        temperature: 0.9,
+        max_tokens: 5000,
+      }),
+    });
+
+      // ADD THESE TWO LINES BEFORE PARSING
+      const raw = await response.text();
+      console.log("--- OPENROUTER RAW RESPONSE:", raw);
+
+      const data = JSON.parse(raw);  // ✅ parse from the text we already read
+
+      if (data.error) {
+        console.error("--- OPENROUTER API ERROR:", data.error.message);
+        throw new Error(`OpenRouter error: ${data.error.message}`);
+      }
+
+      const reasoningTokens = data.usage?.completion_tokens_details?.reasoning_tokens;
+      console.log(`--- OPENROUTER REASONING TOKENS: ${reasoningTokens} ---`);
+      const content = data.choices[0]?.message?.content;
+      console.log("--- OPENROUTER FINISH REASON:", data.choices[0]?.finish_reason);
+      console.log("--- OPENROUTER CONTENT:", content);
+      return content || "";
+      }
   
   if (provider === "gemma") {
     console.log("--- Shoreline ENGINE: ROUTING TO GEMMA 4 (26B MoE) ---");
@@ -291,7 +410,7 @@ function buildPrompt(
       4. Let season, time, and weather colour the language — not override the craft truth.
         ${currentTime} | ${currentWeather ? `${currentWeather} — one grounded moment only.` : ""}
 
-      5. Write the post. Add 3–4 hashtags.
+      5. Write the post. Add 3-4 hashtags.
 
       [POST_SPECIFICS]:
       Type: ${postType}
@@ -541,7 +660,7 @@ export async function POST(req: Request) {
     } else {
       // LAB/PRODUCTION MODE: Robust Fallback Chain
       console.log("--- Shoreline MODE: FALLBACK CHAIN ---");
-      const fallbackChain = ["groq", "gemini", "gemma"];
+      const fallbackChain = ["anthropic", "openrouter", "deepinfra"];
       let success = false;
 
       for (const provider of fallbackChain) {

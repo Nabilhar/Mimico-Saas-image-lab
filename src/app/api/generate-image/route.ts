@@ -203,6 +203,86 @@ export async function POST(req: Request) {
         return buildPollinationsUrl(prompt); // returns URL directly, not uploaded
       }
 
+      if (provider === "deepinfra") {
+        console.log("--- Image ENGINE: DEEPINFRA (FLUX-2-pro) ---");
+      
+        const response = await fetch("https://api.deepinfra.com/v1/openai/images/generations", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${process.env.DEEPINFRA_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: "black-forest-labs/FLUX-2-pro", // Model name goes inside the body for this endpoint
+            prompt: prompt,
+            n: 1,
+            size: "1024x1024",
+            response_format: "b64_json", // This ensures you get base64 back
+          }),
+          signal: AbortSignal.timeout(60000),
+        });
+      
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`DeepInfra image failed: ${response.status} - ${errorText}`);
+        }
+      
+        const data = await response.json();
+        
+        // OpenAI format: data[0].b64_json
+        const base64 = data.data?.[0]?.b64_json;
+        
+        if (!base64) throw new Error("DeepInfra returned no image data");
+      
+        const imageBuffer = Buffer.from(base64, "base64");
+        const blob = new Blob([imageBuffer], { type: "image/png" });
+        return await uploadToSupabase(blob, "DEEPINFRA");
+      }
+
+      if (provider === "openrouter") {
+        console.log("--- Image ENGINE: OPENROUTER (FLUX.2 Pro) ---");
+      
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+            "HTTP-Referer": "https://shorlinestudio.ca",
+            "X-Title": "Shoreline",
+          },
+          body: JSON.stringify({
+            model: "black-forest-labs/flux.2-pro", // note lowercase from their SDK
+            messages: [{ role: "user", content: prompt }],
+            modalities: ["image"],
+          }),
+          signal: AbortSignal.timeout(60000),
+        });
+      
+        const raw = await response.text();
+        console.log("--- OPENROUTER FLUX RAW RESPONSE:", raw);
+      
+        const data = JSON.parse(raw);
+        console.log("--- OPENROUTER FLUX RAW RESPONSE LENGTH:", raw.length, "chars");
+      
+        // Extract image URL from their message.images structure
+        const imageData = data.choices[0]?.message?.images?.[0]?.image_url?.url;
+        if (!imageData) throw new Error("OpenRouter FLUX returned no image data");
+        
+        let blob: Blob;
+        
+        if (imageData.startsWith("data:")) {
+          // Base64 response — decode directly
+          const base64 = imageData.replace(/^data:image\/\w+;base64,/, "");
+          const imageBuffer = Buffer.from(base64, "base64");
+          blob = new Blob([imageBuffer], { type: "image/png" });
+        } else {
+          // URL response — fetch it
+          const imageRes = await fetch(imageData);
+          blob = await imageRes.blob();
+        }
+        return await uploadToSupabase(blob, "OPENROUTER_FLUX2PRO"); // ← was missing
+      }
+
       throw new Error(`Unsupported image provider: ${provider}`);
     }
 
@@ -226,7 +306,7 @@ export async function POST(req: Request) {
     } else {
       // PROD MODE: Fallback chain
       console.log("--- Image MODE: FALLBACK CHAIN ---");
-      const fallbackChain = ["huggingface", "cloudflare"];
+      const fallbackChain = ["deepinfra", "openrouter", "huggingface", "cloudflare"];
 
       for (const provider of fallbackChain) {
         try {
