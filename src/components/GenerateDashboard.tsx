@@ -690,9 +690,10 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
             {(business_name || 'B').charAt(0).toUpperCase()}
           </div>
           <div>
-            <p className="font-bold text-slate-900 text-sm leading-tight">{business_name}</p>
+            <p className="font-bold text-slate-900 text-sm leading-tight">
+            {businessData?.business_name || business_name}</p>
             <p className="text-[10px] text-slate-500 font-medium tracking-tight mt-0.5">
-              Just now • {city} 🌐
+              Just now • {businessData?.city || city} 🌐
             </p>
           </div>
         </div>
