@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import PostActions from "@/components/PostActions";
 import { SavedImage } from "@/components/SavedImage";
 
-export interface Post { id: string; content: string; created_at: string; business_id: string; image_url?: string; }
+export interface Post { id: string; content: string; created_at: string; business_id: string; image_url?: string; business_name?: string; location_snapshot?: string; }
 interface BusinessData { id: string; business_name: string; street: string; city: string; province_state: string; country: string; postal_code: string; category: string; niche: string; voice: string; credits: number; history: Post[]; }
 
 export default function DashboardPage() {
@@ -104,6 +104,12 @@ export default function DashboardPage() {
     if (!user?.id || !businessData || !supabase) return;
   
     const cost = 2 + (imageUrl ? 3 : 0);
+
+    // Snapshot at save time
+    const locationSnapshot = [businessData.street, businessData.city, businessData.postal_code]
+    .filter(Boolean)
+    .join(", ");
+
   
     try {
       const { data: rpcResult, error: rpcError } = await supabase
@@ -111,7 +117,9 @@ export default function DashboardPage() {
           p_user_id: user.id,
           p_content: newContent,
           p_image_url: imageUrl || '',
-          p_amount: cost
+          p_amount: cost,
+          p_business_name: businessData.business_name,     
+          p_location_snapshot: locationSnapshot  
         });
   
       if (rpcError || !rpcResult[0]?.success) {
@@ -235,23 +243,20 @@ export default function DashboardPage() {
                 <div className="p-4 flex items-center gap-3">
                   {/* Avatar circle */}
                   <div className="w-10 h-10 rounded-full bg-cyan-800 flex items-center justify-center text-white font-bold text-lg shrink-0">
-                    {businessData?.business_name?.[0]?.toUpperCase() || 'Q'}
+                  {(post.business_name?.[0] || businessData?.business_name?.[0])?.toUpperCase() || 'Q'}
                   </div>
                 
                   {/* Container for Name and Location/Date row */}
                   <div className="flex flex-col flex-1 min-w-0">
                     <span className="font-bold text-slate-900 text-sm leading-tight truncate">
-                      {businessData?.business_name || 'Your Business'}
+                    {post.business_name || businessData?.business_name || 'Your Business'}
                     </span>
 
                   {/* Row for Location and Date */}
                   <div className="flex items-center justify-between gap-2 mt-1 w-full">
                     <span className="text-[10px] text-slate-500 font-medium truncate max-w-[70%]">
-                      {businessData 
-                        ? [businessData.street, businessData.city, businessData.postal_code]
-                            .filter(Boolean)
-                            .join(", ") 
-                        : "Your location"}
+                    {post?.location_snapshot || [businessData?.street, businessData?.city, businessData?.postal_code]
+                     .filter(Boolean).join(", ") || "Your location"}
                     </span>
                   
                     <span className="shrink-0 text-[10px] font-black text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded uppercase tracking-widest">
@@ -264,7 +269,7 @@ export default function DashboardPage() {
                       }) : 'Just now'}
                     </span>
                   </div>
-                </div> {/* <── THIS WAS THE MISSING CLOSING TAG */}
+                </div> 
               </div>
             
                 {/* ── CAPTION (above image, like Facebook) ── */}
