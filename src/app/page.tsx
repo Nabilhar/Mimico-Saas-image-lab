@@ -22,6 +22,7 @@ import { CheckCircle, Zap, MapPin, Users, History, Watch, Timer, Radio, Clock, }
 import toast from "react-hot-toast";
 import { HeroSection } from "@/components/HeroSection";
 import { GallerySection } from "@/components/GallerySection";
+import "flag-icons/css/flag-icons.min.css";
 
 /**
  * Landing Page for Shoreline Content AI
