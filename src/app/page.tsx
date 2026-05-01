@@ -51,7 +51,7 @@ export default function Home() {
   const handleWaitlistSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     // Updated validation to check all new fields
-    if (!email || !businessName || !street || !city || !province_state || !postalCode) {
+    if (!email || !businessName || !country || !postalCode) {
       toast.error("Please fill in all fields");
       return;
     }
