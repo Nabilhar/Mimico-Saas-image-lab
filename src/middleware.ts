@@ -3,11 +3,12 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 // Added '/' and '/api/generate' to the public list
 const isPublicRoute = createRouteMatcher([
   '/', 
+  '/contact(.*)',  
   '/sign-in(.*)', 
   '/sign-up(.*)', 
   '/api/generate(.*)',
   '/api/waitlist(.*)', 
-
+  '/api/contact(.*)', 
 ]);
 
 export default clerkMiddleware(async (auth, request) => {
