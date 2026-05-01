@@ -47,6 +47,7 @@
   export const POST_TYPE_CTA_OVERRIDE: Partial<Record<string, string>> = {
     "Promotion / offer": `CTA OVERRIDE: Only action is "show this post on phone upon arrival". Phrase warmly (e.g., "Just show this post to the team"). No links/DMs.`,
     "Local event / news": `CTA OVERRIDE: Only action is "stop by on way to/from the event". No links/booking.`,
+    "Community moment": `CTA OVERRIDE: Invitation only. No offer, no urgency, no link, no booking. The close is an open door — warm and unhurried. One sentence maximum.`,
   };
 
 
@@ -299,6 +300,58 @@
       The event is context, not the story. One line maximum.
     Voice note: The [TONE] definition above governs personality.
     AIDA governs structure only.`,
+
+    // ── COMMUNITY MOMENT ─────────────────────────────────────────────────────
+    // This post type bypasses the framework matrix entirely.
+    // All three keys route to the same fixed Scene → Meaning → Invitation structure.
+
+     "PAS_Community moment": `
+    Scene: Open with one specific, time-stamped, observable moment in or around the business.
+      Not "families gather here" — "Sunday at noon, the four-top by the window."
+      Sensory and particular. Day, time, detail. No sentiment stated — only shown.
+      People are doing something specific: laughing, reaching across the table, 
+      lingering over a second cup. Name the action, not the feeling.
+    Meaning: One sentence only. The owner notices something true about why 
+      this moment happens here and not somewhere else.
+      The business earns its place — not by selling, but by being the reason the scene exists.
+      No craft knowledge. No product features. Just the quiet truth of why people return.
+    Invitation: Soft, open, physically possible. "Come as you are" energy.
+      No links, no urgency, no offer, no CTA pressure.
+      The reader should feel welcome, not persuaded.
+    Voice note: The [TONE] definition above governs personality.
+    Structure: Scene → Meaning → Invitation. Fixed. No framework label needed.`,
+
+     "BAB_Community moment": `
+    Scene: Open with one specific, time-stamped, observable moment in or around the business.
+      Not "families gather here" — "Sunday at noon, the four-top by the window."
+      Sensory and particular. Day, time, detail. No sentiment stated — only shown.
+      People are doing something specific: laughing, reaching across the table, 
+      lingering over a second cup. Name the action, not the feeling.
+    Meaning: One sentence only. The owner notices something true about why 
+      this moment happens here and not somewhere else.
+      The business earns its place — not by selling, but by being the reason the scene exists.
+      No craft knowledge. No product features. Just the quiet truth of why people return.
+    Invitation: Soft, open, physically possible. "Come as you are" energy.
+      No links, no urgency, no offer, no CTA pressure.
+      The reader should feel welcome, not persuaded.
+    Voice note: The [TONE] definition above governs personality.
+    Structure: Scene → Meaning → Invitation. Fixed. No framework label needed.`,
+
+     "AIDA_Community moment": `
+    Scene: Open with one specific, time-stamped, observable moment in or around the business.
+      Not "families gather here" — "Sunday at noon, the four-top by the window."
+      Sensory and particular. Day, time, detail. No sentiment stated — only shown.
+      People are doing something specific: laughing, reaching across the table, 
+      lingering over a second cup. Name the action, not the feeling.
+    Meaning: One sentence only. The owner notices something true about why 
+      this moment happens here and not somewhere else.
+      The business earns its place — not by selling, but by being the reason the scene exists.
+      No craft knowledge. No product features. Just the quiet truth of why people return.
+    Invitation: Soft, open, physically possible. "Come as you are" energy.
+      No links, no urgency, no offer, no CTA pressure.
+      The reader should feel welcome, not persuaded.
+    Voice note: The [TONE] definition above governs personality.
+    Structure: Scene → Meaning → Invitation. Fixed. No framework label needed.`,
    };
 
    export const TIP_MODE: Partial<Record<string, "service" | "neighbourhood">> = {
@@ -340,6 +393,9 @@
     "AIDA_Behind the Scenes": `Visual: Desire-building detail of work. Vibe: Intimate, revealing.`,
     "AIDA_Promotion": `Visual: Attention-grabbing offer detail. Vibe: Compelling, warm.`,
     "AIDA_Local Event": `Visual: Attention-grabbing event detail. Vibe: Timely, community-connected.`,
+    "PAS_Community moment": `Visual: People in a genuine scene of connection. Vibe: Warm, belonging, unhurried.`,
+    "BAB_Community moment": `Visual: People in a genuine scene of connection. Vibe: Warm, belonging, unhurried.`,
+    "AIDA_Community moment": `Visual: People in a genuine scene of connection. Vibe: Warm, belonging, unhurried.`,
   };
 
   export const getSeason = (month: string) => {
@@ -444,6 +500,7 @@
       "Trades & Industrial":    "Emergency winterproofing, snow removal. Pain: storm damage, frozen equipment.",
       "Pets":                   "Indoor pet care, winter walks. Pain: cold paws, dry skin, cabin fever.",
       "Technology":             "Year-end upgrades, remote work support. Pain: slow systems, holiday downtime.",
+      "Community moment":       "Warmth shared indoors. Scene: groups gathered close, hot drinks, the particular comfort of familiar faces in cold weather.",
     },
     "Spring": {
       "Health & Wellness":      "Renewal, outdoor practice, fresh air. Pain: winter stiffness, allergies.",
@@ -460,6 +517,7 @@
       "Trades & Industrial":    "Landscaping, exterior repairs, spring prep. Pain: backlog, thaw damage.",
       "Pets":                   "Outdoor walks, spring grooming, shedding season. Pain: mud, allergies.",
       "Technology":             "Spring audits, system refresh, Q2 planning. Pain: outdated setups, slow starts.",
+      "Community moment":       "Returning energy, doors propped open, the first patio days. Scene: people choosing to stay longer than they planned.",
     },
     "Summer": {
       "Health & Wellness":      "Vitality, hydration, outdoor activity. Pain: heat exhaustion, sun damage.",
@@ -476,6 +534,7 @@
       "Trades & Industrial":    "Pool service, irrigation, exterior projects. Pain: heat, peak demand.",
       "Pets":                   "Hydration, outdoor safety, grooming. Pain: overheating, paw burns.",
       "Technology":             "Summer downtime audits, backup systems. Pain: skeleton crews, system strain.",
+      "Community moment":       "Unhurried and social. Scene: groups that spill past their original plans — one more round, one more hour, the long goodbye.",
     },
     "Fall": {
       "Health & Wellness":      "Immunity, routine reset, cozy wellness. Pain: seasonal shift, getting back on track.",
@@ -492,6 +551,7 @@
       "Trades & Industrial":    "Gutter clearing, winterization, pre-snow prep. Pain: backlog, weather windows.",
       "Pets":                   "Fall grooming, routine reset, outdoor safety. Pain: mud, ticks, shorter walks.",
       "Technology":             "Q4 upgrades, year-end audits, holiday prep. Pain: system strain, budget cycles.",
+      "Community moment":       "The retreat back inside. Scene: the familiar table reclaimed, the seasonal ritual of returning regulars.",
     },
   };
 

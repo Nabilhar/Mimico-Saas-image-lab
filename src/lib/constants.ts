@@ -19,7 +19,7 @@ export const NICHE_DATA: Record<string, string[]> = {
 
 export const CATEGORIES = Object.keys(NICHE_DATA);
 export const VOICES = ["Authoritative & Precise", "Warm & Conversational", "Bold & Direct", "Clean & Understated"] as const;
-export const POST_TYPES = ["5 Tips", "Promotion / offer", "Local event / news", "Myth-busting", "Behind the scenes"] as const;
+export const POST_TYPES = ["5 Tips", "Promotion / offer", "Local event / news", "Myth-busting", "Behind the scenes", "Community moment"] as const;
 
 export interface ColorTheme {
   primary: string;      // e.g., "#D4A574" or "Terracotta"

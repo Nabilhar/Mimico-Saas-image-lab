@@ -490,9 +490,10 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
               >
                 <option value="Behind the scenes">Behind the scenes</option>
                 <option value="Myth-busting">Myth-busting</option>
+                <option value="5 Tips">5 Tips</option>
                 <option value="Promotion / offer">Promotion / offer</option>
                 <option value="Local event / news">Local event / news</option>
-                <option value="5 Tips">5 Tips</option>
+                <option value="Community moment">Community moment</option>
                 
               </select>
             </div>

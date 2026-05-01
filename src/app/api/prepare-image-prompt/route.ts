@@ -57,7 +57,10 @@ const POST_TYPE_VISUAL_INTENT: Partial<Record<string, string>> = {
     "This image supports a myth correction. The visual job is 'truth revealed' — the hero should be the real thing, not the assumed thing. Precise and authoritative. No warmth padding. The image should make the viewer feel they're seeing something they got wrong.",
   "5 Tips":
     "This image supports educational content. The visual job is 'craft knowledge made visible' — one specific detail that embodies the tips. Not generic. Specific enough that it could only illustrate this post.",
-};
+  "Community moment":
+    "This image supports a community moment post. The visual job is 'belonging' — real people in a genuine scene of enjoyment or connection, with the product or space as context not subject. Medium-to-wide environmental composition. No posed shots, no direct camera eye contact. The viewer should feel they are witnessing something worth being part of. People are the hero. The product or space is in the scene but never the subject.",
+
+  };
 
 // Extract and store composition type when saving the prompt
 const detectComposition = (prompt: string): string => {

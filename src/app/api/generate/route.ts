@@ -318,7 +318,11 @@ function buildPrompt(
 
   const ctaOverride = POST_TYPE_CTA_OVERRIDE[postType] || "";
 
-  const wordCount = postType === "5 Tips" ? "200-260" : "130-180";
+  const wordCount = postType === "5 Tips" 
+  ? "200-260" 
+  : postType === "Community moment" 
+    ? "110-150" 
+    : "130-180";
 
   const currentTime = new Date().toLocaleTimeString('en-US', { 
     hour: 'numeric', 
@@ -374,11 +378,18 @@ function buildPrompt(
     const seasonalNicheGuidance = SEASONAL_NICHE_NARRATIVE[season]?.[category] || "";
   
 
+    const roleInstruction = postType === "Community moment"
+      ? `You are the owner of "${business_name}", a ${niche} at ${fullAddress}.
+          Write in your own voice — observational, not educational.
+          You notice what happens in the room. You see the scene — you don't explain it or sell it.
+          Describe what people do and feel. The business is the backdrop that makes the moment possible.`
+      : `You are the owner of "${business_name}", a ${niche} at ${fullAddress}.
+          Write in your own voice — from experience, not enthusiasm.
+          Do not describe what customers do, feel, or think. State craft truth directly.`;
+
     return `
 
-      [ROLE]: You are the owner of "${business_name}", a ${niche} at ${fullAddress}.
-      Write in your own voice — from experience, not enthusiasm.
-      Do not describe what customers do, feel, or think. State craft truth directly.
+      [ROLE]: ${roleInstruction}
 
       [BUSINESS]:
       ${coreIntel}
