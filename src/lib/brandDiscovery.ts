@@ -65,9 +65,9 @@ function stripCitations(value: string | null | undefined): string | null {
 // THE LIGHT READER (Fast Path)
 // ---------------------------------------------------------------------------
 
-export async function getBrandIdentity(userId: string): Promise<BusinessIdentity> {
+export async function getBrandIdentity(businessId: string): Promise<BusinessIdentity> {
   const { data, error } = await supabase
-    .from('profiles')
+    .from('businesses')
     .select(`
       color_theme,
       business_visuals,
@@ -82,7 +82,7 @@ export async function getBrandIdentity(userId: string): Promise<BusinessIdentity
       last_analyzed_street,
       last_analyzed_city
     `)
-    .eq('id', userId)
+    .eq('id', businessId)
     .maybeSingle();
 
   if (error) {
@@ -756,7 +756,7 @@ function mergeDiscoveryData(
 // ---------------------------------------------------------------------------
 
 async function saveDiscoveryData(
-  userId: string,
+  businessId: string,
   businessName: string,
   address: {
     street: string;
@@ -816,20 +816,20 @@ async function saveDiscoveryData(
   };
 
   const { error: updateError } = await supabase
-    .from("profiles")
+    .from("businesses")
     .update(updatePayload)
-    .eq("id", userId);
+    .eq("id", businessId);
 
   if (updateError) {
     // Save metadata even if full update fails
     await supabase
-      .from("profiles")
+      .from("businesses")
       .update({
         last_analyzed_business_name: businessName,
         last_analyzed_street:        address.street,
         last_analyzed_city:          address.city,
       })
-      .eq("id", userId);
+      .eq("id", businessId);
 
     throw updateError;
   }
@@ -842,7 +842,7 @@ async function saveDiscoveryData(
 // ---------------------------------------------------------------------------
 
 export async function discoverAndSaveBrandIdentity(
-  userId: string,
+  businessId: string,
   businessName: string,
   address: {
     street: string;
@@ -886,7 +886,7 @@ export async function discoverAndSaveBrandIdentity(
   const merged = mergeDiscoveryData(visionData, researchData);
   const visionRanAndSucceeded = photos.length > 0 && visionData !== null;
   await saveDiscoveryData(
-    userId, businessName, address, merged, visionRanAndSucceeded
+    businessId, businessName, address, merged, visionRanAndSucceeded
   );
 
   console.log(`--- [DISCOVERY] COMPLETE: ${businessName} ---`);

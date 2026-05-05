@@ -510,30 +510,31 @@ export async function POST(req: Request) {
       console.log("-----------------------");
 
     
-    const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('business_name, street, city, province_state, country, postal_code, business_description, color_theme, business_visuals,storefront_architecture, interior_layout')
-    .eq('id', userId)
+    const { data: business, error: businessError  } = await supabase
+    .from('businesses')
+    .select(' id, business_name, street, city, province_state, country, postal_code, business_description, color_theme, business_visuals,storefront_architecture, interior_layout')
+    .eq('user_id', userId)
+    .eq('is_active', true)
     .single();
 
-    if (profileError || !profile) {
+    if (businessError  || !business) {
       return NextResponse.json({ error: "Business profile not found. Please complete your profile." }, { status: 404 });
     }
 
     // 1. Parse the Librarian data once
-    const intel = parseBusinessIntel(profile.business_description);
+    const intel = parseBusinessIntel(business.business_description);
 
     // 2. Check if we are missing visuals OR if the description is still legacy (not JSON)
     const isStructured = intel?.isJson || false;
 
-    if (!profile.color_theme || !profile.business_visuals || !isStructured) {
+    if (!business.color_theme || !business.business_visuals || !isStructured) {
       console.log("--- SINGLE SOURCE CHECK: Triggering background upgrade ---");
-      discoverAndSaveBrandIdentity(userId, profile.business_name, {
-        street: profile.street,
-        city: profile.city,
-        province_state: profile.province_state,
-        country: profile.country,
-        postalCode: profile.postal_code 
+      discoverAndSaveBrandIdentity(business.id, business.business_name, {
+        street: business.street,
+        city: business.city,
+        province_state: business.province_state,
+        country: business.country,
+        postalCode: business.postal_code 
         },
         [],        // no photos in background trigger
         category,  // from profile
@@ -617,12 +618,12 @@ export async function POST(req: Request) {
     let currentWeather = "";
     try {
       const geoRes = await fetch(
-        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(profile.city)}&count=1&language=en&format=json`
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(business.city)}&count=1&language=en&format=json`
       );
       const geoData = await geoRes.json();
       const loc = geoData.results?.[0];
       if (loc) {
-        currentWeather = await fetchWeather(loc.latitude, loc.longitude, profile.city);
+        currentWeather = await fetchWeather(loc.latitude, loc.longitude, business.city);
         console.log(`--- WEATHER: ${currentWeather} ---`);
       }
     } catch {
@@ -631,10 +632,10 @@ export async function POST(req: Request) {
 
     // Build the final prompt
     const finalPrompt = buildPrompt(
-      profile.business_name,
+      business.business_name,
       category,
       niche,
-      profile,   
+      business,   
       voice,
       postType,
       framework,
@@ -643,9 +644,9 @@ export async function POST(req: Request) {
       promoType || "",    // Argument 9
       eventType || "",    // Argument 10
       customDetails || "", // Argument 11
-      profile.color_theme,   
-      profile.business_visuals,
-      profile.business_description,
+      business.color_theme,   
+      business.business_visuals,
+      business.business_description,
       varietyRules,
       currentWeather
     );
@@ -654,7 +655,7 @@ export async function POST(req: Request) {
     if (process.env.NEXT_PUBLIC_MOCK_AI === "true") {
       await new Promise((resolve) => setTimeout(resolve, 800));
       return NextResponse.json({
-        content: `<research>TEST MODE: ${profile.city} | Framework: ${framework} | Month: ${month}</research>\n\nThis is a mock post for ${business_name} in ${profile.city}. Framework auto-selected: ${framework}. No API tokens used.`,
+        content: `<research>TEST MODE: ${business.city} | Framework: ${framework} | Month: ${month}</research>\n\nThis is a mock post for ${business_name} in ${business.city}. Framework auto-selected: ${framework}. No API tokens used.`,
         framework,
       });
     }
@@ -677,7 +678,7 @@ export async function POST(req: Request) {
       // DEVELOPMENT MODE: Use exactly what the user toggled in the UI
       const providerToUse = requestedProvider || process.env.AI_PROVIDER || "gemini";
       console.log(`--- Shoreline MODE: TOGGLE [Using ${providerToUse}] ---`);
-      rawResponse = await callAIProvider(providerToUse, finalPrompt, currentTime, profile);
+      rawResponse = await callAIProvider(providerToUse, finalPrompt, currentTime, business);
       console.log("--- RAW RESPONSE ---");
       console.log(rawResponse);
       console.log("--- END RAW RESPONSE ---");
@@ -689,7 +690,7 @@ export async function POST(req: Request) {
 
       for (const provider of fallbackChain) {
         try {
-          rawResponse = await callAIProvider(provider, finalPrompt, currentTime, profile);
+          rawResponse = await callAIProvider(provider, finalPrompt, currentTime, business);
           if (rawResponse) {
             success = true;
             break; // Stop the loop as soon as we get a successful response

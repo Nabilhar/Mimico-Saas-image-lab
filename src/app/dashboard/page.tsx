@@ -40,54 +40,67 @@ export default function DashboardPage() {
     if (!user?.id || !supabase) return;
     setLoading(true);
     try {
-      const [profileRes, postsRes] = await Promise.all([
-        supabase.from('profiles')
-          .select('business_name, street, city, province_state, country, postal_code, category, niche, voice, credits')
-          .eq('id', user.id).maybeSingle(),
-        supabase.from('community_posts')
-          .select('*')
-          .eq('business_id', user.id)
-          .order('created_at', { ascending: false })
-      ]);
+      // 1. Fetch active business using the RPC function
+      // 2. Fetch posts using the business_id instead of user_id
+      
+      const { data: business, error: businessError } = await supabase
+        .rpc('get_active_business', { p_user_id: user.id })
+        .single<{ id: string, business_name: string, street: string, city: string, province_state: string, country: string, postal_code: string, category: string, niche: string, voice: string }>();
 
-      if (!profileRes.data && !profileRes.error) {
+      // 2. Fetch User Credits from the profiles table
+      const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('credits')
+      .eq('id', user.id)
+      .single();
+
+      if (businessError || !business) {
         router.push('/profile');
-        return; 
+        return;
       }
 
-      if (profileRes.data) {
-        const formattedData: BusinessData = {
-          id: user.id,
-          business_name: profileRes.data.business_name,
-          street: profileRes.data.street || "",
-          city: profileRes.data.city || "",
-          province_state: profileRes.data.province_state || "",
-          country: profileRes.data.country || "",
-          postal_code: profileRes.data.postal_code || "",
-          category: profileRes.data.category,
-          voice: profileRes.data.voice,
-          niche: profileRes.data.niche,
-          credits: profileRes.data.credits || 0,
-          history: postsRes.data || []
-        };
-        setBusinessData(formattedData);
-        setPosts(postsRes.data || []);
+      // Now fetch posts using the ID from the active business
+      const { data: posts, error: postsError } = await supabase
+        .from('community_posts')
+        .select('*')
+        .eq('business_id', user.id) // Use business.id, not user.id
+        .order('created_at', { ascending: false });
 
-        if (profileRes.data.voice) {
-          setVoice(profileRes.data.voice);
-        }
+      const formattedData: BusinessData = {
+        id: business.id, // Store the business UUID
+        business_name: business.business_name,
+        street: business.street || "",
+        city: business.city || "",
+        province_state: business.province_state || "",
+        country: business.country || "",
+        postal_code: business.postal_code || "",
+        category: business.category,
+        voice: business.voice,
+        niche: business.niche,
+        credits: profile?.credits || 0, // Pulling from the profile now!
+        history: posts || []
+      };
+
+      setBusinessData(formattedData);
+      setPosts(posts || []);
+
+      if (business.voice) {
+        setVoice(business.voice);
       }
-
-    } catch (err) { console.error(err); } finally { setLoading(false); }
+    } catch (err) {
+      console.error("Error loading business data:", err);
+    } finally {
+      setLoading(false);
+    }
   }, [user?.id, supabase, router]);
 
   const updateSavedVoice = async (newVoice: string) => {
-    if (!user?.id || !supabase) return;
+    if (!businessData?.id  || !supabase) return;
     try {
       await supabase
-        .from('profiles')
+        .from('businesses')
         .update({ voice: newVoice })
-        .eq('id', user.id);
+        .eq('id', businessData.id);
       console.log("Voice updated in Supabase:", newVoice);
     } catch (err) {
       console.error("Failed to update voice:", err);

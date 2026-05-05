@@ -83,6 +83,28 @@ function PhotoSlot({ label, sublabel, icon, file, onChange }: PhotoSlotProps) {
   );
 }
 
+// Add this helper function inside your ProfilePage.tsx file
+function parseBusinessIntel(raw: any) {
+  if (!raw) return null;
+  // If it's already an object (from the DB), just use it.
+  if (typeof raw === 'object' && raw !== null) {
+    return {
+      description: raw.description || "",
+      // You can add other fields here if needed later
+    };
+  }
+  // Fallback for stringified JSON
+  try {
+    const parsed = JSON.parse(raw);
+    return {
+      description: parsed.description || "",
+    };
+  } catch (e) {
+    // Fallback for legacy plain text descriptions
+    return { description: raw };
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Main Profile Page
 // ---------------------------------------------------------------------------
@@ -115,6 +137,7 @@ export default function ProfilePage() {
   const [voice, setVoice] = useState("");
   const [credits, setCredits] = useState(0);
   const [business_description, setBusinessDescription] = useState("");
+  const [saveMode, setSaveMode] = useState<'update' | 'create'>('update');
 
   // ── Photo upload state (3 optional slots) ─────────────────────────────────
   const [storefrontPhoto, setStorefrontPhoto] = useState<File | null>(null);
@@ -129,27 +152,44 @@ export default function ProfilePage() {
 
   // ── Fetch existing profile ─────────────────────────────────────────────────
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchActiveBusiness = async () => {
       // Guard: only run if user/supabase ready AND profile not already loaded
-      if (!user?.id || !supabase || profileLoaded) { 
-        console.log("Skipping profile fetch: User not ready, Supabase not ready, or profile already loaded.");
+      if (!user?.id || !supabase || profileLoaded) {
+        console.log("Skipping business fetch: User, Supabase not ready, or already loaded.");
         return;
       }
 
       try {
+        // --- THIS IS THE KEY CHANGE ---
+        // We now call the SQL function to get the user's active business.
+        // Define the shape of the business data coming from your SQL function
+        type BusinessData = {
+          business_name: string;
+          street: string;
+          city: string;
+          province_state: string;
+          country: string;
+          postal_code: string;
+          category: string;
+          niche: string;
+          voice: string;
+          brand_source: string;
+          business_description: any; // 'any' works here because we parse it next
+        };
+
         const { data, error } = await supabase
-          .from('profiles')
-          .select('business_name, street, city, country, postal_code, province_state, category, niche, voice, credits, business_description, brand_source')
-          .eq('id', user.id)
-          .maybeSingle();
+          .rpc('get_active_business', { p_user_id: user.id })
+          .single<BusinessData>();
 
-        console.log('Profile fetch:', { data, error });
+        console.log('Active Business fetch:', { data, error });
 
-        if (error) { // Handle Supabase errors
-          console.error("Supabase profile fetch error:", error.message);
-          toast.error("Error loading profile: " + error.message);
-          // Don't set profileLoaded to true on error, so it might retry or user can manually save
+        if (error) {
+          console.error("Supabase active business fetch error:", error.message);
+          toast.error("Error loading business: " + error.message);
         } else if (data) {
+          // Note: The 'business_description' from the DB is now a JSON object.
+          const intel = parseBusinessIntel(data.business_description);
+
           setbusiness_name(data.business_name || "");
           setStreet(data.street || "");
           setCity(data.city || "");
@@ -157,50 +197,67 @@ export default function ProfilePage() {
           setCountry(data.country || "Canada");
           setPostalCode(data.postal_code || "");
           setCategory(data.category || "");
-          setVoice(data.voice || ""); 
+          setVoice(data.voice || "");
           setNiche(data.niche || "");
-          setCredits(data.credits ?? 0);
-          setBusinessDescription(data.business_description || "");
           setBrandSource(data.brand_source || null);
-          setProfileLoaded(true); // <--- Set true ONLY on successful data load
+          
+          // We set the business description from the parsed JSON 'description' field.
+          setBusinessDescription(intel?.description || ""); 
+
+          setProfileLoaded(true);
         } else {
-          // If no data from Supabase, check local storage (as fallback for initial values)
-          const saved = localStorage.getItem("shoreline_business_profile");
-          if (saved) {
-            const localData = JSON.parse(saved);
-            setbusiness_name(localData.business_name || "");
-            setStreet(localData.street || "");
-            setCity(localData.city || "");
-            setCountry(localData.country || "Canada");
-            setPostalCode(localData.postal_code || "");
-            setCategory(localData.category || "");
-            setVoice(localData.voice || "");
-            setNiche(localData.niche || "");
-            setCredits(localData.credits ?? 0);
-          }
-          setProfileLoaded(true); // <--- Also set true if no data but tried to fetch
+          // No active business found for this user. This might be a new user.
+          console.log("No active business found for this user.");
+          setProfileLoaded(true); // Still set to true to unblock the UI.
         }
 
       } catch (err) {
-        console.error("Catch block error fetching profile:", err);
-        toast.error("An unexpected error occurred while loading profile.");
-      } finally {
-        // setLoading(false); // Only use if you set setLoading(true) at the start of fetchProfile
+        console.error("Catch block error fetching business:", err);
+        toast.error("An unexpected error occurred while loading your business profile.");
       }
     };
-    
-    // Call fetchProfile only when conditions are met and profile is not yet loaded.
+
     if (isLoaded && user?.id && supabase && !profileLoaded) {
-      console.log("Attempting to fetch profile...");
-      fetchProfile();
+      console.log("Attempting to fetch active business...");
+      fetchActiveBusiness();
     }
 
-  }, [isLoaded, user?.id, supabase, profileLoaded]); // <--- CORRECT DEPENDENCY ARRAY
+  }, [isLoaded, user?.id, supabase, profileLoaded]); // Dependencies remain the same
 
 
   if (!isLoaded || !user || !session || !profileLoaded) { 
     return <div className="p-10 text-center text-slate-500">Loading Profile...</div>;
   }
+
+  const fetchBusinessByName = async (name: string) => {
+    if (!name || !user?.id) return;
+
+    // Search for a business with this exact name owned by the user
+    const { data, error } = await supabase
+      .from('businesses')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('business_name', name.trim())
+      .maybeSingle();
+
+    if (data && !error) {
+      // 1. Switch the active row in the database IMMEDIATELY
+      await supabase.rpc('switch_active_business', { p_user_id: user.id, p_business_id: data.id });
+
+      // 2. Populate the form
+      setStreet(data.street || "");
+      setCity(data.city || "");
+      setProvinceState(data.province_state || "");
+      setCountry(data.country || "Canada");
+      setPostalCode(data.postal_code || "");
+      setCategory(data.category || "");
+      setVoice(data.voice || "");
+      setNiche(data.niche || "");
+      setBusinessDescription(data.business_description?.description || "");
+      
+      toast.success(`Found existing data for "${data.business_name}"!`, { icon: '🔄' });
+    }
+  };
 
   const categories = Object.keys(BUSINESS_ARCHETYPES);
   const voices = ["Authoritative & Precise", "Warm & Conversational", "Bold & Direct", "Clean & Understated"];
@@ -211,135 +268,72 @@ export default function ProfilePage() {
     e.preventDefault();
     if (!user || !supabase) return;
 
-    setLoading(true); // Start loading immediately for profile save + photo uploads
-
-    const statusToast = toast.loading("Saving profile settings...");
-
-    const uploadedPhotoData: UploadedPhoto[] = []; // Collects URLs of *successfully* uploaded photos
+    setLoading(true);
+    const statusToast = toast.loading("Saving...");
 
     try {
-      // 1. Save basic profile to Supabase (this is usually fast)
-      const profileData = {
-        id: user.id,
-        first_name: user.firstName,
-        last_name: user.lastName,
-        email: user.primaryEmailAddress?.emailAddress,
-        business_name,
-        street,
-        city,
-        province_state,
-        country,
-        postal_code: postalCode,
-        category,
-        niche,
-        voice,
-        business_description,
-        updated_at: new Date().toISOString(),
-      };
+      // 1. RPC Call
+      const { data: businessId, error: rpcError } = await supabase.rpc('switch_or_create_business', {
+        p_user_id: user.id,
+        p_business_name: business_name,
+        p_street: street,
+        p_city: city,
+        p_province_state: province_state,
+        p_country: country,
+        p_postal_code: postalCode,
+        p_category: category,
+        p_niche: niche,
+        p_voice: voice,
+        p_mode: 'update'
+      });
+      if (rpcError) throw rpcError;
 
-      const { error: profileError } = await supabase.from('profiles').upsert(profileData);
-      if (profileError) throw profileError;
-
-      // 2. Process and upload photos to Supabase Storage
-      const selectedPhotoFiles = [ // These are the files the user *selected*
+      // 2. Upload Photos
+      const uploadedPhotoData: UploadedPhoto[] = [];
+      const selectedFiles = [
         { file: storefrontPhoto, label: "storefront" },
         { file: logoPhoto,       label: "logo"       },
         { file: interiorPhoto,   label: "interior"   },
       ].filter((p) => p.file !== null) as { file: File; label: string }[];
 
-      if (selectedPhotoFiles.length > 0) {
-
-        toast.loading("Uploading brand photos...", { id: statusToast });
-
-        for (const { file, label } of selectedPhotoFiles) {
-          const fileExt = file.name.split('.').pop();
-          const filePath = `${user.id}/${label}-${Date.now()}.${fileExt}`; 
-          
-          const { error: uploadError } = await supabase.storage
-            .from('brand_assets') // Ensure this matches your bucket name!
-            .upload(filePath, file, {
-              cacheControl: '3600',
-              upsert: false,
-            });
-
-          if (uploadError) {
-            console.error(`Supabase upload failed for ${label}:`, uploadError.message);
-            toast.error(`Failed to upload ${label} photo.`); 
-          } else {
-            const { data: { publicUrl } } = supabase.storage
-              .from('brand_assets')
-              .getPublicUrl(filePath);
-            
+      if (selectedFiles.length > 0) {
+        for (const { file, label } of selectedFiles) {
+          const filePath = `${businessId}/${label}-${Date.now()}.${file.name.split('.').pop()}`;
+          const { error } = await supabase.storage.from('brand_assets').upload(filePath, file);
+          if (!error) {
+            const { data: { publicUrl } } = supabase.storage.from('brand_assets').getPublicUrl(filePath);
             uploadedPhotoData.push({ url: publicUrl, mimeType: file.type, label });
           }
         }
       }
 
-      // Determine if we should show the "Brand analysis started" toast.
-      // Scenario 1: New photos were successfully uploaded (Will trigger Vision Analysis)
-      const isUpgradingToVision = uploadedPhotoData.length > 0;
-      
-      // Scenario 2: No photos uploaded, but we have NO brand data at all (Will trigger initial Text Search)
-      const isFirstTimeDiscovery = uploadedPhotoData.length === 0 && brandSource === null;
-      
+      // 3. Conditional Discovery Trigger
+      // Trigger if it's a NEW business OR if we have photos to analyze
+      const needsDiscovery = (saveMode === 'create') || (uploadedPhotoData.length > 0);
 
-      // 3. Claim welcome credits (existing logic)
-      const { data: creditData, error: creditError } = await supabase.rpc('claim_welcome_credits');
-      if (creditError) {
-        console.error("Credit claim error:", creditError);
-      } else if (creditData?.success) {
-        toast.success("Welcome! 25 free credits have been added to your account! 🚀");
-      }
-
-      //Update toast for the AI Phase
-      let aiMessage = "🔄 Updating brand context...";
-        if (isUpgradingToVision) {
-          aiMessage = "🤖 AI is analyzing your photos for a custom identity... (30s)";
-        } else if (isFirstTimeDiscovery) {
-          aiMessage = "🔍 AI is researching your business for initial setup... (30s)";
-        } else {
-          aiMessage = "⚡ Updating research for your new business details... (30s)";
-        }
-        
-        toast.loading(aiMessage, { id: statusToast });
-
-      // 4. Trigger brand discovery API (fire and forget from frontend's await perspective)
-      // The backend's /api/discover-brand route *will* await the full analysis.
-      try {
+      if (needsDiscovery) {
         await fetch("/api/discover-brand", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            business_id:   user.id,
-            business_name: business_name,
+            business_id: businessId,
+            business_name,
             address: { street, city, province_state, country, postalCode },
             photos: uploadedPhotoData,
-            category: category,
-            niche: niche,
+            category,
+            niche,
           }),
         });
+        toast.success("Business saved & AI analysis running...", { id: statusToast });
+      } else {
+        toast.success("Business details updated.", { id: statusToast });
+      }
 
-          // Discovery complete — safe to redirect
-          localStorage.setItem("shoreline_business_profile", JSON.stringify(profileData));
-          toast.success("Identity captured! Opening dashboard...", { id: statusToast });
-          setTimeout(() => router.push("/dashboard"), 1000);
-
-        } catch (aiError) {
-          console.error("AI Brand analysis failed:", aiError);
-          // Profile is saved — redirect anyway but set expectations
-          localStorage.setItem("shoreline_business_profile", JSON.stringify(profileData));
-          toast("Profile saved. Brand colours will be estimated from web research.", { 
-            icon: "⚡", 
-            duration: 5000 
-          });
-          setTimeout(() => router.push("/dashboard"), 1000);
-        }
-
+      setTimeout(() => router.push("/dashboard"), 1000);
     } catch (err: any) {
-      console.error("Save failed:", err.message);
-      toast.error("Save Error: " + err.message, { id: statusToast });
+      toast.error("Save failed: " + err.message, { id: statusToast });
     } finally {
-      setLoading(false); // Frontend tasks are done, backend analysis is running asynchronously.
+      setLoading(false);
     }
   };
 
@@ -389,6 +383,8 @@ export default function ProfilePage() {
                 placeholder="e.g. San Remo Bakery"
                 value={business_name}
                 onChange={(e) => setbusiness_name(e.target.value)}
+                // Trigger the search when they finish typing
+                onBlur={() => fetchBusinessByName(business_name)}
                 required
               />
             </div>
@@ -618,6 +614,19 @@ export default function ProfilePage() {
                   {voices.map(v => <option key={v} value={v}>{v}</option>)}
                 </select>
               </div>
+            </div>
+
+            {/* ── dropdown 'update' | 'create' ─────────────────────────────── */}
+            <div className="mb-6 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 block">Action</label>
+              <select 
+                className="w-full p-3 rounded-xl border border-slate-200 bg-white"
+                value={saveMode}
+                onChange={(e) => setSaveMode(e.target.value as 'update' | 'create')}
+              >
+                <option value="update">Update current business details</option>
+                <option value="create">Create a new business</option>
+              </select>
             </div>
 
             {/* ── Brand Photos — 3-state section driven by brandSource ──────── */}

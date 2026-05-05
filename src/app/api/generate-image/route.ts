@@ -83,17 +83,18 @@ export async function POST(req: Request) {
     }
 
     // 3. Update Profile Query to use userId
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
+    const { data: business, error: businessError  } = await supabase
+      .from('businesses')
       .select('business_name, street, city, province_state, country, postal_code')
-      .eq('id', userId) // <-- Changed from business_id
+      .eq('user_id', userId) // <-- Changed from business_id
+      .eq('is_active', true) // Only the active business
       .single();
 
-    if (profileError || !profile) {
+    if (businessError || !business) {
       return NextResponse.json({ error: "Business profile not found." }, { status: 404 });
     }
-    const fullAddress = `${profile.street}, ${profile.city}, ${profile.province_state}, ${profile.country} ${profile.postal_code}`;
-    const businessName = profile.business_name;
+    const fullAddress = `${business.street}, ${business.city}, ${business.province_state}, ${business.country} ${business.postal_code}`;
+    const businessName = business.business_name;
  
     const { data: post, error: dbError } = await supabase
         .from('community_posts')

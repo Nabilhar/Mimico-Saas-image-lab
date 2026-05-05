@@ -23,10 +23,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { business_name, address, photos, category, niche } = await req.json();
+    const { business_id, business_name, address, photos, category, niche } = await req.json();
     const uploadedPhotos: UploadedPhoto[] = photos || [];
 
-    const currentBrandIdentity = await getBrandIdentity(userId);
+    const currentBrandIdentity = await getBrandIdentity(business_id);
     const currentBrandSource = currentBrandIdentity.brand_source;
 
     console.log(`--- [Discovery API] User: ${business_name}, brandSource: '${currentBrandSource}', Photos: ${uploadedPhotos.length} ---`);
@@ -55,7 +55,7 @@ export async function POST(req: Request) {
 
       try {
         await discoverAndSaveBrandIdentity(
-          userId,
+          business_id,
           business_name,
           address,
           [],  // Empty photos — text search only
@@ -91,7 +91,7 @@ export async function POST(req: Request) {
         if (visionData && visionData.visuals) {
           // Save vision results directly to Supabase
           const { error: updateError } = await supabase
-            .from('profiles')
+            .from('businesses')
             .update({
               color_theme: {
                 primary: visionData.visuals.primary_color || "neutral",
@@ -108,7 +108,7 @@ export async function POST(req: Request) {
               interior_layout: visionData.visuals.interior_layout || "Not provided",
               brand_source: "photos",
             })
-            .eq('id', userId);
+            .eq('id',  business_id);
 
           if (updateError) {
             console.error(`❌ [Discovery API] PATH 2: Failed to save vision data:`, updateError);

@@ -90,27 +90,28 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing Post ID" }, { status: 400 });
     }
     // 2. Fetch the "Ground Truth" profile using the secure userId
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
+    const { data: business, error: businessError  } = await supabase
+      .from('businesses')
       .select(`
         business_name, street, city, province_state, country, postal_code,
         niche, voice, business_description, color_theme, business_visuals, 
         storefront_architecture, interior_layout
       `)
       .eq('id', userId)
+      .eq('is_active', true) // <--- Only get the active business
       .single();
 
-    if (profileError || !profile) {
+    if (businessError || !business) {
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
 
-    const fullAddress = `${profile.street}, ${profile.city}, ${profile.province_state}, ${profile.country} ${profile.postal_code}`;
+    const fullAddress = `${business.street}, ${business.city}, ${business.province_state}, ${business.country} ${business.postal_code}`;
 
     // Map the profile data to variables used later in the script
-    const business_name = profile.business_name;
-    const brandIdentity = profile; 
-    const niche = profile.niche;
-    const voice = profile.voice;
+    const business_name = business.business_name;
+    const brandIdentity = business; 
+    const niche = business.niche;
+    const voice = business.voice;
 
     // ── CALCULATE STRATEGY & SEASON ────────────────────────────────────────
     const season = getSeason(currentMonth);
