@@ -9,6 +9,7 @@
     "Home Services":          "pain-driven",
     "Automotive":             "pain-driven",
     "Trades & Industrial":    "pain-driven",
+    
     "Food & Beverage":        "lifestyle",
     "Beauty & Personal Care": "lifestyle",
     "Fitness & Recreation":   "lifestyle",
@@ -32,14 +33,20 @@
   };
 
   export function getFramework(category: string, postType: string, voice: string): Framework {
-    if (postType === "Myth-busting")      return "PAS";
-    if (postType === "Behind the scenes") return "BAB";
-    if (voice === "Bold & Direct")          return "PAS";
-
+    if (voice === "Bold & Direct") return "PAS";
+  
     const archetype = (BUSINESS_ARCHETYPES[category] || "lifestyle") as PurchaseType;
 
-    if (voice === "Bold & Direct" && archetype === "pain-driven") return "PAS";
-
+    if (postType === "Behind the scenes") {
+      const archetype = BUSINESS_ARCHETYPES[category];
+      return archetype === "lifestyle" ? "BAB" : "PAS";
+    }
+  
+    if (postType === "Myth-busting") {
+      const archetype = BUSINESS_ARCHETYPES[category];
+      return archetype === "lifestyle" ? "BAB" : "PAS";
+    }
+  
     return matrix[postType]?.[archetype] || "PAS";
   }
 
@@ -88,7 +95,7 @@
     Hook: One specific, ordinary moment in the business day — 
       a detail most customers never think about but immediately recognise as true.
       Not something the owner observes about customers. Something that happens inside the work.
-    Agitate: What goes wrong when businesses skip this step.
+    Agitate: What goes wrong when this is overlooked, misunderstood, or handled incorrectly.
       One sentence. The cost is real — not dramatic.
     Solve: This is why we do it.
       One specific detail — time, texture, temperature, or process.
@@ -568,19 +575,16 @@
         "The timing factor that determines peak quality in one category of products",
       ],
       "Myth-busting": [
-        "The 'fresh means longer lasting' assumption — real food degrades faster because nothing is suppressing it",
         "The cold storage assumption — refrigeration preserves some things and actively damages others",
-        "The price-quality assumption — premium pricing reflects marketing spend more often than production quality",
-        "The 'natural equals safe' assumption — natural ingredients can be just as processed as synthetic ones",
         "The preservative assumption — short shelf life is a quality signal, not a flaw",
-        "The ingredient sensitivity assumption — most reactions are triggered by processing, not the base ingredient",
+        "The shortcut assumption — the steps that look unnecessary are usually the ones that define the result",
+        "The consistency assumption — variation between batches is craft working, not quality control failing",
       ],
       "Behind the scenes": [
-        "The early decision that determines the final quality of the entire batch",
+        "The early decision that determines the final quality of the entire work",
         "The single process step that quietly defines consistency",
         "What experienced makers notice in seconds that customers never detect",
-        "The one variable that separates an average batch from a great one",
-        "What failure looks like in production before it becomes visible to customers",
+        "The timing threshold that separates good from wasted — and why it's never on the recipe"
       ],
       "Local event / news": [
         "How seasonal demand shifts what gets made and how it's made",
@@ -604,15 +608,13 @@
         "The 'no pain no gain' assumption — pain is a warning signal, not a progress indicator",
         "The rest equals recovery assumption — controlled movement heals faster than immobility in most cases",
         "The perfect posture assumption — static posture is the problem, not the solution",
-        "The ice vs heat assumption — most people apply both at the wrong time for the wrong reason",
-        "The ageing equals decline assumption — most physical decline is disuse, not inevitability",
+        "The symptom location assumption — where it hurts is rarely where the problem lives"
       ],
       "Behind the scenes": [
         "What is identified in the first assessment that changes the entire plan",
         "The question that reveals more than any test or measurement",
-        "What intake observations reveal that symptoms alone do not",
-        "Why similar cases receive completely different treatment approaches",
-        "What changes in real-time observation that patients don't notice",
+        "The preparation step that happens before the  patient arrives that determines what's possible in the session",
+	      "The recovery threshold most people cross too early — and what it costs them three weeks later",
       ],
       "Local event / news": [
         "How seasonal shifts influence common physical patterns in the community",
@@ -636,16 +638,15 @@
         "The DIY simplicity assumption — what looks straightforward online involves compounding decisions tradespeople train for",
         "The lowest quote assumption — margin reductions always come from somewhere in the job",
         "The delay-it-later assumption — most home issues don't pause, they compound",
-        "The new equals problem-free assumption — new builds have as many defects as older ones, just different ones",
-        "The insurance coverage assumption — most policies exclude far more than homeowners expect",
+        "The like-for-like replacement assumption — replacing a failed component with the same spec repeats the failure on the same timeline"
       ],
       "Behind the scenes": [
         "What is evaluated before any work begins that determines the entire approach",
         "What experienced tradespeople identify immediately that others miss",
-        "The preparation step that determines long-term durability",
         "What callback jobs typically reveal about original execution",
-        "The unseen decision that affects longevity more than visible work",
+        "The point in a job where cutting time costs twice as much to fix later",
       ],
+
       "Local event / news": [
         "What current weather patterns mean for local systems and infrastructure",
         "How seasonal transitions affect maintenance priorities",
@@ -665,18 +666,16 @@
         "Applying treatment too close to sun exposure doesn't just reduce results — it can reverse them",
       ],
       "Myth-busting": [
-        "The 'more product equals better results' assumption — concentration matters more than volume",
-        "The 'natural equals safe' assumption — natural ingredients can irritate, sensitize, and destabilize skin",
-        "The 'higher price equals higher performance' assumption — formulation determines efficacy, not price point",
-        "The SPF number assumption — SPF measures one type of radiation and degrades faster than most people reapply",
-        "The hair washing frequency assumption — scalp health responds to consistency, not reduction",
+        "The preparation assumption — the result is determined before the appointment starts, not during it",
+        "The aftercare assumption — what happens in the first 48 hours determines whether the result holds or fades",
+        "The frequency assumption — more sessions sooner starts working against the result after a threshold most clients never get told about",
+        "The discomfort assumption — sensation during a treatment is a poor indicator of what's actually happening to the tissue",
       ],
       "Behind the scenes": [
         "What is observed during consultation that reshapes the entire approach",
-        "The first visual assessment that experienced practitioners rely on",
-        "The preparation step clients rarely see but always benefit from",
         "Why identical concerns often require different treatment paths",
-        "What determines outcome differences between similar treatments",
+        "The preparation step clients rarely see but always benefit from",
+	      "The application threshold where more product starts working against the result",
       ],
       "Local event / news": [
         "How seasonal conditions directly affect skin and hair behaviour",
@@ -697,19 +696,18 @@
         "The timing factor that affects performance more than effort",
       ],
       "Myth-busting": [
-        "The soreness equals progress assumption — DOMS indicates novelty, not adaptation",
-        "The cardio equals fat loss assumption — energy balance determines fat loss, not modality",
-        "The spot reduction assumption — fat is mobilized systemically, not locally",
-        "The more training equals better results assumption — recovery is where adaptation happens",
-        "The machines vs free weights assumption — the difference is stability demand, not muscle recruitment",
+        "The repetition assumption — practicing a movement more often reinforces the error as much as the skill",
+        "The intensity assumption — the hardest session is rarely the most productive one",
+        "The recovery assumption — adaptation happens during rest, not during the work",
+        "The effort assumption — trying harder compensates for technique until the point where it causes the injury that stops everything",
       ],
       "Behind the scenes": [
         "What coaches observe in early sessions that predicts long-term outcomes",
         "The programming decision that drives progress but looks arbitrary",
         "Why identical workouts produce different results",
-        "What environmental factors influence performance more than expected",
-        "What is evaluated before a training plan is built",
+        "The recovery window most people treat as optional that determines whether training compounds or stalls",
       ],
+
       "Local event / news": [
         "How seasonal conditions influence training performance",
         "What local activity trends reveal about common training needs",
@@ -732,15 +730,13 @@
         "The 'I'll deal with it later' assumption — most professional problems compound interest the longer they sit",
         "The DIY tool assumption — online tools handle standard cases and quietly fail on the exceptions",
         "The one-size-fits-all assumption — generic advice optimizes for the average case, not yours",
-        "The 'my case is too simple' assumption — simple cases have the highest rate of overlooked details",
         "The cost vs consequence assumption — professional fees are typically a fraction of the cost of errors",
       ],
       "Behind the scenes": [
-        "What is reviewed before client meetings to shape outcomes",
+        "The detail in the brief that changes the entire scope — and why clients never flag it themselves",
         "What experienced professionals detect that templates miss",
         "The follow-up action that determines completion quality",
         "Why similar cases lead to different recommendations",
-        "What becomes critical later that seems minor at intake",
       ],
       "Local event / news": [
         "What local or regulatory changes mean for planning decisions",
@@ -761,18 +757,17 @@
         "The pre-purchase question that prevents most regret purchases",
       ],
       "Myth-busting": [
-        "The brand loyalty assumption — brand recognition is built through marketing, not consistently superior product",
-        "The discount equals value assumption — markdowns often signal overstock or end-of-cycle product",
-        "The newer equals better assumption — product cycles prioritize differentiation over improvement",
-        "The care label literal interpretation assumption — instructions are conservative minimums, not optimal conditions",
+        "The discount equals value assumption — markdowns signal end-of-cycle inventory, not generosity",
+        "The presentation assumption — the most beautifully packaged version is rarely the best performing one",
+        "The newness assumption — new arrivals reflect what sold well elsewhere, not what works best",
+        "The selection assumption — more options increases the chance of finding the right thing until it doesn't",
         "The price equals quality assumption — retail markup varies so widely that price is a poor quality proxy",
       ],
       "Behind the scenes": [
         "What determines whether a product is selected or rejected for sale",
-        "What sourcing decisions reveal about final product quality",
         "What experienced buyers evaluate beyond specifications",
-        "What happens before a product reaches shelves or listings",
         "How seasonal purchasing decisions are made in advance",
+        "What happens to a product line when one sourcing decision gets made on price instead of quality",
       ],
       "Local event / news": [
         "How seasonal demand shifts what customers prioritize",
@@ -793,18 +788,16 @@
         "The enrichment gap that affects behaviour more than expected",
       ],
       "Myth-busting": [
-        "The dominance behaviour assumption — most unwanted behaviour is anxiety or miscommunication, not hierarchy",
-        "The human food harm assumption — toxicity is dose and species dependent, not categorical",
-        "The indoor pet sufficiency assumption — indoor animals have unmet environmental and sensory needs",
-        "The age explains behaviour assumption — most age-attributed behaviour changes have earlier, addressable causes",
-        "The breed determines behaviour assumption — individual history and environment outweigh breed generalizations",
+        "The calm equals happy assumption — stillness in an animal is as often shutdown as it is contentment",
+        "The indoor pet sufficiency assumption — indoor animals have unmet environmental and sensory needs that behaviour eventually makes visible",
+        "The one-size-fits-all care assumption — the standard recommendation exists for the average animal, and most animals aren't average",
+        "The single symptom assumption — the presenting behaviour or condition is rarely the origin point",
       ],
       "Behind the scenes": [
         "What is observed immediately when interacting with an animal",
-        "What pre-service assessment reveals about home environment",
+        "The intake detail that changes how the entire session gets structured before it starts",
         "Why identical animals respond differently to the same care",
-        "What early behaviour signals indicate about routine at home",
-        "What handlers adjust before interaction begins",
+        "The stress signal in an animal that changes the entire handling approach — and why it's never the obvious one",
       ],
       "Local event / news": [
         "How seasonal conditions affect local pet behaviour",
@@ -825,18 +818,16 @@
         "The overlooked component that often causes system failure",
       ],
       "Myth-busting": [
-        "The oil interval assumption — modern engine tolerances are tighter, not more forgiving than older guidance suggests",
-        "The premium fuel assumption — octane rating affects knock resistance, not energy output or engine longevity",
-        "The warm-up time assumption — modern fuel injection systems reach operating temperature faster under load than at idle",
         "The dealership requirement assumption — warranty compliance requires documented maintenance, not dealer-specific labour",
-        "The all-season tire assumption — all-season compounds harden below 7°C and lose the grip winter tires are designed for",
+        "The surface assumption — what's visible on a vehicle is rarely where the most consequential damage lives",
+        "The parts equivalence assumption — components with the same specification number perform differently depending on who made them and why",
+        "The clean equals maintained assumption — appearance and mechanical condition deteriorate on completely independent timelines",
       ],
       "Behind the scenes": [
-        "What is inspected before any repair is quoted",
         "What experienced technicians detect without diagnostic tools",
         "How parts selection affects long-term reliability",
         "Why similar symptoms lead to different diagnoses",
-        "What post-repair testing is actually validating",
+        "The wear threshold where a component that looks acceptable starts failing under load",
       ],
       "Local event / news": [
         "How seasonal road conditions affect vehicle maintenance needs",
@@ -857,18 +848,16 @@
         "The developmental principle that contradicts common assumptions",
       ],
       "Myth-busting": [
-        "The early pressure equals success assumption — earlier academic exposure correlates with higher anxiety, not higher achievement",
-        "The screen time uniform effect assumption — content and context determine impact more than duration",
-        "The learning styles assumption — no evidence supports matching instruction to preferred modality",
-        "The 'they'll grow out of it' assumption — most patterns that persist past a window become harder to address",
-        "The homework volume equals learning assumption — retention correlates with spacing and retrieval, not time spent",
+        "The 'they'll grow out of it' assumption — most patterns that persist past a developmental window become significantly harder to address",
+        "The talent assumption — what looks like natural ability is almost always accumulated correct repetition that started earlier than people realise",
+        "The engagement assumption — a child who is quiet and compliant is not always a child who is learning",
+        "The repetition equals mastery assumption — doing something more times embeds the error as reliably as it embeds the skill",
       ],
       "Behind the scenes": [
         "What is observed in the first days that shapes planning",
-        "What experienced educators detect before formal assessment",
         "How environments are adjusted without disrupting routines",
         "Why similar learners receive different approaches",
-        "What preparation happens before daily programming begins",
+        "The developmental window that closes quietly — and why waiting for formal assessment costs it",
       ],
       "Local event / news": [
         "How seasonal changes affect learning behaviour",
@@ -889,18 +878,16 @@
         "The upgrade timing mistake most users make",
       ],
       "Myth-busting": [
-        "The antivirus equals safety assumption — antivirus addresses known signatures; most breaches exploit behaviour, not files",
-        "The cloud equals backup assumption — sync replicates deletions and corruptions instantly across all devices",
-        "The new device equals secure setup assumption — out-of-box configuration prioritizes usability over security",
-        "The 'I'm not a target' assumption — most attacks are automated and target vulnerabilities, not specific individuals",
-        "The IT cost vs risk assumption — the average cost of a single incident exceeds years of preventative support",
+        "The finished equals done assumption — a delivered website, app, or system requires ongoing attention or it starts degrading the day it launches",
+        "The specification assumption — what the brief describes and what the problem actually needs are rarely identical until someone with experience reads between the lines",
+        "The tool equals solution assumption — software, platforms, and apps solve the problem they were designed for and create new ones at the boundary",
+        "The cost of cheap assumption — the lowest quote for any technical work prices out the discovery phase where most problems get found",
       ],
       "Behind the scenes": [
-        "What is assessed before recommending any solution",
-        "What experienced technicians identify beyond surface symptoms",
-        "What infrastructure decisions affect reliability most",
-        "Why similar setups have different risk profiles",
-        "What ongoing monitoring reveals over time",
+        "The setup decision most businesses make once — and what it quietly determines months later",
+        "The point in a system's lifecycle where problems actually begin — not when they show up",
+        "The tradeoff most businesses make early that limits what the system can handle later",
+        "Why two identical setups can perform completely differently under real-world use",
       ],
       "Local event / news": [
         "How local business patterns affect tech needs",
@@ -921,18 +908,16 @@
         "The day-of factor that determines execution quality",
       ],
       "Myth-busting": [
-        "The scale equals quality assumption — larger events have more variables, not better outcomes",
-        "The DIY saves money assumption — coordination time and error cost typically exceed vendor fees",
         "The cheapest vendor equals best value assumption — margin cuts always surface somewhere in execution",
-        "The 'it will work out on the day' assumption — day-of problems are always pre-existing problems",
         "The perfection matters most assumption — guests remember atmosphere and feeling, not flawless logistics",
+        "The booking early assumption — availability and price move in opposite directions past a threshold most people discover too late",
+        "The headcount determines budget assumption — the variables that actually drive cost are rarely the ones clients track",
       ],
       "Behind the scenes": [
-        "What is confirmed in the final week that changes everything",
-        "What is discovered during venue walkthroughs",
-        "What coordination determines day-of success",
-        "Why identical budgets produce different experiences",
-        "What contingency planning actually prepares for",
+        "What happens before a property is officially listed",
+        "What experienced agents notice in first walkthroughs",
+        "Why comparable properties sell differently",
+        "The preparation threshold where a property shifts from priced-to-negotiate to priced-to-sell",
       ],
       "Local event / news": [
         "How seasonal demand affects booking availability",
@@ -953,11 +938,10 @@
         "The timing decision that significantly affects outcomes",
       ],
       "Myth-busting": [
-        "The seasonal market assumption — inventory and competition shift seasonally, but price drivers are largely independent",
-        "The renovation ROI assumption — most renovations recover less than 70% of cost at sale",
-        "The listing price equals value assumption — asking price is a negotiation opener, not a market assessment",
-        "The open house equals buyer source assumption — most buyers in active markets are already working with agents",
-        "The online estimate accuracy assumption — algorithms use historical sales data and miss condition, context, and timing",
+        "The condition assumption — what's visible during a walkthrough represents a fraction of what determines long-term value",
+        "The market timing assumption — waiting for the right moment to buy, sell, or build costs more than the moment saves",
+        "The DIY management assumption — the decisions that look administrative are the ones with the largest financial consequences when they go wrong",
+        "The price determines outcome assumption — the terms, timing, and preparation surrounding a transaction move the result more than the number",
       ],
       "Behind the scenes": [
         "What happens before a property is officially listed",
@@ -986,17 +970,15 @@
       ],
       "Myth-busting": [
         "The cheapest quote equals best value assumption — lower margins mean reduced material grade, labour time, or both",
-        "The 'it can wait' assumption — most system failures follow a compounding pattern, not a sudden one",
-        "The DIY tutorial equals professional work assumption — tutorials show the procedure, not the judgment calls within it",
-        "The permit is optional assumption — unpermitted work voids insurance coverage and creates liability at resale",
         "The material grade equivalence assumption — spec-grade and retail-grade products share names but not tolerances",
+        "The completion equals done assumption — the work that determines longevity happens after the visible job is finished",
+        "The any-season timing assumption — the best window for most trade work closes earlier than clients realise and costs more after it does",
       ],
       "Behind the scenes": [
-        "What determines job scope before work begins",
-        "What experienced tradespeople notice immediately",
         "What affects durability more than visible execution",
-        "Why similar jobs have different timelines",
-        "What unseen decisions determine longevity",
+        "The material decision that looks identical at installation and behaves differently in year three",
+        "What experienced tradespeople diagnose before touching the job",
+        "The preparation step that determines whether the visible work holds or fails",
       ],
       "Local event / news": [
         "How seasonal conditions affect infrastructure demands",

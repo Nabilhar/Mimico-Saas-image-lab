@@ -53,7 +53,7 @@ export default function ContactPage() {
         <div className="text-center">
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900">Get in Touch</h1>
           <p className="mt-3 text-slate-500 text-lg">
-            Have a question or feedback? We’d love to hear from you.
+            Have a question or feedback? We'd love to hear from you.
           </p>
         </div>
 

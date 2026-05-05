@@ -1,95 +1,142 @@
 // app/api/discover-brand/route.ts
 
 import { NextResponse } from "next/server";
-import { discoverAndSaveBrandIdentity, UploadedPhoto, getBrandIdentity } from "@/lib/brandDiscovery";
-import { auth } from "@clerk/nextjs/server"; 
+import { 
+  discoverAndSaveBrandIdentity, 
+  UploadedPhoto, 
+  getBrandIdentity,
+  analyzePhotosWithGemini 
+} from "@/lib/brandDiscovery";
+import { auth } from "@clerk/nextjs/server";
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function POST(req: Request) {
   try {
 
-    const { userId } = await auth(); // Get the authenticated user's ID from Clerk (await added)
+    const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { business_name, address, photos } = await req.json();
-    
-    // photos is UploadedPhoto[] | undefined — both are valid
+    const { business_name, address, photos, category, niche } = await req.json();
     const uploadedPhotos: UploadedPhoto[] = photos || [];
 
-        // --- Start of NEW LOGIC: Determine if brand discovery needs to be triggered ---
-        const currentBrandIdentity = await getBrandIdentity(userId);
-        const currentBrandSource = currentBrandIdentity.brand_source; 
+    const currentBrandIdentity = await getBrandIdentity(userId);
+    const currentBrandSource = currentBrandIdentity.brand_source;
+
+    console.log(`--- [Discovery API] User: ${business_name}, brandSource: '${currentBrandSource}', Photos: ${uploadedPhotos.length} ---`);
+
+    // ─────────────────────────────────────────────────────────────────
+    // PATH 1: TEXT SEARCH (Haiku) — Independent trigger
+    // ─────────────────────────────────────────────────────────────────
+    // Triggers: New user OR business name changed
     
-        // This flag will control whether we actually call discoverAndSaveBrandIdentity
-        let shouldTriggerDiscovery = false; 
-        
-        // Log initial state for debugging
-        console.log(`--- [Discovery API] Current brandSource: '${currentBrandSource}', New photos uploaded: ${uploadedPhotos.length} ---`);
-    
-        // **Step 3: Implement Condition 4: If brand_source is 'null' (First Time)**
-        const hasNeverAnalyzed =
-          !currentBrandSource ||
-          !currentBrandIdentity.last_analyzed_business_name ||
-          !currentBrandIdentity.last_analyzed_city ||
-          !currentBrandIdentity.last_analyzed_street;
+    const hasNeverAnalyzed =
+      !currentBrandSource ||
+      !currentBrandIdentity.last_analyzed_business_name;
 
-        const nameChanged =
-        (currentBrandIdentity.last_analyzed_business_name || "") !==
-        (business_name || "");
+    const nameChanged =
+      (currentBrandIdentity.last_analyzed_business_name || "") !==
+      (business_name || "");
 
-        const cityChanged =
-          (currentBrandIdentity.last_analyzed_city || "") !==
-          (address.city || "");
+    const shouldTriggerTextDiscovery = hasNeverAnalyzed || nameChanged;
 
-        const streetChanged =
-          (currentBrandIdentity.last_analyzed_street || "") !==
-          (address.street || "");
-      
-        if (hasNeverAnalyzed) {
-          console.log(
-            `--- [Discovery API] First-time or missing analysis photos. Triggering discovery. ---`
-          );
-          shouldTriggerDiscovery = true;
-        }
-
-        else if (uploadedPhotos.length > 0) {
-          console.log(`--- [Discovery API] Condition 3 or 5 met: New photos uploaded. Triggering discovery. ---`);
-          shouldTriggerDiscovery = true;
-        }
-        
-        // **Step 4: Stale data check — fires for BOTH photos and text_search**
-        else if (uploadedPhotos.length === 0) {
-
-          if (nameChanged || cityChanged || streetChanged) {
-            console.log(`---[Discovery API] Identity change detected with no new photos. Resetting and re-discovering brand context. source was: '${currentBrandSource}' ---`);
-            shouldTriggerDiscovery = true;
-          } else {
-            console.log(`--- [Discovery API] No changes detected. Brand source '${currentBrandSource}' is current. Skipping. ---`);
-            shouldTriggerDiscovery = false;
-          }
-        }
-        // **Step 5: Implement Condition 3 and Condition 5 (Trigger)**
-        // If none of the 'skip' conditions (null, or no-new-photos while already analyzed) were met,
-        // and new photos *were* uploaded, then we trigger discovery.
-
-    
-    
-        // --- Execute discoverAndSaveBrandIdentity based on the flag ---
-        if (shouldTriggerDiscovery) {
-          console.log(`🚀 [Discovery API] Initiating full brand analysis for: ${business_name}`);
-          // CRITICAL: We MUST await this on Vercel. 
-          await discoverAndSaveBrandIdentity(userId, business_name, address, uploadedPhotos);
-          
-          console.log(`✅ [Discovery API] Research and save complete for: ${business_name}`);
-        } else {
-          console.log(`✅ [Discovery API] No new brand analysis required for: ${business_name}`);
-        }
-        
-        return NextResponse.json({ success: true }); // Always respond with success (unless a true error occurs)
-        
-      } catch (error: any) {
-        console.error("Discovery API Route Error:", error.message);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    if (shouldTriggerTextDiscovery) {
+      if (hasNeverAnalyzed) {
+        console.log(`🚀 [Discovery API] PATH 1: First-time user. Starting text research...`);
+      } else {
+        console.log(`🚀 [Discovery API] PATH 1: Business name changed. Re-running text research...`);
       }
+
+      try {
+        await discoverAndSaveBrandIdentity(
+          userId,
+          business_name,
+          address,
+          [],  // Empty photos — text search only
+          category || "",
+          niche || ""
+        );
+        console.log(`✅ [Discovery API] PATH 1: Text research complete`);
+      } catch (textError) {
+        console.error(`❌ [Discovery API] PATH 1 failed:`, textError);
+        throw textError;
+      }
+    } else {
+      console.log(`⏭️  [Discovery API] PATH 1: Text research skipped (no changes)`);
     }
+
+    // ─────────────────────────────────────────────────────────────────
+    // PATH 2: VISION ANALYSIS (Gemini) — Independent trigger
+    // ─────────────────────────────────────────────────────────────────
+    // Triggers: At least 1 photo uploaded
+
+    if (uploadedPhotos.length > 0) {
+      console.log(`🚀 [Discovery API] PATH 2: Starting vision analysis for ${uploadedPhotos.length} photo(s)...`);
+
+      try {
+        const fullAddressString = `${address.street}, ${address.city}, ${address.province_state}, ${address.country} ${address.postalCode}`;
+
+        const visionData = await analyzePhotosWithGemini(
+          uploadedPhotos,
+          business_name,
+          fullAddressString
+        );
+
+        if (visionData && visionData.visuals) {
+          // Save vision results directly to Supabase
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({
+              color_theme: {
+                primary: visionData.visuals.primary_color || "neutral",
+                secondary: visionData.visuals.secondary_color || "neutral",
+                accent: visionData.visuals.accent_color || "neutral",
+                description: visionData.visuals.theme_description || "natural tones",
+              },
+              business_visuals: {
+                logoColors: visionData.visuals.logo_colors || "Not provided",
+                storefrontColors: visionData.visuals.storefront_colors || "Not provided",
+                interiorColors: visionData.visuals.interior_colors || "Not provided",
+              },
+              storefront_architecture: visionData.visuals.storefront_architecture || null,
+              interior_layout: visionData.visuals.interior_layout || "Not provided",
+              brand_source: "photos",
+            })
+            .eq('id', userId);
+
+          if (updateError) {
+            console.error(`❌ [Discovery API] PATH 2: Failed to save vision data:`, updateError);
+            throw updateError;
+          }
+
+          console.log(`✅ [Discovery API] PATH 2: Vision analysis complete and saved`);
+        }
+      } catch (visionError) {
+        console.error(`❌ [Discovery API] PATH 2 failed:`, visionError);
+        // Vision failure is non-critical — continue even if it fails
+        console.log(`⚠️  [Discovery API] PATH 2: Vision failed but continuing (photos may be reprocessed later)`);
+      }
+    } else {
+      console.log(`⏭️  [Discovery API] PATH 2: Vision analysis skipped (no photos)`);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // SUMMARY
+    // ─────────────────────────────────────────────────────────────────
+    console.log(`✅ [Discovery API] COMPLETE for ${business_name}`);
+    console.log(`   └─ TEXT SEARCH: ${shouldTriggerTextDiscovery ? "RAN" : "SKIPPED"}`);
+    console.log(`   └─ VISION: ${uploadedPhotos.length > 0 ? "RAN" : "SKIPPED"}`);
+
+    return NextResponse.json({ success: true });
+
+  } catch (error: any) {
+    console.error("Discovery API Route Error:", error.message);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}

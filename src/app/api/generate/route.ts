@@ -9,7 +9,7 @@ import { NextResponse } from "next/server";
 import Groq from "groq-sdk"; // <-- NEW
 import { createClient } from '@supabase/supabase-js';
 import { getFramework, BUSINESS_ARCHETYPES } from "@/lib/frameworks";
-import { TIP_MODE, POST_TYPE_CTA_OVERRIDE, SEASONAL_NICHE_NARRATIVE, getSeason, NARRATIVE_COMBINATIONS, NarrativeEntry } from "@/lib/frameworks";
+import { TIP_MODE, POST_TYPE_CTA_OVERRIDE, SEASONAL_NICHE_NARRATIVE, getSeason, NARRATIVE_COMBINATIONS, NarrativeEntry, ANGLE_POOL} from "@/lib/frameworks";
 import { getBrandIdentity, discoverAndSaveBrandIdentity, parseBusinessIntel  } from "@/lib/brandDiscovery";
 import { ColorTheme, BusinessVisuals } from '@/lib/constants';
 import { auth } from "@clerk/nextjs/server"; 
@@ -316,6 +316,12 @@ function buildPrompt(
           Local grounding belongs in the opener and close only — not the tips.`)
       : "";
 
+  // Select a random angle from the pool for this category + post type
+  const anglePool = ANGLE_POOL[category]?.[postType] || [];
+  const selectedAngleText = anglePool.length > 0
+    ? anglePool[Math.floor(Math.random() * anglePool.length)]
+    : null;
+
   const ctaOverride = POST_TYPE_CTA_OVERRIDE[postType] || "";
 
   const wordCount = postType === "5 Tips" 
@@ -338,16 +344,18 @@ function buildPrompt(
   const localFacts = intel?.isJson ? `
   [LOCAL_GROUND_TRUTH]:
   This is background knowledge — not a checklist.
-  The owner knows this neighbourhood the way a local does.
-  Use only what earns its place — one detail or several, whatever serves the post.
-  If nothing fits naturally, use none.
+  Use only what earns its place.
   
   Neighbourhood: ${intel.neighbourhood}
   Nearby: ${intel.landmarks.join(", ")}
   Transit: ${intel.transit.join(", ")}
   Vibe: ${intel.local_trends.join(", ")}
   Offerings: ${intel.products_services.join(", ")}
-  ` : `[RESEARCH]: Search for "${business_name}" in ${fullAddress} to find relevant local context.`;
+  Craft: ${intel.craft_identity}
+  ${intel.isInferred 
+    ? "Note: Craft identity was inferred — use as background context only." 
+    : ""}
+  ` : `[RESEARCH]: Search for "${business_name}" in ${fullAddress}.`;
 
   const coreIntel =  `[BUSINESS_SUMMARY]: ${intel?.description || "A local " + niche + " serving the community."}`;
 
@@ -411,16 +419,17 @@ function buildPrompt(
       - A constraint (what cannot be done and why)
       - A trade-off (what is sacrificed for a better result)
       - A threshold (when something changes in quality)
-      - A correction (what most people get wrong, stated directly)`
+      - A correction (what most people get wrong, stated directly)
+
+      ${selectedAngleText ? `[ANGLE]: "${selectedAngleText}" — use this as the specific lens for the craft truth. Do not quote it directly. Let it shape the angle of the opening.` : ""}`
         : `Let the offer in [POST_SPECIFICS] drive the opening naturally.`
       }
-
+      
       1. Connect this angle to the post type and voice.
       2. Check [LOCAL_GROUND_TRUTH] for one detail that sharpens the angle — use only if natural.
       3. Anchor to ONE offering from Offerings. Avoid offerings in [VARIETY RULES]. It grounds the post — not the subject of any tip.
       4. Let season, time, and weather colour the language — not override the craft truth.
-        ${currentTime} | ${currentWeather ? `${currentWeather} — one grounded moment only.` : ""}
-
+          ${currentTime} | ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} | ${currentWeather ? `${currentWeather} — one grounded moment only.` : ""}
       5. Write the post. Add 3-4 hashtags.
 
       [POST_SPECIFICS]:
@@ -525,7 +534,11 @@ export async function POST(req: Request) {
         province_state: profile.province_state,
         country: profile.country,
         postalCode: profile.postal_code 
-      }).catch(err => console.error("Background Discovery Error:", err));
+        },
+        [],        // no photos in background trigger
+        category,  // from profile
+        niche      // from profile
+      ).catch(err => console.error("Background Discovery Error:", err));
     }
 
     const recentHistory = postHistory?.length

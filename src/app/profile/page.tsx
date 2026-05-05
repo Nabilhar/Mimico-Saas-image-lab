@@ -313,7 +313,9 @@ export default function ProfilePage() {
             business_id:   user.id,
             business_name: business_name,
             address: { street, city, province_state, country, postalCode },
-            photos:        uploadedPhotoData,
+            photos: uploadedPhotoData,
+            category: category,
+            niche: niche,
           }),
         });
 
