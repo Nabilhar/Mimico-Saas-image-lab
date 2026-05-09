@@ -15,7 +15,7 @@ import { useRouter } from "next/navigation";
 
 interface GenerateDashboardProps {
   businessData: any;
-  onGenerateSuccess?: (content: string, imageUrl: string) => Promise<string | undefined>;
+  onGenerateSuccess?: (content: string, imageUrl: string, cognitiveLens?: string) => Promise<string | undefined>;
   onShare?: (content: string, imageUrl?: string) => void;
   canGenerate: boolean; 
   userCredits: number;
@@ -259,10 +259,13 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
         const weather = data.currentWeather || "";
         setCurrentWeather(weather);
 
+        const cognitiveLens = data.cognitive_lens || "";
+        console.log("DEBUG: Sending lens to savePostToCloud:", cognitiveLens);
+
         // --- THE FIX: Capture the ID ---
         if (onGenerateSuccess) {
           // Assuming your parent function returns the ID from the Supabase insert
-          const generatedUuid = await onGenerateSuccess(cleanPost, "");
+          const generatedUuid = await onGenerateSuccess(cleanPost, "", cognitiveLens);
           if (generatedUuid) {
             setLastPostId(generatedUuid); // Now we have the auto-generated Supabase ID!
 

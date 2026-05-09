@@ -97,7 +97,7 @@ export async function POST(req: Request) {
         niche, voice, business_description, color_theme, business_visuals, 
         storefront_architecture, interior_layout
       `)
-      .eq('id', userId)
+      .eq('user_id', userId)
       .eq('is_active', true) // <--- Only get the active business
       .single();
 

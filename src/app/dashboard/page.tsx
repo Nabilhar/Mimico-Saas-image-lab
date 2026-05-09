@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import PostActions from "@/components/PostActions";
 import { SavedImage } from "@/components/SavedImage";
 
-export interface Post { id: string; content: string; created_at: string; business_id: string; image_url?: string; business_name?: string; location_snapshot?: string; }
+export interface Post { id: string; content: string; created_at: string; business_id: string; image_url?: string; business_name?: string; location_snapshot?: string; cognitive_lens?: string; }
 interface BusinessData { id: string; business_name: string; street: string; city: string; province_state: string; country: string; postal_code: string; category: string; niche: string; voice: string; credits: number; history: Post[]; }
 
 export default function DashboardPage() {
@@ -113,16 +113,27 @@ export default function DashboardPage() {
   }, [isLoaded, user, supabase, loadBusinessData]);
 
 
-  const savePostToCloud = useCallback(async (newContent: string, imageUrl?: string) => {
-    if (!user?.id || !businessData || !supabase) return;
+  const savePostToCloud = useCallback(async (
+    newContent: string, 
+    imageUrl?: string, 
+    cognitiveLens?: string
+  ): Promise<string | undefined> => {  // ✅ Add explicit return type
+    
+    if (!user?.id || !businessData || !supabase) {
+      console.error("❌ Missing required data for saving post");
+      return undefined;
+    }
   
     const cost = 2 + (imageUrl ? 3 : 0);
-
+  
     // Snapshot at save time
-    const locationSnapshot = [businessData.street, businessData.city, businessData.postal_code]
-    .filter(Boolean)
-    .join(", ");
-
+    const locationSnapshot = [
+      businessData.street, 
+      businessData.city, 
+      businessData.postal_code
+    ]
+      .filter(Boolean)
+      .join(", ");
   
     try {
       const { data: rpcResult, error: rpcError } = await supabase
@@ -132,28 +143,52 @@ export default function DashboardPage() {
           p_image_url: imageUrl || '',
           p_amount: cost,
           p_business_name: businessData.business_name,     
-          p_location_snapshot: locationSnapshot  
+          p_location_snapshot: locationSnapshot,
+          p_cognitive_lens: cognitiveLens || ''
         });
+
+      // ✅ ADD THIS DEBUG BLOCK
+      console.log("🔍 Full RPC Response:", JSON.stringify(rpcResult, null, 2));
+      console.log("🔍 rpcResult type:", typeof rpcResult);
+      console.log("🔍 rpcResult is array?", Array.isArray(rpcResult));
+      console.log("🔍 rpcResult[0]:", rpcResult?.[0]);
+      console.log("🔍 rpcError:", rpcError);
   
       if (rpcError || !rpcResult[0]?.success) {
+        console.error("❌ RPC Error or insufficient credits:", rpcError);
         alert("Insufficient credits! Email Nabil for a refill.");
         return undefined;
       }
   
+      // ✅ Extract the UUID immediately
+      const newPostId = rpcResult[0].post_id;
+      
+      if (!newPostId) {
+        console.error("❌ RPC succeeded but returned no post ID!");
+        return undefined;
+      }
+  
+      console.log("✅ Post saved successfully. UUID:", newPostId);
+      console.log("✅ New credit balance:", rpcResult[0].new_balance);
+  
       // Update local state immediately for a fast UI
       setPosts(prev => [{
-        id: rpcResult[0].new_post_id,
+        id: newPostId,
         content: newContent,
         image_url: imageUrl,
         created_at: new Date().toISOString(),
-        business_id: user.id
+        business_id: user.id,
+        cognitive_lens: cognitiveLens
       }, ...prev]);
+  
+      // Sync the credit count
+      await loadBusinessData();
       
-      await loadBusinessData(); // Sync the credit count
-      return rpcResult[0].new_post_id;
+      // ✅ Return the UUID
+      return newPostId;
   
     } catch (err: any) {
-      console.error("Deduction error:", err.message);
+      console.error("❌ Deduction error:", err.message);
       return undefined;
     }
   }, [user?.id, loadBusinessData, businessData, supabase]);
@@ -225,7 +260,7 @@ export default function DashboardPage() {
                     setVoice(newVoice); // Update UI state
                     updateSavedVoice(newVoice); // Save to DB
                   }}
-                  onGenerateSuccess={(content, url) => savePostToCloud(content, url)}
+                  onGenerateSuccess={(content, url, cognitiveLens) => savePostToCloud(content, url, cognitiveLens)}
                   canGenerate={(businessData?.credits ?? 0) > 0}
                   userCredits={businessData?.credits ?? 0}
                   onDelete={() => {}}

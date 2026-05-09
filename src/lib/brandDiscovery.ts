@@ -114,12 +114,15 @@ export async function getBrandIdentity(businessId: string): Promise<BusinessIden
 }
 
 
-export function parseBusinessIntel(raw: string | null) {
+export function parseBusinessIntel(raw: any) {
   if (!raw) return null;
   
   try {
-    const parsed = JSON.parse(raw);
-    if (parsed && parsed.neighbourhood) {
+    const parsed =
+      typeof raw === "string"
+        ? JSON.parse(raw)
+        : raw;
+
       return {
         description:       parsed.description       || "",
         craft_identity:    parsed.craft_identity     || "",
@@ -131,11 +134,14 @@ export function parseBusinessIntel(raw: string | null) {
         isJson:            true,
         isInferred:        (parsed.craft_identity || "").startsWith("INFERRED:"),
       };
-    }
-  } catch (e) {}
+
+  } catch (e) {console.error("parseBusinessIntel failed:", e);}
 
   return {
-    description:       raw,
+    description:
+      typeof raw === "string"
+          ? raw
+          : raw?.description || "",
     craft_identity:    "",
     neighbourhood:     null,
     landmarks:         [],

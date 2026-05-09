@@ -51,10 +51,13 @@
   }
 
 
-  export const POST_TYPE_CTA_OVERRIDE: Partial<Record<string, string>> = {
-    "Promotion / offer": `CTA OVERRIDE: Only action is "show this post on phone upon arrival". Phrase warmly (e.g., "Just show this post to the team"). No links/DMs.`,
-    "Local event / news": `CTA OVERRIDE: Only action is "stop by on way to/from the event". No links/booking.`,
-    "Community moment": `CTA OVERRIDE: Invitation only. No offer, no urgency, no link, no booking. The close is an open door — warm and unhurried. One sentence maximum.`,
+  export const CTA_BY_POST_TYPE: Record<string, string> = {
+    "Behind the scenes": "Observation timing only. '[Process] happens [when/where].' No selling, no learning promise.",
+    "Myth-busting": "No CTA. The correction is the action.",
+    "5 Tips": "Low-pressure, physically possible visit. No urgency.",
+    "Promotion / offer": "Only action is 'show this post on phone upon arrival'. Phrase warmly (e.g., Just show this post to the team). No links/DMs.",
+    "Local event / news": "Only action is 'stop by on way to/from the event'. No links/booking.",
+    "Community moment": "Invitation only. No offer, no urgency, no link, no booking. The close is an open door — warm and unhurried. One sentence maximum.",
   };
 
 
@@ -988,3 +991,73 @@
       ],
     },
   };
+
+
+/**
+ * LAYER 2: PAS — PURE TEMPORAL STRUCTURE
+ * NO DOMAIN KNOWLEDGE. Only defines how causality unfolds in time.
+ */
+
+  export const FRAMEWORKS = {
+    PAS: {
+      HOOK: [
+        "HOOK: One paragraph: A single concrete moment inside an ongoing process with implicit constraint or operational pressure",
+        "HOOK: One paragraph: A snapshot of work in motion, before any result exists with implicit constraint or operational pressure",
+        "HOOK: One paragraph: An observable fragment of activity without interpretation with implicit constraint or operational pressure"
+      ],
+      AGITATE: [
+        "AGITATE: One paragraph: The consequence that emerges later when this moment is misaligned or skipped",
+        "AGITATE: One paragraph: A downstream effect revealed only after time has passed",
+        "AGITATE: One paragraph: A structural tension created by the initial condition"
+      ],
+      SOLVE: [
+        "SOLVE: (MECHANISM ONLY) 1-2 sentences max: What is actually set or established at this stage that determines future outcomes",
+        "SOLVE: (MECHANISM ONLY) 1-2 sentences max: The stable decision, constraint, or structure that governs later behaviour",
+        "SOLVE: (MECHANISM ONLY) 1-2 sentences max: The underlying rule that explains why the system behaves the way it does"
+      ]
+    },
+
+    BAB: {
+      BEFORE: [
+        "BEFORE: One paragraph: A stable description of the system prior to process execution",
+        "BEFORE: One paragraph: A baseline state where outcomes are inconsistent, unrefined, or uncontrolled",
+        "BEFORE: One paragraph: An observable condition before structure has been applied"
+      ],
+      AFTER: [
+        "AFTER: One paragraph: The same system after the process has stabilized outcomes",
+        "AFTER: One paragraph: A consistent, repeatable state where variation is reduced or controlled",
+        "AFTER: One paragraph: A resolved condition shaped by applied structure or process"
+      ],
+      BRIDGE: [
+        "BRIDGE: (MECHANISM ONLY) 1-2 sentences max: The mechanism, constraint, or operational change that produces the shift",
+        "BRIDGE: (MECHANISM ONLY) 1-2 sentences max: The specific intervention that connects unstable state to stable state",
+        "BRIDGE: (MECHANISM ONLY) 1-2 sentences max: The structural decision that explains why transformation is possible"
+      ]
+    },
+
+    AIDA: {
+      ATTENTION: [
+        "ATTENTION: One paragraph: A single observable system signal that reveals underlying operational behavior",
+        "ATTENTION: One paragraph: A concrete moment where a process is visibly constrained, accelerated, or exposed",
+        "ATTENTION: One paragraph: A surface-level event that implies deeper system structure"
+      ],
+    
+      INTEREST: [
+        "INTEREST: One paragraph: The underlying operational mechanism that produces the observed signal",
+        "INTEREST: One paragraph: The constraint, rule, or process logic responsible for the visible behavior",
+        "INTEREST: One paragraph: The structural cause that explains why this pattern consistently appears"
+      ],
+    
+      DESIRE: [
+        "DESIRE: One paragraph: The stabilized system outcome when the mechanism is correctly applied",
+        "DESIRE: One paragraph: The performance improvement or quality shift produced by the system constraint",
+        "DESIRE: One paragraph: The resulting equilibrium state of the process after optimization"
+      ],
+    
+      ACTION: [
+        "ACTION: 1 sentence max: A minimal, physically grounded next step that aligns with the observed system outcome",
+        "ACTION: 1 sentence max: A low-friction invitation to engage with the system outcome in real context",
+        "ACTION: 1 sentence max: A constrained interaction that does not introduce new system assumptions"
+      ]
+    }
+  } as const;

@@ -254,6 +254,11 @@ export default function ProfilePage() {
       setVoice(data.voice || "");
       setNiche(data.niche || "");
       setBusinessDescription(data.business_description?.description || "");
+
+      // --- ADD THIS TO PREVENT LEAKING PHOTOS FROM OLD BUSINESS ---
+      setStorefrontPhoto(null);
+      setLogoPhoto(null);
+      setInteriorPhoto(null);
       
       toast.success(`Found existing data for "${data.business_name}"!`, { icon: '🔄' });
     }
@@ -269,7 +274,7 @@ export default function ProfilePage() {
     if (!user || !supabase) return;
 
     setLoading(true);
-    const statusToast = toast.loading("Saving...");
+    const statusToast = toast.loading("🤖 Business saved & AI analysis running to extract your visuals...");
 
     try {
       // 1. RPC Call
@@ -284,7 +289,7 @@ export default function ProfilePage() {
         p_category: category,
         p_niche: niche,
         p_voice: voice,
-        p_mode: 'update'
+        p_mode: saveMode
       });
       if (rpcError) throw rpcError;
 
@@ -298,7 +303,7 @@ export default function ProfilePage() {
 
       if (selectedFiles.length > 0) {
         for (const { file, label } of selectedFiles) {
-          const filePath = `${businessId}/${label}-${Date.now()}.${file.name.split('.').pop()}`;
+          const filePath = `${user.id}/${businessId}/${label}-${Date.now()}.${file.name.split('.').pop()}`;
           const { error } = await supabase.storage.from('brand_assets').upload(filePath, file);
           if (!error) {
             const { data: { publicUrl } } = supabase.storage.from('brand_assets').getPublicUrl(filePath);
@@ -324,7 +329,7 @@ export default function ProfilePage() {
             niche,
           }),
         });
-        toast.success("Business saved & AI analysis running...", { id: statusToast });
+        toast.success("AI analysis completed & Business saved", { id: statusToast });
       } else {
         toast.success("Business details updated.", { id: statusToast });
       }
@@ -616,19 +621,6 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* ── dropdown 'update' | 'create' ─────────────────────────────── */}
-            <div className="mb-6 p-4 bg-slate-50 rounded-2xl border border-slate-200">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 block">Action</label>
-              <select 
-                className="w-full p-3 rounded-xl border border-slate-200 bg-white"
-                value={saveMode}
-                onChange={(e) => setSaveMode(e.target.value as 'update' | 'create')}
-              >
-                <option value="update">Update current business details</option>
-                <option value="create">Create a new business</option>
-              </select>
-            </div>
-
             {/* ── Brand Photos — 3-state section driven by brandSource ──────── */}
             <div className="space-y-4">
               <div className="flex items-start justify-between">
@@ -716,6 +708,19 @@ export default function ProfilePage() {
                   )}
                 </>
               )}
+            </div>
+
+            {/* ── dropdown 'update' | 'create' ─────────────────────────────── */}
+            <div className="mb-6 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 block">Action</label>
+              <select 
+                className="w-full p-3 rounded-xl border border-slate-200 bg-white"
+                value={saveMode}
+                onChange={(e) => setSaveMode(e.target.value as 'update' | 'create')}
+              >
+                <option value="update">Update current business details</option>
+                <option value="create">Create a new business</option>
+              </select>
             </div>
 
             {/* ── Save button ───────────────────────────────────────────────── */}

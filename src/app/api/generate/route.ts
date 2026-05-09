@@ -8,11 +8,12 @@ import {
 import { NextResponse } from "next/server";
 import Groq from "groq-sdk"; // <-- NEW
 import { createClient } from '@supabase/supabase-js';
-import { getFramework, BUSINESS_ARCHETYPES } from "@/lib/frameworks";
-import { TIP_MODE, POST_TYPE_CTA_OVERRIDE, SEASONAL_NICHE_NARRATIVE, getSeason, NARRATIVE_COMBINATIONS, NarrativeEntry, ANGLE_POOL} from "@/lib/frameworks";
+import { getFramework, BUSINESS_ARCHETYPES, Framework, FRAMEWORKS   } from "@/lib/frameworks";
+import { TIP_MODE, CTA_BY_POST_TYPE, SEASONAL_NICHE_NARRATIVE, getSeason, NARRATIVE_COMBINATIONS, NarrativeEntry, ANGLE_POOL} from "@/lib/frameworks";
 import { getBrandIdentity, discoverAndSaveBrandIdentity, parseBusinessIntel  } from "@/lib/brandDiscovery";
 import { ColorTheme, BusinessVisuals } from '@/lib/constants';
 import { auth } from "@clerk/nextjs/server"; 
+import { selectAngle } from "@/lib/angle-selector";
 
 // 1. Initialize Groq (The New Engine)
 const groq = new Groq({
@@ -107,7 +108,6 @@ async function callAIProvider(provider: string, finalPrompt: string, currentTime
     });
     const groqContent = chatCompletion.choices[0]?.message?.content;
     console.log("--- GROQ FINISH REASON:", chatCompletion.choices[0]?.finish_reason);
-    console.log("--- GROQ CONTENT:", groqContent);
     return groqContent || "";
   } 
 
@@ -116,6 +116,15 @@ async function callAIProvider(provider: string, finalPrompt: string, currentTime
   // ───────────────────────────────────────────────────────────────────────────
 
   if (provider === "anthropic") {
+
+    // ──────────────────────────────────────────────────────────────
+    console.log("\n\n🚀 === [FULL HAIKU PROMPT START] === \n");
+    console.log(finalPrompt);
+    console.log("\n === [FULL HAIKU PROMPT END] === \n\n");
+    // ──────────────────────────────────────────────────────────────
+
+    console.log(`--- PROMPT LENGTH: ${finalPrompt.length} characters, ~${Math.round(finalPrompt.length / 4)} tokens ---`);
+
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -280,9 +289,10 @@ function buildPrompt(
   businessVisuals: BusinessVisuals | null,
   business_description: string | null,
   varietyRules: string,
-  currentWeather: string
+  currentWeather: string,
+  recentLenses: string[]
 
-): string {
+): { prompt: string; lens: string }  {
 
 
   const fullAddress = `${address.street}, ${address.city}, ${address.province_state} ${address.country} ${address.postal_code}`;
@@ -322,8 +332,6 @@ function buildPrompt(
     ? anglePool[Math.floor(Math.random() * anglePool.length)]
     : null;
 
-  const ctaOverride = POST_TYPE_CTA_OVERRIDE[postType] || "";
-
   const wordCount = postType === "5 Tips" 
   ? "200-260" 
   : postType === "Community moment" 
@@ -336,6 +344,13 @@ function buildPrompt(
     hour12: true 
   });
 
+  const { lens, lensDefinition, categoryContext } = selectAngle(
+    category,
+    postType,
+    recentLenses
+  );
+
+  // STEP 2: Get business intelligence
   const intel = parseBusinessIntel(business_description);
 
   // Angle selection — dynamic for most post types, null for Promotion
@@ -384,6 +399,23 @@ function buildPrompt(
     const capitalizedMonth = month.charAt(0).toUpperCase() + month.slice(1);
     const season = getSeason(capitalizedMonth); 
     const seasonalNicheGuidance = SEASONAL_NICHE_NARRATIVE[season]?.[category] || "";
+
+    const FRAMEWORK_SHAPES = {
+      PAS: ["HOOK", "AGITATE", "SOLVE"],
+      BAB: ["BEFORE", "AFTER", "BRIDGE"],
+      AIDA: ["ATTENTION", "INTEREST", "DESIRE", "ACTION"]
+    } as const satisfies Record<Framework, readonly string[]>;
+
+    const shape = FRAMEWORK_SHAPES[framework as keyof typeof FRAMEWORK_SHAPES];
+
+    const rendered = shape
+      .map((stage: string) => {
+        const options =
+          (FRAMEWORKS as any)?.[framework]?.[stage] ?? [];
+    
+        return options[0] ?? "";
+      })
+      .join("\n\n");
   
 
     const roleInstruction = postType === "Community moment"
@@ -392,58 +424,84 @@ function buildPrompt(
           You notice what happens in the room. You see the scene — you don't explain it or sell it.
           Describe what people do and feel. The business is the backdrop that makes the moment possible.`
       : `You are the owner of "${business_name}", a ${niche} at ${fullAddress}.
-          Write in your own voice — from experience, not enthusiasm.
-          Do not describe what customers do, feel, or think. State craft truth directly.`;
+          Write like someone in the middle of a real shift — noticing things, remembering moments, reacting to what happened in the room.
+          The tone is observational, grounded, and human.
+          You are not teaching, selling, or explaining processes step-by-step.
+          Do not sound like a textbook, consultant, food scientist, or advertisement.`;
 
-    return `
+    const promptText = `
 
       [ROLE]: ${roleInstruction}
 
-      [BUSINESS]:
+      Your job is to express causal truth inside a real operational system.
+
+      You are NOT allowed to:
+      - explain frameworks or lenses
+      - generalize abstractly
+      - invent new tools, equipment, or systems
+      - describe customer emotions or interpretations
+      - use reflective intros (e.g. "I used to think", "I've learned")
+
+      You ARE required to:
+      - anchor everything in physical process or constraint
+      - express cause → effect relationships
+      - stay inside existing business facts only
+
+      [BUSINESS_SYSTEM]:
+
       ${coreIntel}
 
-      [TONE]: ${VOICE_PROMPTS[voice] || "Warm, community-first."}
+      ${intel?.products_services?.length ? `Offerings: ${intel.products_services.join(", ")}` : ''}
 
-      [SEASONAL_GUIDE]: ${seasonalNicheGuidance}
+      [LOCAL_CONTEXT]:
+      ${intel?.neighbourhood ? `Neighbourhood: ${intel.neighbourhood}` : ''}
+      ${intel?.landmarks?.length ? `Nearby: ${intel.landmarks.join(", ")}` : ''}
+      ${intel?.local_trends?.length ? `Vibe: ${intel.local_trends.join(", ")}` : ''}
 
-      ${visualIdentity}
 
-      ${localFacts}
+      [SEASONAL_CONTEXT]: ${season} | ${currentTime} | ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} | ${currentWeather }
+
+      These are facts. Do not embellish. Do not extend them.
+
+      [BUSINESS CRAFT]
+      ${intel?.craft_identity ? `Craft: ${intel.craft_identity}` : ''}
+
+      [CATEGORY CONTEXT]:
+      ${categoryContext}
+
+      [COGNITIVE LENS]: ${lens}
+      ${lensDefinition}
 
       [TASK]:
-      ${selectedAngle
-        ? `Open with one specific craft truth earned through years of practice — not findable online.
-      Start from it directly. No introduction. First sentence is about the craft, not people.
-
-      A valid craft truth includes at least one of:
-      - A constraint (what cannot be done and why)
-      - A trade-off (what is sacrificed for a better result)
-      - A threshold (when something changes in quality)
-      - A correction (what most people get wrong, stated directly)
-
-      ${selectedAngleText ? `[ANGLE]: "${selectedAngleText}" — use this as the specific lens for the craft truth. Do not quote it directly. Let it shape the angle of the opening.` : ""}`
-        : `Let the offer in [POST_SPECIFICS] drive the opening naturally.`
-      }
+      Open with one specific craft truth through the ${lens} lens. Do not explain the lens.
+      Do not describe the system abstractly. Start inside a real moment where this lens is already happening.
       
-      1. Connect this angle to the post type and voice.
-      2. Check [LOCAL_GROUND_TRUTH] for one detail that sharpens the angle — use only if natural.
-      3. Anchor to ONE offering from Offerings. Avoid offerings in [VARIETY RULES]. It grounds the post — not the subject of any tip.
-      4. Let season, time, and weather colour the language — not override the craft truth.
-          ${currentTime} | ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} | ${currentWeather ? `${currentWeather} — one grounded moment only.` : ""}
-      5. Write the post. Add 3-4 hashtags.
+      [EXPRESSION HINT]:
+      Express this through something concrete:
+      - a constraint
+      - a tradeoff
+      - a threshold
+      - or a correction
 
-      [POST_SPECIFICS]:
-      Type: ${postType}
-      ${tipModeInstruction ? `Tip Mode: ${tipModeInstruction}\n` : ""}
-      ${narrative}
+      Do not force it. Use what fits the moment.
+
+      [VOICE]: ${VOICE_PROMPTS[voice]}
+
+      [POST TYPE]: ${postType}
+
+      [FRAMEWORK]: ${framework}
+      ${rendered}
+
+      [CTA]: 
+      ${CTA_BY_POST_TYPE[postType]}
 
       [HARD CONSTRAINTS]:
       - ${wordCount} words. 1st person. Short paragraphs, double-spaced.
       - Max 3 emojis in body only. Never in hashtags.
       - No labels (e.g. "Hook:", "Tip 1:"). No commentary or word counts.
       - No competing business references.
-      - ${postType === "Myth-busting" ? "No CTA of any kind." : `CTA: low-pressure, physically possible for a ${niche}.`}
-      - ${ctaOverride || ""}
+      - Do not introduce new tools, equipment, or systems unless explicitly present in [BUSINESS_SUMMARY].
+        You may only describe adjustments to existing systems.
 
       [BANNED PHRASES]:
       "bike-to-work buzz" / "stone's throw" / "pour our hearts" / "passionate about" /
@@ -457,11 +515,26 @@ function buildPrompt(
 
       [VARIETY RULES]:
       ${varietyRules}
-      If all offerings used recently — pick least recently used. If all landmarks used — use none.
+
+      IMPORTANT: The lens selected for THIS post is: ${lens}
+      This lens must NOT appear in the "recently used" list above.
+      If you see it there, STOP and report an error.
 
       [OUTPUT]: <<<POST_BEGIN>>> then post body then hashtags. Nothing else.
 
-`;}
+`;
+  return { prompt: promptText, lens };
+}
+
+// Helper function to extract recently used lenses from post history
+function extractRecentLenses(postHistory: any[]): string[] {
+  if (!postHistory || postHistory.length === 0) return [];
+  
+  return postHistory
+    .slice(0, 3)  // Last 3 posts
+    .map(p => p.cognitive_lens)  // Extract the lens field
+    .filter(Boolean);  // Remove any undefined/null values
+}
 
 // ─────────────────────────────────────────────
 // 5. API ROUTE HANDLER
@@ -579,6 +652,15 @@ export async function POST(req: Request) {
         })
         .join("\n\n")
     : "No previous posts found.";
+
+    // Extract lenses from recent posts for variety
+    const recentLenses = postHistory?.length 
+    ? extractRecentLenses(postHistory)
+    : [];
+
+    console.log("--- LENS HISTORY CHECK ---");
+    console.log("Recent lenses used:", recentLenses);
+    console.log("--------------------------");
     
         // Variety rules — products and landmarks used recently
     const usedOfferings = postHistory?.slice(0, 3).flatMap((p: any) => {
@@ -605,10 +687,13 @@ export async function POST(req: Request) {
       uniqueUsedLandmarks.length
         ? `  - Landmarks to avoid: ${uniqueUsedLandmarks.join(", ")}`
         : "  - No recent landmark patterns to avoid.",
+      recentLenses.length
+        ? `  - Cognitive lenses recently used: ${recentLenses.join(", ")} — select a completely different lens.`
+        : "  - No recent lens patterns to avoid."
     ].join("\n");
 
     // Auto-select framework — user never has to choose
-    const framework = getFramework(category, postType, voice) || "PAS";
+    const framework: Framework = getFramework(category, postType, voice) || "PAS";
     console.log("Using Framework:", framework);
 
     // Inject current month for seasonality
@@ -631,7 +716,7 @@ export async function POST(req: Request) {
     }
 
     // Build the final prompt
-    const finalPrompt = buildPrompt(
+    const { prompt: finalPrompt, lens } = buildPrompt(
       business.business_name,
       category,
       niche,
@@ -648,7 +733,8 @@ export async function POST(req: Request) {
       business.business_visuals,
       business.business_description,
       varietyRules,
-      currentWeather
+      currentWeather,
+      recentLenses
     );
 
     // ── MOCK MODE (delete before going to production) ─────
@@ -773,7 +859,8 @@ if (!content || content.trim().length < 80) {
 }
 
 console.log("--- GENERATION SUCCESSFUL ---");
-return NextResponse.json({ content, framework, currentWeather });
+return NextResponse.json({ content, framework, currentWeather, cognitive_lens: lens });
+
 
 } catch (error: any) {
 console.error("--- Shoreline ENGINE CRASH REPORT ---");
