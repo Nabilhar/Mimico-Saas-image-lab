@@ -347,9 +347,9 @@ export default function ProfilePage() {
       setTestResult("Please select a category and voice first!");
       return;
     }
-    const result = getFramework(category, "5 Tips", voice);
+    const result = getFramework(category, "Tip of the Day", voice);
     const archetype = BUSINESS_ARCHETYPES[category];
-    setTestResult(`Logic: ${category} is "${archetype}". Using ${voice} voice for "5 Tips" results in: ${result} framework.`);
+    setTestResult(`Logic: ${category} is "${archetype}". Using ${voice} voice for "Tip of the Day" results in: ${result} framework.`);
   };
 
   if (!isLoaded) return <div className="p-10 text-center text-slate-500">Loading Profile...</div>;

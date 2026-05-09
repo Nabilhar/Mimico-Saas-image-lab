@@ -27,7 +27,7 @@
   };
 
     const matrix: Record<string, Record<PurchaseType, Framework>> = {
-      "5 Tips":             { "pain-driven": "PAS", "lifestyle": "BAB", "considered-purchase": "AIDA" },
+      "Tip of the Day":             { "pain-driven": "PAS", "lifestyle": "BAB", "considered-purchase": "AIDA" },
       "Promotion / offer":  { "pain-driven": "PAS", "lifestyle": "BAB", "considered-purchase": "AIDA" },
       "Local event / news": { "pain-driven": "PAS", "lifestyle": "BAB", "considered-purchase": "AIDA" },
   };
@@ -54,7 +54,7 @@
   export const CTA_BY_POST_TYPE: Record<string, string> = {
     "Behind the scenes": "Observation timing only. '[Process] happens [when/where].' No selling, no learning promise.",
     "Myth-busting": "No CTA. The correction is the action.",
-    "5 Tips": "Low-pressure, physically possible visit. No urgency.",
+    "Tip of the Day": "Low-pressure, physically possible visit. No urgency.",
     "Promotion / offer": "Only action is 'show this post on phone upon arrival'. Phrase warmly (e.g., Just show this post to the team). No links/DMs.",
     "Local event / news": "Only action is 'stop by on way to/from the event'. No links/booking.",
     "Community moment": "Invitation only. No offer, no urgency, no link, no booking. The close is an open door — warm and unhurried. One sentence maximum.",
@@ -67,7 +67,7 @@
  
    export const NARRATIVE_COMBINATIONS: Record<string, NarrativeEntry> = {
  
-      "PAS_5 Tips": `
+      "PAS_Tip of the Day": `
     Intro: Open with one craft or trade truth the reader gets wrong in their own experience.
       The owner is sharing a truth — not watching customers make mistakes.
       One sentence on what getting this wrong costs — time, money, or comfort.
@@ -144,7 +144,7 @@
 
       // ── BAB ──────────────────────────────────────────────────────────────────
   
-      "BAB_5 Tips": `
+      "BAB_Tip of the Day": `
     Before: One grounded sentence on a craft or trade reality the reader lives —
       an ordinary imperfect moment they'd recognise as their own.
       Not something the owner observes. Not dramatic.
@@ -222,7 +222,7 @@
   
       // ── AIDA ─────────────────────────────────────────────────────────────────
   
-      "AIDA_5 Tips": `
+      "AIDA_Tip of the Day": `
     Attention: One bold craft or trade claim that stops the scroll —
       a specific truth, surprising fact, or counterintuitive statement.
       Not a local scene the owner observes. A claim the reader feels.
@@ -388,17 +388,17 @@
 
   //Visual
   export const FRAMEWORK_POST_TYPE_COMBINATIONS = {
-    "PAS_5 Tips": `Visual: Solution state/benefit. Vibe: Instructive, clear.`,
+    "PAS_Tip of the Day": `Visual: Solution state/benefit. Vibe: Instructive, clear.`,
     "PAS_Myth-busting": `Visual: Truth/solution state. Vibe: Authoritative, confident.`,
     "PAS_Behind the Scenes": `Visual: Solution process/work. Vibe: Authentic, revealing.`,
     "PAS_Promotion": `Visual: Benefit being offered. Vibe: Inviting, accessible.`,
     "PAS_Local Event": `Visual: Event opportunity. Vibe: Timely, community-connected.`,
-    "BAB_5 Tips": `Visual: "After" state of tips. Vibe: Instructive, aspirational.`,
+    "BAB_Tip of the Day": `Visual: "After" state of tips. Vibe: Instructive, aspirational.`,
     "BAB_Myth-busting": `Visual: Transformation (Wrong $\rightarrow$ Correct). Vibe: Authoritative.`,
     "BAB_Behind the Scenes": `Visual: Transformation moment/after-work. Vibe: Intimate, revealing.`,
     "BAB_Promotion": `Visual: "After" state of offer. Vibe: Inviting, warm.`,
     "BAB_Local Event": `Visual: Community connection at event. Vibe: Community-first.`,
-    "AIDA_5 Tips": `Visual: Attention-grabbing tip/result. Vibe: Compelling, clear.`,
+    "AIDA_Tip of the Day": `Visual: Attention-grabbing tip/result. Vibe: Compelling, clear.`,
     "AIDA_Myth-busting": `Visual: Surprising truth/striking difference. Vibe: Bold, credible.`,
     "AIDA_Behind the Scenes": `Visual: Desire-building detail of work. Vibe: Intimate, revealing.`,
     "AIDA_Promotion": `Visual: Attention-grabbing offer detail. Vibe: Compelling, warm.`,
@@ -568,7 +568,7 @@
   export const ANGLE_POOL: Record<string, Partial<Record<string, string[]>>> = {
 
     "Food & Beverage": {
-      "5 Tips": [
+      "Tip of the Day": [
         "The freshness signal a customer can read before the first bite — not how it's stored, but what to look for",
         "What temperature does to the eating experience — what the customer notices, not what happens in production",
         "The difference between artisan and industrial versions of the same product — what shows up on the customer's side",
@@ -598,7 +598,7 @@
     },
   
     "Health & Wellness": {
-      "5 Tips": [
+      "Tip of the Day": [
         "Pain at the site is rarely where the problem lives — the source is almost always upstream",
         "Resting a recurring issue makes it quieter, not smaller — movement is usually the medicine",
         "Recovery slows down the moment people stop the thing that was working, not when they start something new",
@@ -628,7 +628,7 @@
     },
   
     "Home Services": {
-      "5 Tips": [
+      "Tip of the Day": [
         "The early warning sign that appears long before a costly failure",
         "What seasonal changes quietly do to systems over time",
         "The preventative action that avoids the most expensive future repairs",
@@ -659,7 +659,7 @@
     },
   
     "Beauty & Personal Care": {
-      "5 Tips": [
+      "Tip of the Day": [
         "Layering actives on top of each other without waiting cancels both — skin can only absorb one thing at a time",
         "Skin purges in spring because cell turnover accelerates — it looks worse before it looks better, and that's the treatment working",
         "The tool matters as much as the product — a dirty applicator reintroduces exactly what the product was removing",
@@ -689,7 +689,7 @@
     },
   
     "Fitness & Recreation": {
-      "5 Tips": [
+      "Tip of the Day": [
         "The warm-up mistake that leads to the most avoidable injuries",
         "What progressive overload actually looks like in practice",
         "The recovery tradeoff that limits long-term progress",
@@ -720,7 +720,7 @@
     },
   
     "Professional Services": {
-      "5 Tips": [
+      "Tip of the Day": [
         "The document most people only prepare after it becomes urgent",
         "The deadline that quietly creates the highest long-term cost when missed",
         "What should be prepared before any consultation for maximum value",
@@ -750,7 +750,7 @@
     },
   
     "Retail": {
-      "5 Tips": [
+      "Tip of the Day": [
         "The quality signal that matters more than price in this category",
         "The usage or wear factor that determines product lifespan",
         "The detail missing from descriptions that affects performance",
@@ -781,7 +781,7 @@
     },
   
     "Pets": {
-      "5 Tips": [
+      "Tip of the Day": [
         "The behavioural signal that is often misunderstood by owners",
         "How seasonal changes alter needs without obvious signs",
         "The feeding or nutrition pattern that quietly creates issues",
@@ -811,7 +811,7 @@
     },
   
     "Automotive": {
-      "5 Tips": [
+      "Tip of the Day": [
         "The warning sign that appears long before mechanical failure",
         "How seasonal conditions affect vehicle systems quietly over time",
         "The maintenance interval that most people underestimate",
@@ -841,7 +841,7 @@
     },
   
     "Education & Childcare": {
-      "5 Tips": [
+      "Tip of the Day": [
         "The environmental factor that impacts learning more than curriculum",
         "What consistency builds that short-term intensity cannot",
         "The transition point most families underestimate",
@@ -871,7 +871,7 @@
     },
   
     "Technology": {
-      "5 Tips": [
+      "Tip of the Day": [
         "The security gap most users leave open without realizing it",
         "What actually slows systems down beyond obvious causes",
         "The backup assumption that leads to data loss",
@@ -901,7 +901,7 @@
     },
   
     "Events & Hospitality": {
-      "5 Tips": [
+      "Tip of the Day": [
         "The planning timeline error that increases cost and stress",
         "What vendors need that clients often fail to provide",
         "The detail guests remember most that planners underinvest in",
@@ -931,7 +931,7 @@
     },
   
     "Real Estate & Property": {
-      "5 Tips": [
+      "Tip of the Day": [
         "The preparation step that changes final selling outcomes",
         "What buyers prioritize that often surprises sellers",
         "How inspection findings should actually be interpreted",
@@ -962,7 +962,7 @@
     },
   
     "Trades & Industrial": {
-      "5 Tips": [
+      "Tip of the Day": [
         "The early failure signal most property owners ignore",
         "How seasonal shifts affect system durability",
         "The maintenance step that prevents high-cost failures",

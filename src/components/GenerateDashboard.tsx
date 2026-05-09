@@ -45,7 +45,16 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
   const [promoType, setPromoType] = useState("discount");
   const [eventType, setEventType] = useState("event");
   const [customDetails, setCustomDetails] = useState("")
+  const [eventOrShoutout, setEventOrShoutout] = useState("");
   const [currentWeather, setCurrentWeather] = useState("");
+
+  const [offerName, setOfferName] = useState("");
+  const [offerCategory, setOfferCategory] = useState("discount");
+  const [whatsIncluded, setWhatsIncluded] = useState("");
+  const [availableTimeframe, setAvailableTimeframe] = useState("");
+  const [eligibility, setEligibility] = useState("anyone");
+  const [offerHook, setOfferHook] = useState("");
+  const [valueFraming, setValueFraming] = useState("discount");
 
   // Generation States
   const [content, setContent] = useState<string | null>(null);
@@ -218,11 +227,6 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
         body: JSON.stringify({ 
           prompt: `Generate a ${postType} post for ${business_name}in ${city}, ${province_state} ${country}`,
           business_name,
-          street,
-          city,
-          province_state,
-          country,
-          postal_code: postalCode,
           category,
           niche,
           voice,  
@@ -230,10 +234,25 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
           promoType,    // "discount", "freebie", or "custom"
           eventType,    // "news", "event", "update"
           customDetails, // The raw text from the box
+          eventOrShoutout,
           business_id: user?.id,
           history: history,
           currentWeather,
-          currentMonth: new Date().toLocaleString("en", { month: "long" })
+          currentMonth: new Date().toLocaleString("en", { month: "long" }),
+          address: {
+            street,
+            city,
+            province_state,
+            country,
+            postal_code: postalCode,
+            },
+          offerName,
+          offerCategory,
+          whatsIncluded,
+          availableTimeframe,
+          eligibility,
+          offerHook,
+          valueFraming
         }),
       });
 
@@ -442,8 +461,28 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
     pollForImage();
   };
 
-  const isDetailsRequired = postType === "Promotion / offer" || postType === "Local event / news";
-  const isDetailsMissing = isDetailsRequired && customDetails.trim().length === 0;
+    // Delete this line completely:
+    // const isDetailsRequired = postType === "Promotion / offer" || postType === "Local event / news";
+
+    // MODE 4 (Promotion/offer) requires 7 fields; other modes use customDetails
+  const isDetailsMissing = (() => {
+    if (postType === "Promotion / offer") {
+      // MODE 4: All 7 fields required (except offerHook which is optional)
+      return (
+        !offerName.trim() ||
+        !offerCategory ||
+        !whatsIncluded.trim() ||
+        !availableTimeframe.trim() ||
+        !eligibility ||
+        !valueFraming
+      );
+    } else if (postType === "Local event / news") {
+      // MODE 5: Requires event/shoutout details
+      return eventOrShoutout.trim().length === 0;
+    }
+    // All other post types don't require details
+    return false;
+  })();
   
   return (
 
@@ -493,7 +532,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
               >
                 <option value="Behind the scenes">Behind the scenes</option>
                 <option value="Myth-busting">Myth-busting</option>
-                <option value="5 Tips">5 Tips</option>
+                <option value="Tip of the Day">Tip of the Day</option>
                 <option value="Promotion / offer">Promotion / offer</option>
                 <option value="Local event / news">Local event / news</option>
                 <option value="Community moment">Community moment</option>
@@ -505,33 +544,124 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
           {/* --- CONDITIONAL PROMOTION BOXES --- */}
           {postType === "Promotion / offer" && (
             <div className="mt-4 space-y-4 animate-in fade-in slide-in-from-top-2">
+              
+              {/* 1. OFFER NAME */}
               <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Promotion Type</label>
+                <label className="text-[10px] font-black uppercase text-slate-400 ml-1">
+                  What's Being Offered?
+                </label>
+                <input 
+                  type="text"
+                  value={offerName}
+                  onChange={(e) => setOfferName(e.target.value)}
+                  placeholder="e.g., Spring Hair Refresh Package"
+                  maxLength={40}
+                  className="w-full p-3 border rounded-xl bg-white border-slate-200 shadow-sm outline-none focus:ring-2 focus:ring-cyan-100 transition-all"
+                />
+              </div>
+
+              {/* 2. OFFER CATEGORY */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-black uppercase text-slate-400 ml-1">
+                  Type of Offer
+                </label>
                 <select 
-                  value={promoType}
-                  onChange={(e) => setPromoType(e.target.value)}
+                  value={offerCategory}
+                  onChange={(e) => setOfferCategory(e.target.value)}
                   className="w-full p-3 border rounded-xl bg-white border-slate-200 shadow-sm outline-none focus:ring-2 focus:ring-cyan-100 transition-all"
                 >
-                  <option value="discount">Discount %</option>
-                  <option value="freebie">Freebie / Gift</option>
-                  <option value="custom">Custom Offer</option>
+                  <option value="">Select type...</option>
+                  <option value="discount">Discount/Deal</option>
+                  <option value="bundle">Bundle (Things Grouped)</option>
+                  <option value="package">Service Package</option>
+                  <option value="limited">Limited Availability</option>
+                  <option value="seasonal">Seasonal/Timed</option>
+                  <option value="sample">Access/Sample</option>
                 </select>
               </div>
 
+              {/* 3. WHAT'S INCLUDED */}
               <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Offer Details</label>
+                <label className="text-[10px] font-black uppercase text-slate-400 ml-1">
+                  What's Included (What Do They Get?)
+                </label>
                 <textarea 
-                  value={customDetails}
-                  onChange={(e) => setCustomDetails(e.target.value)}
-                  placeholder="e.g., 20% off all curries until Friday..."
-                  className="w-full p-3 border rounded-xl border-slate-200 min-h-[100px] outline-none focus:ring-2 focus:ring-cyan-100 transition-all"
+                  value={whatsIncluded}
+                  onChange={(e) => setWhatsIncluded(e.target.value)}
+                  placeholder="e.g., Color consultation + treatment + 2-week care plan"
+                  className="w-full p-3 border rounded-xl border-slate-200 min-h-[80px] outline-none focus:ring-2 focus:ring-cyan-100 transition-all"
                 />
-                  {customDetails.trim().length === 0 && (
-                    <p className="text-[10px] text-amber-600 font-semibold ml-1">
-                      Required to generate this post type
-                    </p>
-                  )}
               </div>
+
+              {/* 4. AVAILABILITY */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-black uppercase text-slate-400 ml-1">
+                  When's It Available?
+                </label>
+                <input 
+                  type="text"
+                  value={availableTimeframe}
+                  onChange={(e) => setAvailableTimeframe(e.target.value)}
+                  placeholder="e.g., This weekend only, April-May, Next 3 weeks"
+                  className="w-full p-3 border rounded-xl bg-white border-slate-200 shadow-sm outline-none focus:ring-2 focus:ring-cyan-100 transition-all"
+                />
+              </div>
+
+              {/* 5. ELIGIBILITY */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-black uppercase text-slate-400 ml-1">
+                  Who Can Access It?
+                </label>
+                <select 
+                  value={eligibility}
+                  onChange={(e) => setEligibility(e.target.value)}
+                  className="w-full p-3 border rounded-xl bg-white border-slate-200 shadow-sm outline-none focus:ring-2 focus:ring-cyan-100 transition-all"
+                >
+                  <option value="">Select...</option>
+                  <option value="new_clients">New Clients Only</option>
+                  <option value="walk_ins">Walk-Ins Welcome</option>
+                  <option value="by_appointment">By Appointment (24-hr notice)</option>
+                  <option value="limited_qty">Limited to X Per Day</option>
+                  <option value="first_time">First-Time Visitors</option>
+                  <option value="anyone">Anyone — No Restrictions</option>
+                </select>
+              </div>
+
+              {/* 6. OFFER HOOK (Optional) */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-black uppercase text-slate-400 ml-1">
+                  Why Now? (Optional)
+                </label>
+                <textarea 
+                  value={offerHook}
+                  onChange={(e) => setOfferHook(e.target.value)}
+                  placeholder="e.g., Spring arrived and..., or We noticed customers..."
+                  className="w-full p-3 border rounded-xl border-slate-200 min-h-[60px] outline-none focus:ring-2 focus:ring-cyan-100 transition-all"
+                />
+                <p className="text-[9px] text-slate-400">Leave blank for system to generate</p>
+              </div>
+
+              {/* 7. VALUE FRAMING */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-black uppercase text-slate-400 ml-1">
+                  How Is It Positioned?
+                </label>
+                <select 
+                  value={valueFraming}
+                  onChange={(e) => setValueFraming(e.target.value)}
+                  className="w-full p-3 border rounded-xl bg-white border-slate-200 shadow-sm outline-none focus:ring-2 focus:ring-cyan-100 transition-all"
+                >
+                  <option value="">Select...</option>
+                  <option value="discount">Lighter on the wallet</option>
+                  <option value="accessible">More accessible entry point</option>
+                  <option value="entry_level">Entry-level option</option>
+                  <option value="bundle_savings">Bundle savings</option>
+                  <option value="early_bird">Early bird special</option>
+                  <option value="seasonal">Seasonal timing</option>
+                </select>
+                <p className="text-[9px] text-slate-400">Do NOT state actual prices (customer shows post in-store for details)</p>
+              </div>
+
             </div>
           )}
 
@@ -539,7 +669,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
           {postType === "Local event / news" && (
             <div className="mt-4 space-y-4 animate-in fade-in slide-in-from-top-2">
               <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Update Category</label>
+                <label className="text-[10px] font-black uppercase text-slate-400 ml-1">What Type?</label>
                 <select 
                   value={eventType}
                   onChange={(e) => setEventType(e.target.value)}
@@ -552,18 +682,21 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
               </div>
 
               <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Event/News Details</label>
+                <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Tell Us About It</label>
                 <textarea 
-                  value={customDetails}
-                  onChange={(e) => setCustomDetails(e.target.value)}
-                  placeholder="e.g., The Mimico Waterfront Festival is happening this Saturday!"
+                  value={eventOrShoutout}
+                  onChange={(e) => setEventOrShoutout(e.target.value)}
+                  placeholder="e.g., The Mimico Waterfront Festival is happening this Saturday from 10am-6pm. Live music, food vendors, perfect for families."
                   className="w-full p-3 border rounded-xl border-slate-200 min-h-[100px] outline-none focus:ring-2 focus:ring-cyan-100 transition-all"
                 />
-                  {customDetails.trim().length === 0 && (
-                    <p className="text-[10px] text-amber-600 font-semibold ml-1">
-                      Required to generate this post type
-                    </p>
-)}
+                <p className="text-[9px] text-slate-400">
+                  Share the event name, when it's happening, and why it matters to your neighborhood.
+                </p>
+                {eventOrShoutout.trim().length === 0 && (
+                  <p className="text-[10px] text-amber-600 font-semibold ml-1">
+                    Required to generate this post type
+                  </p>
+                )}
               </div>
             </div>
           )}

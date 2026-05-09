@@ -9,10 +9,10 @@ const testCategories = [
 ];
 
 const testCases = [
-  { postType: "5 Tips", history: [] },
+  { postType: "Tip of the Day", history: [] },
   { postType: "Behind the scenes", history: [] },
   { postType: "Myth-busting", history: ["Latent Point"] }, // Test variety
-  { postType: "5 Tips", history: ["Latent Point", "Tradeoff Lock"] }, // Test with 2 used
+  { postType: "Tip of the Day", history: ["Latent Point", "Tradeoff Lock"] }, // Test with 2 used
 ];
 
 console.log("\n🧪 COGNITIVE LENS SYSTEM TEST\n");

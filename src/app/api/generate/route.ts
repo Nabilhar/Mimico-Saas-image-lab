@@ -14,6 +14,9 @@ import { getBrandIdentity, discoverAndSaveBrandIdentity, parseBusinessIntel  } f
 import { ColorTheme, BusinessVisuals } from '@/lib/constants';
 import { auth } from "@clerk/nextjs/server"; 
 import { selectAngle } from "@/lib/angle-selector";
+import { selectGroupAngle } from "@/lib/group-angle-selector";  // ← NEW
+import { buildPrompt as buildModePrompt } from "@/lib/prompt-builder";  // ← NEW
+import { type PostType } from "@/lib/mode-templates";  // ← NEW
 
 // 1. Initialize Groq (The New Engine)
 const groq = new Groq({
@@ -272,7 +275,7 @@ async function callAIProvider(provider: string, finalPrompt: string, currentTime
 // + keyword-first caption + framework all assembled here.
 // ─────────────────────────────────────────────
 
-function buildPrompt(
+function buildLegacyPrompt(
   business_name: string,
   category: string,
   niche: string,
@@ -309,7 +312,7 @@ function buildPrompt(
 
     const tipMode = TIP_MODE[niche] || TIP_MODE[category] || "service";
 
-    const tipModeInstruction = postType === "5 Tips"
+    const tipModeInstruction = postType === "Tip of the Day"
       ? (tipMode === "neighbourhood"
           ? `Tips: practical local life-admin a community expert would share.
           1 tip max may reference the core service.
@@ -332,7 +335,7 @@ function buildPrompt(
     ? anglePool[Math.floor(Math.random() * anglePool.length)]
     : null;
 
-  const wordCount = postType === "5 Tips" 
+  const wordCount = postType === "Tip of the Day" 
   ? "200-260" 
   : postType === "Community moment" 
     ? "110-150" 
@@ -559,13 +562,19 @@ export async function POST(req: Request) {
       category,
       niche,
       voice,
-      postType = "5 Tips", 
-      promoType = "discount",    // <-- Make sure these are here
-      eventType = "event",    // <-- Make sure these are here
-      customDetails = "", // <-- Make sure these are here
+      postType = "Tip of the Day", 
+      eventType = "event",
+      eventOrShoutout = "",
       history: postHistory,
-      provider: requestedProvider
-
+      provider: requestedProvider,
+      address,  // ✨ NEW: Accept address object from GenerateDashboard
+      offerName = "",
+      offerCategory = "discount",
+      whatsIncluded = "",
+      availableTimeframe = "",
+      eligibility = "anyone",
+      offerHook = "",
+      valueFraming = "discount"
     } = body;
 
       // --- ADD THIS DEBUG BLOCK ---
@@ -582,6 +591,22 @@ export async function POST(req: Request) {
       }
       console.log("-----------------------");
 
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ✨ NEW: Handle address from request (from GenerateDashboard)
+    // ═══════════════════════════════════════════════════════════════════════════
+    let fullAddress: string;
+
+    if (address && address.street && address.city) {
+      // Use address from request if provided
+      fullAddress = `${address.street}, ${address.city}, ${address.province_state} ${address.country} ${address.postal_code}`;
+      console.log("✅ Using address from request:", fullAddress);
+    } else {
+      // Fallback: Will be built after Supabase fetch
+      console.log("⏳ Will use address from Supabase after fetch");
+      fullAddress = ""; // Placeholder
+    }
+    // ═══════════════════════════════════════════════════════════════════════════
     
     const { data: business, error: businessError  } = await supabase
     .from('businesses')
@@ -594,26 +619,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Business profile not found. Please complete your profile." }, { status: 404 });
     }
 
-    // 1. Parse the Librarian data once
-    const intel = parseBusinessIntel(business.business_description);
-
-    // 2. Check if we are missing visuals OR if the description is still legacy (not JSON)
-    const isStructured = intel?.isJson || false;
-
-    if (!business.color_theme || !business.business_visuals || !isStructured) {
-      console.log("--- SINGLE SOURCE CHECK: Triggering background upgrade ---");
-      discoverAndSaveBrandIdentity(business.id, business.business_name, {
-        street: business.street,
-        city: business.city,
-        province_state: business.province_state,
-        country: business.country,
-        postalCode: business.postal_code 
-        },
-        [],        // no photos in background trigger
-        category,  // from profile
-        niche      // from profile
-      ).catch(err => console.error("Background Discovery Error:", err));
+    // ✨ NEW: Fallback - build fullAddress from Supabase if not in request
+    if (!fullAddress || fullAddress === "") {
+      fullAddress = `${business.street}, ${business.city}, ${business.province_state} ${business.country} ${business.postal_code}`;
+      console.log("✅ Built fullAddress from Supabase:", fullAddress);
     }
+
+    // Step 2: Parse business intelligence (you already do this above)
+    const intel = parseBusinessIntel(business.business_description);
 
     const recentHistory = postHistory?.length
     ? postHistory
@@ -715,28 +728,72 @@ export async function POST(req: Request) {
       console.warn("Weather fetch failed — continuing without it.");
     }
 
-    // Build the final prompt
-    const { prompt: finalPrompt, lens } = buildPrompt(
-      business.business_name,
-      category,
-      niche,
-      business,   
-      voice,
-      postType,
-      framework,
-      month,
-      recentHistory,
-      promoType || "",    // Argument 9
-      eventType || "",    // Argument 10
-      customDetails || "", // Argument 11
-      business.color_theme,   
-      business.business_visuals,
-      business.business_description,
-      varietyRules,
-      currentWeather,
-      recentLenses
-    );
+    // ═══════════════════════════════════════════════════════════════════════════
+    // NEW SYSTEM: 7-group lens + MODE templates
+    // ═══════════════════════════════════════════════════════════════════════════
 
+    // Step 1: Get lens + context from the 7-group system
+    const angle = selectGroupAngle(niche, postType as PostType);
+
+    // Step 3: Build parsed business intel structure
+    const businessIntel = intel?.isJson ? {
+      neighbourhood: intel.neighbourhood,
+      landmarks: intel.landmarks || [],
+      transit: intel.transit || [],
+      local_trends: intel.local_trends || [],
+      products_services: intel.products_services || [],
+      craft_identity: intel.craft_identity,
+      description: intel.description,
+      isInferred: intel.isInferred,
+    } : undefined;
+
+    // Step 4: Get current date/time/season
+    const currentTime = new Date().toLocaleTimeString('en-US', { 
+      hour: 'numeric', 
+      minute: '2-digit',
+      hour12: true
+    });
+
+    const currentDate = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
+    const currentSeason = getSeason(month); // You already have this function!
+
+    // Step 5: Build complete prompt using MODE template
+    const finalPrompt = buildModePrompt({
+      business_name: business.business_name,
+      niche,
+      fullAddress: `${business.street}, ${business.city}, ${business.province_state} ${business.country} ${business.postal_code}`,
+      lens: angle.lens,
+      lensDefinition: angle.lensDefinition,
+      groupContext: angle.groupContext,
+      voice,
+      postType: postType as PostType,
+      recentHistory: recentHistory || undefined,
+      varietyRules,
+      currentTime,
+      currentDate,
+      currentWeather: currentWeather || "Unknown",
+      currentSeason,
+      businessIntel: businessIntel,  // NEW: Pass structured data
+      event_or_shoutout: eventOrShoutout,
+      // ✨ NEW: Promotion/Offer specific variables (MODE 4)
+      offer_name: offerName,
+      offer_category: offerCategory,
+      whats_included: whatsIncluded,
+      available_timeframe: availableTimeframe,
+      eligibility,
+      offer_hook: offerHook,
+      value_framing: valueFraming,
+    });
+
+    // Extract lens for later use
+    const lens = angle.lens;
+
+    // ═══════════════════════════════════════════════════════════════════════════
     // ── MOCK MODE (delete before going to production) ─────
     if (process.env.NEXT_PUBLIC_MOCK_AI === "true") {
       await new Promise((resolve) => setTimeout(resolve, 800));
@@ -746,12 +803,6 @@ export async function POST(req: Request) {
       });
     }
     // ─────────────────────────────────────────────────────
-
-    const currentTime = new Date().toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit', 
-      hour12: true 
-    });
 
   
     // ─────────────────────────────────────────────────────────────────────────────
