@@ -34,21 +34,25 @@ const ARCHITECT_MODE: "GEMINI" | "GROQ" | "GEMMA" = "GEMMA";
 const textModel = genAI.getGenerativeModel({ model: "models/gemini-2.5-flash" }, { apiVersion: 'v1beta' });
 
 const VOICE_VISUAL_MAP: Record<string, string> = {
-  "Authoritative & Precise": 
-    "Tight composition. Minimal props — only what earns its place. Precise, controlled lighting. No warmth padding. Every element is intentional.",
-  "Warm & Conversational": 
-    "Wider scene with breathing room. Human presence welcome if it serves the hero. Soft natural light. Props that suggest lived-in familiarity — a worn edge, a fingerprint on glass. One imperfection for realism",
-  "Bold & Direct": 
-    "High contrast. Single strong subject, nothing competing. Punchy framing — close or dramatic angle. Light is decisive, not ambient.",
-  "Clean & Understated": 
-    "Generous negative space. Minimal palette — two tones maximum. Flat even light, no harsh shadows. Restraint over richness. If in doubt, remove an element.",
-};
+
+    "Authoritative & Precise": 
+      "Precise, controlled lighting with clinical clarity. Minimal props — only what earns its place. No warmth, no softness. Every element must justify its presence.",
+    
+    "Warm & Conversational": 
+      "Soft, natural lighting with gentle shadows. Props suggest lived-in familiarity — worn surfaces, flour dust, fingerprints. One visible imperfection for authenticity. Human hands welcome if they reveal the truth.",
+    
+    "Bold & Direct": 
+      "High-contrast lighting with decisive shadows. Punchy framing, dramatic angles. One hero, nothing competing. Make the truth impossible to miss.",
+    
+    "Clean & Understated": 
+      "Flat, even lighting with no harsh shadows. Generous negative space. Minimal palette — two colors maximum. Restraint over richness. Remove anything that doesn't serve the truth.",
+  };
 
 const POST_TYPE_VISUAL_INTENT: Partial<Record<string, string>> = {
   "Promotion / offer": 
-    "This image supports a promotional offer. The visual job is 'reason to visit' — warm, inviting, specific to the offer. The hero should feel like something worth showing at a counter. Abundance and welcome over craft precision. The viewer should feel they'd be missing out by not going.",
+    "This image supports a promotional offer. The visual job is 'reason to visit' — warm, inviting, specific to the offer. For product offers: abundance and welcome. For service offers: show the specific benefit or result. The hero should make viewers feel they'd be missing out by not going.",
   "Local event / news":
-    "This image supports a local event or news post. The visual job is 'community energy' — the neighbourhood is alive, something is happening. Favour wider scenes over close-ups. If the setting can hint at the street, the season, or the community context — use it. The business is part of the neighbourhood, not separate from it.",
+    "This image supports a local event or news post. The visual job is 'community energy' — the neighbourhood is alive, something is happening. If the truth is visible at street-level (signage, patio, storefront activity), show it. If it's a detail (new menu item, specific offering), reveal that. The business is part of the neighbourhood, not separate from it.",
   "Behind the scenes":
     "This image reveals process. The visual job is 'earned trust' — show one specific step that customers never see but immediately recognise as real craft. Raw materials, mid-process moments, tools in use. Not a finished product shot.",
   "Myth-busting":
@@ -486,16 +490,47 @@ Storefront/signage: secondary only, mid/background, slightly out of focus if ext
 
     // New the architect prompt
     const architectPrompt = `
-    [SYSTEM]: Image prompt engineer for FLUX.1-schnell. Commercial/lifestyle photography.
+    [SYSTEM]: Image prompt engineer for FLUX-2-pro. Commercial/lifestyle photography.
 
     [TASK]:
     Post: "${generatedPost}"
     Business: ${business_name} (${niche})
     Visual job: ${POST_TYPE_VISUAL_INTENT[postType]}
 
-    [HERO]:
-    What specific subject/process/moment does the post describe?
-    That's your hero. Determine appropriate composition (wide/medium/detail) based on subject.
+ 
+    [HERO — VISUAL TRUTH EXTRACTION]:
+    
+    Step 1 — READ THE POST DEEPLY:
+    What specific insight, truth, or revelation is this post teaching?
+    Don't just identify the general activity ("assessment", "baking", "treatment").
+    Find the SPECIFIC CLAIM or "aha moment" the post makes.
+    
+    Step 2 — IDENTIFY WHAT MAKES IT VISIBLE:
+    What physical detail, gesture, tool, or moment would prove this truth to someone looking?
+    What would an expert see that a novice would miss?
+    
+    Step 3 — CHOOSE YOUR HERO:
+    The hero is NOT the general process.
+    The hero is the SPECIFIC VISUAL EVIDENCE of the post's truth.
+    
+    Examples:
+    ❌ "Invisible patterns" → Generic assessment scene
+    ✅ "Invisible patterns" → Hands measuring angle patient can't feel
+    
+    ❌ "Water quality matters" → Water tank shot
+    ✅ "Water quality matters" → pH meter + sample jar, precision visible
+    
+    ❌ "Assessment prevents injury" → Generic exercise
+    ✅ "Assessment prevents injury" → Therapist observing squat, catching what patient misses
+    
+    THE TEST: Would this make someone say "I never noticed that"?
+    
+    Step 4 — DETERMINE COMPOSITION:
+    Detail / Medium / Wide — whatever makes the hero most visible.
+    
+    ${postType === 'Community moment' 
+      ? 'EXCEPTION: For Community moment only, people ARE the hero. Show genuine human connection, business as backdrop. Medium-to-wide composition.' 
+      : ''}
 
     [VOICE]: ${VOICE_VISUAL_MAP[voice]}
 
@@ -504,13 +539,22 @@ Storefront/signage: secondary only, mid/background, slightly out of focus if ext
     ${structureBlock}
     Layer the subject INTO this real business environment.
 
-    [AVOID]: ${recentImageHistory}
+    [AVOID]: ${recentImageHistory || 'None'}
 
     [SPEC]:
     60-70 word FLUX prompt:
-    - Composition + subject from post
+    - Hero from above (the visual truth, not generic activity)
+    - Composition that reveals it best
     - Authentic setting from Brand blocks
     - ${currentMonth}, ${currentTime}, Weather: ${currentWeather || "N/A"} lighting
+    - IMPERFECTION (choose ONE safe option):
+      ${['Bakery', 'Coffee Shop', 'Restaurant', 'Café'].some(n => niche.includes(n))
+        ? 'Flour dust, condensation, steam, or soft shadow variation'
+        : ['Medical Esthetician', 'Dermatologist', 'Spa', 'Salon', 'Fitness'].some(n => niche.includes(n))
+          ? 'Lighting variation only: soft shadow edge, gentle reflection'
+          : 'Soft shadow, floor texture, or natural reflection'}
+      Never: people, products, clinical equipment
+    ${postType !== 'Community moment' ? '- No legible faces, people secondary if visible' : '- Genuine moment, no posed shots'}
     - Storefront/signage: background only if visible
     - End: "Shot on Sony A7, f/1.8, 1:1 crop, no text"
 

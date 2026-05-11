@@ -2,13 +2,7 @@
 // Instead of building everything then stripping, we build only what each mode needs
 
 import { getModeTemplate, PostType } from './mode-templates';
-
-const VOICE_PROMPTS: Record<string, string> = {
-  "Authoritative & Precise": "Authoritative, factual, confident. Light industry terms. No exclamation marks. Trust through knowledge, not enthusiasm. Never use 'excited', 'thrilled', or 'delighted'. This is a style modifier — the post structure is defined separately.",
-  "Warm & Conversational": "Warm, conversational, community-first. Friend-like tone. Use 'we' and 'you'. Non-corporate. Short sentences. Never ramble or hedge. This is a style modifier — the post structure is defined separately.",
-  "Bold & Direct": "High-energy, direct, urgent. Short, punchy sentences. Bold claims. Drives immediate action. Sparse emphasis. This is a style modifier — the post structure is defined separately.",
-  "Clean & Understated": "Clean, understated, sophisticated. Zero filler. Every sentence must earn its place. This is a style modifier — the post structure is defined separately.",
-};
+import { VOICE_PROMPTS } from "@/lib/VOICE_PROMPTS";
 
 export interface ParsedBusinessIntel {
   neighbourhood?: string;
@@ -56,6 +50,7 @@ export interface PromptBuilderConfig {
   recentHistory?: string;
   varietyRules?: string;
   currentTime?: string;
+  currentDay?: string;
   currentDate?: string;
   currentWeather?: string;
   currentSeason?: string;
@@ -83,11 +78,11 @@ const MODE_DATA_REQUIREMENTS = {
       craft_identity: true,
       products_services: true,
       description: true,
-      neighbourhood: false,
-      landmarks: false,
-      transit: false,
-      local_trends: false,
-      interior_layout: false,
+      neighbourhood: true,
+      landmarks: true,
+      transit: true,
+      local_trends: true,
+      interior_layout: true,
       storefront_architecture: false,
     }
   },
@@ -241,6 +236,10 @@ function buildBusinessIntelSection(
   return parts.length > 0 ? `[BUSINESS INTELLIGENCE]\n${parts.join("\n")}` : "";
 }
 
+function getCurrentDay(): string {
+  return new Date().toLocaleDateString('en-US', { weekday: 'long' });
+}
+
 function getCurrentDate(): string {
   return new Date().toLocaleDateString('en-US', { 
     year: 'numeric', month: 'long', day: 'numeric' 
@@ -260,9 +259,9 @@ function getCurrentTime(): string {
 
 function getCurrentSeason(): string {
   const month = new Date().getMonth();
-  if (month >= 2 && month <= 4) return "Spring";
-  if (month >= 5 && month <= 7) return "Summer";
-  if (month >= 8 && month <= 10) return "Fall";
+  if (month >= 3 && month <= 5) return "Spring";
+  if (month >= 6 && month <= 8) return "Summer";
+  if (month >= 9 && month <= 11) return "Fall";
   return "Winter";
 }
 
@@ -288,6 +287,7 @@ export function buildPrompt(config: PromptBuilderConfig): string {
     recentHistory: config.recentHistory || "None",
     varietyRules: config.varietyRules || "",
     current_time: config.currentTime || getCurrentTime(),
+    current_day: config.currentDay || getCurrentDay(), 
     current_date: config.currentDate || getCurrentDate(),
     current_weather: config.currentWeather || "Unknown",
     current_season: config.currentSeason || getCurrentSeason(),

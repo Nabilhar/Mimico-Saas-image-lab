@@ -1,65 +1,56 @@
 // lib/angle-selector.ts
 
 import { COGNITIVE_LENSES, CognitiveLens } from './cognitive-lenses';
-import { CATEGORY_LENS_MAP } from './lens-mapping';
 
 /**
- * ANGLE SELECTION PIPELINE
- * STEP 1: Lens selects causal lens
- * STEP 2: PAS provides temporal structure
- * STEP 3: Category provides surface context only
+ * SIMPLIFIED ANGLE SELECTION
+ * All 4 lenses available for every niche
+ * Smart context in mode templates handles niche-specific translation
+ * 
+ * History tracking prevents lens repetition for variety
  */
 
 export function selectAngle(
-  category: string,
-  postType: string,
-  recentHistory?: string[]
+  recentHistory?: CognitiveLens[]
 ): {
   lens: CognitiveLens;
   lensDefinition: string;
-  categoryContext: string;
 } {
-  // Get available lenses for this category
-  const categoryLenses = CATEGORY_LENS_MAP[category];
+  // Get all 4 lenses
+  const allLenses = Object.keys(COGNITIVE_LENSES) as CognitiveLens[];
   
-  if (!categoryLenses) {
-    throw new Error(`No lens mapping found for category: ${category}`);
-  }
-
   // Filter out recently used lenses if history exists
-  let availableLenses = categoryLenses;
+  let availableLenses = allLenses;
   
   if (recentHistory && recentHistory.length > 0) {
     const usedLenses = new Set(recentHistory);
-    availableLenses = categoryLenses.filter(
-      mapping => !usedLenses.has(mapping.lens)
+    availableLenses = allLenses.filter(
+      lens => !usedLenses.has(lens)
     );
     
     // If all lenses used, reset to full pool
     if (availableLenses.length === 0) {
-      availableLenses = categoryLenses;
+      console.log("All lenses used in recent history, resetting pool");
+      availableLenses = allLenses;
     }
   }
 
   // Random selection from available pool
-  const selectedMapping = availableLenses[
+  const selectedLens = availableLenses[
     Math.floor(Math.random() * availableLenses.length)
   ];
 
   // Get random variant from universal lens definition
-  const lensData = COGNITIVE_LENSES[selectedMapping.lens];
+  const lensData = COGNITIVE_LENSES[selectedLens];
   const lensDefinition = lensData.variants[
     Math.floor(Math.random() * lensData.variants.length)
   ];
 
-  // Get random context from category mapping
-  const categoryContext = selectedMapping.context[
-    Math.floor(Math.random() * selectedMapping.context.length)
-  ];
+  console.log(`Selected lens: ${selectedLens}`);
+  console.log(`Available lenses were: ${availableLenses.join(", ")}`);
 
   return {
-    lens: selectedMapping.lens,
+    lens: selectedLens,
     lensDefinition,
-    categoryContext,
   };
 }

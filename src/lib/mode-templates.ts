@@ -44,7 +44,8 @@ You are teaching one focused insight by busting a widely-held misconception.
 {{lensDefinition}}
 
 [WHAT THIS MEANS IN YOUR DOMAIN]:
-{{groupContext}}
+Before writing, mentally translate what {{lens}} means for a {{niche}} specifically. 
+Think of 1-2 concrete examples from their actual operations where this pattern plays out. Then weave this into the post naturally.
 
 [APPROACH]
 Bust one specific, widespread misconception about your domain.
@@ -72,14 +73,17 @@ The myth must be:
 - Explained through the lens (showing why the lens makes the truth clear)
 
 [CONTEXT]
-Current time: {{current_time}}
+Current date & time: {{current_time}}. {{current_day}}, {{current_date}}.
 Weather: {{current_weather}}
 Season: {{current_season}}
 
-[BUSINESS INTELLIGENCE]
+[BUSINESS CONTEXT]
 {{business_summary}}
 
+[WRITING NOTE]:
 Ground the correction in your actual practice and expertise.
+You have neighborhood name, vibe, and landmark info above. Use it naturally when it strengthens the post—
+but only if it flows. Don't force local references if they don't serve the message.
 
 [VOICE]
 {{voice_description}}
@@ -117,7 +121,8 @@ You are teaching one focused, actionable insight through a cognitive lens.
 {{lensDefinition}}
 
 [WHAT THIS MEANS IN YOUR DOMAIN]:
-{{groupContext}}
+Before writing, mentally translate what {{lens}} means for a {{niche}} specifically. 
+Think of 1-2 concrete examples from their actual operations where this pattern plays out. Then weave this into the post naturally.
 
 This lens is the filter through which your tip flows. The tip should reveal something the lens makes visible.
 
@@ -149,16 +154,19 @@ The tip must be:
 - Deep enough to teach something real in 100-140 words
 
 [CONTEXT]
-Current time: {{current_time}}
+Current date & time: {{current_time}}. {{current_day}}, {{current_date}}.
 Weather: {{current_weather}}
 Season: {{current_season}}
 
 Use context naturally if it connects to the tip (seasonal considerations, time-of-day patterns, etc.)
 
-[BUSINESS INTELLIGENCE]
+[BUSINESS CONTEXT]
 {{business_summary}}
 
+[WRITING NOTE]:
 Ground your tip in actual work from these offerings and practices.
+You have neighborhood name, vibe, and landmark info above. Use it naturally when it strengthens the post—
+but only if it flows. Don't force local references if they don't serve the message.
 
 [VOICE]
 {{voice_description}}
@@ -209,7 +217,8 @@ You are sharing one specific moment or detail from your work that customers rare
 {{lensDefinition}}
 
 [WHAT THIS MEANS IN YOUR DOMAIN]:
-{{groupContext}}
+Before writing, mentally translate what {{lens}} means for a {{niche}} specifically. 
+Think of 1-2 concrete examples from their actual operations where this pattern plays out. Then weave this into the post naturally.
 
 The lens shapes what you notice — what you observe is filtered through it.
 
@@ -241,14 +250,17 @@ The moment must be:
 - Specific enough to be believable and memorable
 
 [CONTEXT]
-Current time: {{current_time}}
+Current date & time: {{current_time}}. {{current_day}}, {{current_date}}.
 Weather: {{current_weather}}
 Season: {{current_season}}
 
-[BUSINESS INTELLIGENCE]
+[BUSINESS CONTEXT]
 {{business_summary}}
 
+[WRITING NOTE]:
 Ground your observation in the actual work and practices here.
+You have neighborhood name, vibe, and landmark info above. Use it naturally when it strengthens the post—
+but only if it flows. Don't force local references if they don't serve the message.
 
 [VOICE]
 {{voice_description}}
@@ -287,7 +299,8 @@ You are observing work in progress that naturally connects to what's available.
 {{lensDefinition}}
 
 [WHAT THIS MEANS IN YOUR DOMAIN]:
-{{groupContext}}
+Before writing, mentally translate what {{lens}} means for a {{niche}} specifically. 
+Think of 1-2 concrete examples from their actual operations where this pattern plays out. Then weave this into the post naturally.
 
 Through this lens, notice what's happening in your work right now.
 The work you observe should connect naturally to what's being offered.
@@ -325,14 +338,17 @@ Example connection:
 This lets customers show the post in-store for actual pricing details.
 
 [CONTEXT]
-Current time: {{current_time}}
+Current date & time: {{current_time}}. {{current_day}}, {{current_date}}.
 Weather: {{current_weather}}
 Season: {{current_season}}
 
-[BUSINESS INTELLIGENCE]
+[BUSINESS CONTEXT]
 {{business_summary}}
 
+[WRITING NOTE]:
 Ground the observation in actual timing and seasonal context.
+You have neighborhood name, vibe, and landmark info above. Use it naturally when it strengthens the post—
+but only if it flows. Don't force local references if they don't serve the message.
 
 [VOICE]
 {{voice_description}}
@@ -384,7 +400,8 @@ You are sharing a brief, conversational observation about something happening in
 {{lens_definition}}
 
 [WHAT THIS MEANS IN YOUR DOMAIN]:
-{{lens_context}}
+Before writing, mentally translate what {{lens}} means for a {{niche}} specifically. 
+Think of 1-2 concrete examples from their actual operations where this pattern plays out. Then weave this into the post naturally.
 
 Weave the lens lightly into your observation. It should feel like you're noticing something through that lens, not explaining it.
 
@@ -444,16 +461,19 @@ Short sentences. Conversational.
 - No marketing speak
 
 [CONTEXT]
-Current time: {{current_time}}
+Current date & time: {{current_time}}. {{current_day}}, {{current_date}}.
 Weather: {{current_weather}}
 Season: {{current_season}}
 
 Use naturally in your scene description if relevant.
 
-[BUSINESS INTELLIGENCE]
+[BUSINESS CONTEXT]
 {{business_summary}}
 
+[WRITING NOTE]:
 Ground your observation in actual patterns/moments from your business.
+You have neighborhood name, vibe, and landmark info above. Use it naturally when it strengthens the post—
+but only if it flows. Don't force local references if they don't serve the message.
 
 [LENS USAGE - LIGHT TOUCH]
 If using a lens: weave it into your observation naturally.
@@ -523,17 +543,21 @@ The observation must be:
 - Brief and present-tense
 
 [CONTEXT]
-Current time: {{current_time}}
+Current date & time: {{current_time}}. {{current_day}}, {{current_date}}.
 Weather: {{current_weather}}
 Season: {{current_season}}
 
 Use these to set the sensory moment. How do they affect the space?
 
-[BUSINESS INTELLIGENCE]
+[BUSINESS CONTEXT]
 {{business_summary}}
 
 Use for understanding what work/activity is happening.
 Don't explain it — let the sensory detail speak.
+
+[WRITING NOTE]:
+You have neighborhood name, vibe, and landmark info above. Use it naturally when it strengthens the post—
+but only if it flows. Don't force local references if they don't serve the message.
 
 [VOICE]
 {{voice_description}}

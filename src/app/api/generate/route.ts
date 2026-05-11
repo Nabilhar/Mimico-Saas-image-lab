@@ -14,9 +14,10 @@ import { getBrandIdentity, discoverAndSaveBrandIdentity, parseBusinessIntel, par
 import { ColorTheme, BusinessVisuals } from '@/lib/constants';
 import { auth } from "@clerk/nextjs/server"; 
 import { selectAngle } from "@/lib/angle-selector";
-import { selectGroupAngle } from "@/lib/group-angle-selector";  // ← NEW
 import { buildPrompt as buildModePrompt } from "@/lib/prompt-builder";  // ← NEW
 import { type PostType } from "@/lib/mode-templates";  // ← NEW
+import { CognitiveLens } from "@/lib/cognitive-lenses";
+import { VOICE_PROMPTS } from "@/lib/VOICE_PROMPTS";
 
 // 1. Initialize Groq (The New Engine)
 const groq = new Groq({
@@ -60,13 +61,18 @@ const WMO_CODES: Record<number, string> = {
 async function fetchWeather(lat: number, lng: number, city: string): Promise<string> {
   try {
     const res = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true&temperature_unit=celsius`
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,apparent_temperature,weather_code&temperature_unit=celsius`
     );
     const data = await res.json();
-    const cw = data.current_weather;
-    const description = WMO_CODES[cw.weathercode] ?? "variable conditions";
-    const temp = Math.round(cw.temperature);
-    return `${temp}°C, ${description} in ${city}`;
+    const current = data.current;
+    const description = WMO_CODES[current.weather_code] ?? "variable conditions";
+    const temp = Math.round(current.temperature_2m);
+    const feelsLike = Math.round(current.apparent_temperature);
+    
+    // Only show "feels like" if it's different
+    const feelsLikeText = temp !== feelsLike ? `, feels like ${feelsLike}°C` : '';
+    
+    return `${temp}°C${feelsLikeText}, ${description} in ${city}`;
   } catch {
     return "";
   }
@@ -77,12 +83,7 @@ async function fetchWeather(lat: number, lng: number, city: string): Promise<str
 // Matches the exact voice strings sent from the frontend.
 // ─────────────────────────────────────────────
 
-const VOICE_PROMPTS: Record<string, string> = {
-  "Authoritative & Precise": "Authoritative, factual, confident. Light industry terms. No exclamation marks. Trust through knowledge, not enthusiasm. Never use 'excited', 'thrilled', or 'delighted'. This is a style modifier — the post structure is defined separately.",
-  "Warm & Conversational": "Warm, conversational, community-first. Friend-like tone. Use 'we' and 'you'. Non-corporate. Short sentences. Never ramble or hedge. This is a style modifier — the post structure is defined separately.",
-  "Bold & Direct": "High-energy, direct, urgent. Short, punchy sentences. Bold claims. Drives immediate action. Sparse emphasis. This is a style modifier — the post structure is defined separately.",
-  "Clean & Understated": "Clean, understated, sophisticated. Zero filler. Every sentence must earn its place. This is a style modifier — the post structure is defined separately.",
-};
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPER: THE PROVIDER CALLER
@@ -295,7 +296,7 @@ function buildLegacyPrompt(
   currentWeather: string,
   recentLenses: string[]
 
-): { prompt: string; lens: string }  {
+): { prompt: string; }  {
 
 
   const fullAddress = `${address.street}, ${address.city}, ${address.province_state} ${address.country} ${address.postal_code}`;
@@ -346,12 +347,6 @@ function buildLegacyPrompt(
     minute: '2-digit', 
     hour12: true 
   });
-
-  const { lens, lensDefinition, categoryContext } = selectAngle(
-    category,
-    postType,
-    recentLenses
-  );
 
   // STEP 2: Get business intelligence
   const intel = parseBusinessIntel(business_description);
@@ -470,13 +465,13 @@ function buildLegacyPrompt(
       ${intel?.craft_identity ? `Craft: ${intel.craft_identity}` : ''}
 
       [CATEGORY CONTEXT]:
-      ${categoryContext}
+     
 
-      [COGNITIVE LENS]: ${lens}
-      ${lensDefinition}
+      [COGNITIVE LENS]: 
+      
 
       [TASK]:
-      Open with one specific craft truth through the ${lens} lens. Do not explain the lens.
+      Open with one specific craft truth through the lens. Do not explain the lens.
       Do not describe the system abstractly. Start inside a real moment where this lens is already happening.
       
       [EXPRESSION HINT]:
@@ -519,14 +514,14 @@ function buildLegacyPrompt(
       [VARIETY RULES]:
       ${varietyRules}
 
-      IMPORTANT: The lens selected for THIS post is: ${lens}
+      IMPORTANT: The lens selected for THIS post is: 
       This lens must NOT appear in the "recently used" list above.
       If you see it there, STOP and report an error.
 
       [OUTPUT]: <<<POST_BEGIN>>> then post body then hashtags. Nothing else.
 
 `;
-  return { prompt: promptText, lens };
+  return { prompt: promptText, };
 }
 
 // Helper function to extract recently used lenses from post history
@@ -732,8 +727,8 @@ export async function POST(req: Request) {
     // NEW SYSTEM: 7-group lens + MODE templates
     // ═══════════════════════════════════════════════════════════════════════════
 
-    // Step 1: Get lens + context from the 7-group system
-    const angle = selectGroupAngle(niche, postType as PostType);
+    // Step 1: Get lens from all 4 available lenses (history prevents repetition)
+    const angle = selectAngle(recentLenses as CognitiveLens[]);
 
     // Step 3: Build parsed business intel structure
     const businessIntel = intel?.isJson ? {
@@ -756,6 +751,10 @@ export async function POST(req: Request) {
       hour12: true
     });
 
+    const currentDay = new Date().toLocaleDateString('en-US', { 
+      weekday: 'long' 
+    }); // Returns: "Monday", "Tuesday", etc.
+
     const currentDate = new Date().toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
@@ -771,12 +770,13 @@ export async function POST(req: Request) {
       fullAddress: `${business.street}, ${business.city}, ${business.province_state} ${business.country} ${business.postal_code}`,
       lens: angle.lens,
       lensDefinition: angle.lensDefinition,
-      groupContext: angle.groupContext,
+      groupContext: "",
       voice,
       postType: postType as PostType,
       recentHistory: recentHistory || undefined,
       varietyRules,
       currentTime,
+      currentDay,
       currentDate,
       currentWeather: currentWeather || "Unknown",
       currentSeason,
