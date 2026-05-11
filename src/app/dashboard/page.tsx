@@ -45,7 +45,7 @@ export default function DashboardPage() {
       
       const { data: business, error: businessError } = await supabase
         .rpc('get_active_business', { p_user_id: user.id })
-        .single<{ id: string, business_name: string, street: string, city: string, province_state: string, country: string, postal_code: string, category: string, niche: string, voice: string }>();
+        .single<{ id: string, business_name: string, street: string, city: string, province_state: string, country: string, postal_code: string, category: string, niche: string, voice: string, color_theme?: any, business_visuals?: any, storefront_architecture?: any, interior_layout?: any, business_description?: any, brand_source?: string}>();
 
       // 2. Fetch User Credits from the profiles table
       const { data: profile, error: profileError } = await supabase
@@ -78,7 +78,7 @@ export default function DashboardPage() {
         voice: business.voice,
         niche: business.niche,
         credits: profile?.credits || 0, // Pulling from the profile now!
-        history: posts || []
+        history: posts || [],
       };
 
       setBusinessData(formattedData);
@@ -147,12 +147,6 @@ export default function DashboardPage() {
           p_cognitive_lens: cognitiveLens || ''
         });
 
-      // ✅ ADD THIS DEBUG BLOCK
-      console.log("🔍 Full RPC Response:", JSON.stringify(rpcResult, null, 2));
-      console.log("🔍 rpcResult type:", typeof rpcResult);
-      console.log("🔍 rpcResult is array?", Array.isArray(rpcResult));
-      console.log("🔍 rpcResult[0]:", rpcResult?.[0]);
-      console.log("🔍 rpcError:", rpcError);
   
       if (rpcError || !rpcResult[0]?.success) {
         console.error("❌ RPC Error or insufficient credits:", rpcError);

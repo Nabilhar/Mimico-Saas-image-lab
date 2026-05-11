@@ -51,6 +51,7 @@ export const NICHE_TO_GROUPS_MAP: Record<string, LensGroupKey[]> = {
 
   // Beauty & Personal Care (6)
   'Hair salon': ['GROUP_1_HIDDEN_UPSTREAM', 'GROUP_5_DIVERGENCE'],  // Also divergence
+  'Barbershop': ['GROUP_1_HIDDEN_UPSTREAM', 'GROUP_5_DIVERGENCE'],  // Also divergence
   'Nail salon': ['GROUP_1_HIDDEN_UPSTREAM'],
   'Spa': ['GROUP_1_HIDDEN_UPSTREAM', 'GROUP_5_DIVERGENCE'],  // Also divergence
   'Medical aesthetics clinic': ['GROUP_1_HIDDEN_UPSTREAM', 'GROUP_5_DIVERGENCE'],  // Also divergence
@@ -136,6 +137,7 @@ export const NICHE_TO_GROUPS_MAP: Record<string, LensGroupKey[]> = {
   'Insurance broker': ['GROUP_4_HIDDEN_CONSTRAINT'],
   'Mortgage broker': ['GROUP_4_HIDDEN_CONSTRAINT'],
   'Business consultant': ['GROUP_4_HIDDEN_CONSTRAINT'],
+  'Social media agency': ['GROUP_4_HIDDEN_CONSTRAINT', 'GROUP_5_DIVERGENCE'],
   'HR consultant': ['GROUP_4_HIDDEN_CONSTRAINT'],
 
   // Technology (4)

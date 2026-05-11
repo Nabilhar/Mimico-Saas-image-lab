@@ -131,6 +131,10 @@ export function parseBusinessIntel(raw: any) {
         transit:           Array.isArray(parsed.transit)           ? parsed.transit           : [],
         local_trends:      Array.isArray(parsed.local_trends)      ? parsed.local_trends      : [],
         products_services: Array.isArray(parsed.products_services) ? parsed.products_services : [],
+
+        interior_layout: parsed.interior_layout ? parseInteriorLayout(parsed.interior_layout) : undefined,
+        storefront_architecture: parsed.storefront_architecture || undefined,
+
         isJson:            true,
         isInferred:        (parsed.craft_identity || "").startsWith("INFERRED:"),
       };
@@ -148,11 +152,40 @@ export function parseBusinessIntel(raw: any) {
     transit:           [],
     local_trends:      [],
     products_services: [],
+    interior_layout:   undefined,
+    storefront_architecture: undefined,
     isJson:            false,
     isInferred:        false,
   };
 }
 
+/**
+ * ✨ NEW: Helper function to parse interior_layout from vision output
+ * Converts string description into structured fields
+ */
+export function parseInteriorLayout(data: any): any {
+  if (!data) return undefined;
+  
+  // If it's already structured (from Gemini vision), return as-is
+  if (typeof data === 'object' && !Array.isArray(data)) {
+    return {
+      counter_position: data.counter_position,
+      seating_style_density: data.seating_style_density,
+      open_plan_or_divided_spaces: data.open_plan_or_divided_spaces,
+      lighting_mood: data.lighting_mood,
+      distinctive_design_feature: data.distinctive_design_feature,
+    };
+  }
+  
+  // If it's a string description from research, return it as distinctive_design_feature
+  if (typeof data === 'string') {
+    return {
+      distinctive_design_feature: data,
+    };
+  }
+  
+  return undefined;
+}
 // ---------------------------------------------------------------------------
 // PATH A: Gemini Vision Analysis
 // ---------------------------------------------------------------------------
@@ -315,10 +348,13 @@ export async function analyzePhotosWithGemini(
       "interior_colors": "wall color, floor tone, 
         ceiling, counter material — precise descriptions 
         or Not visible in photos",
-      "interior_layout": "counter position, seating style 
-        and density, lighting mood, distinctive features, 
-        one sentence atmosphere — from photo only 
-        or Not visible in photos"
+      "interior_layout": {
+      "counter_position": "position description or Not visible in photos",
+      "seating_style_density": "seating description or Not visible in photos",
+      "open_plan_or_divided_spaces": "spatial description or Not visible in photos",
+      "lighting_mood": "lighting description or Not visible in photos",
+      "distinctive_design_feature": "design feature description or Not visible in photos"
+}
     }
   }
   `;
@@ -742,7 +778,7 @@ function mergeDiscoveryData(
       storefront_colors: stripCitations(vis.storefront_colors)  || "Not provided",
       storefront_architecture: vis.storefront_architecture || null,
       interior_colors:   stripCitations(vis.interior_colors)    || "Not provided",
-      interior_layout:   stripCitations(vis.interior_layout)    || "Not provided",
+      interior_layout: vis.interior_layout || null,
     },
     contact: researchData?.contact 
       ? {
@@ -812,7 +848,7 @@ async function saveDiscoveryData(
       interiorColors:   vis.interior_colors    || "Not provided",
     },
     storefront_architecture: vis.storefront_architecture || null,
-    interior_layout:         vis.interior_layout         || "Not provided",
+    interior_layout:         vis.interior_layout         || null,
 
     // Metadata
     brand_source:               brandSource,

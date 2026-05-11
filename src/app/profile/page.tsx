@@ -85,24 +85,80 @@ function PhotoSlot({ label, sublabel, icon, file, onChange }: PhotoSlotProps) {
 
 // Add this helper function inside your ProfilePage.tsx file
 function parseBusinessIntel(raw: any) {
+  
   if (!raw) return null;
+  
   // If it's already an object (from the DB), just use it.
   if (typeof raw === 'object' && raw !== null) {
+
     return {
       description: raw.description || "",
-      // You can add other fields here if needed later
+      craft_identity: raw.craft_identity || "",
+      neighbourhood: raw.neighbourhood || "",
+      landmarks: Array.isArray(raw.landmarks) ? raw.landmarks : [],
+      transit: Array.isArray(raw.transit) ? raw.transit : [],
+      local_trends: Array.isArray(raw.local_trends) ? raw.local_trends : [],
+      products_services: Array.isArray(raw.products_services) ? raw.products_services : [],
+      
+      // ✨ NEW: Interior and storefront data for MODE 3
+      interior_layout: raw.interior_layout ? parseInteriorLayout(raw.interior_layout) : undefined,
+      storefront_architecture: raw.storefront_architecture || undefined,
     };
   }
+  
   // Fallback for stringified JSON
   try {
     const parsed = JSON.parse(raw);
+
     return {
       description: parsed.description || "",
+      craft_identity: parsed.craft_identity || "",
+      neighbourhood: parsed.neighbourhood || "",
+      landmarks: Array.isArray(parsed.landmarks) ? parsed.landmarks : [],
+      transit: Array.isArray(parsed.transit) ? parsed.transit : [],
+      local_trends: Array.isArray(parsed.local_trends) ? parsed.local_trends : [],
+      products_services: Array.isArray(parsed.products_services) ? parsed.products_services : [],
+      
+      // ✨ NEW: Interior and storefront data for MODE 3
+      interior_layout: parsed.interior_layout ? parseInteriorLayout(parsed.interior_layout) : undefined,
+      storefront_architecture: parsed.storefront_architecture || undefined,
     };
   } catch (e) {
-    // Fallback for legacy plain text descriptions
-    return { description: raw };
+    
+    return { 
+
+      description: raw,
+      interior_layout: undefined,
+      storefront_architecture: undefined,
+    };
   }
+}
+
+/**
+ * ✨ NEW: Helper function to parse interior_layout
+ */
+function parseInteriorLayout(data: any): any {
+  if (!data) return undefined;
+  
+  // If it's already structured, return as-is
+  if (typeof data === 'object' && !Array.isArray(data)) {
+    return {
+      counter_position: data.counter_position,
+      seating_style_density: data.seating_style_density,
+      open_plan_or_divided_spaces: data.open_plan_or_divided_spaces,
+      lighting_mood: data.lighting_mood,
+      distinctive_design_feature: data.distinctive_design_feature,
+    };
+  }
+  
+  // If it's a string, return as distinctive_design_feature
+  if (typeof data === 'string') {
+    return {
+      distinctive_design_feature: data,
+    };
+  }
+  
+  return undefined;
 }
 
 // ---------------------------------------------------------------------------

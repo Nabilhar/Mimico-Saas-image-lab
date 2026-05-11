@@ -1,15 +1,8 @@
-// lib/prompt-builder.ts
+// lib/prompt-builder.ts - REFACTORED VERSION
+// Instead of building everything then stripping, we build only what each mode needs
 
 import { getModeTemplate, PostType } from './mode-templates';
 
-
-/**
- * PROMPT BUILDER
- * 
- * Takes variables from Supabase and the lens system,
- * selects the correct MODE template based on postType,
- * injects all variables, and returns a complete prompt ready for Haiku.
- */
 const VOICE_PROMPTS: Record<string, string> = {
   "Authoritative & Precise": "Authoritative, factual, confident. Light industry terms. No exclamation marks. Trust through knowledge, not enthusiasm. Never use 'excited', 'thrilled', or 'delighted'. This is a style modifier — the post structure is defined separately.",
   "Warm & Conversational": "Warm, conversational, community-first. Friend-like tone. Use 'we' and 'you'. Non-corporate. Short sentences. Never ramble or hedge. This is a style modifier — the post structure is defined separately.",
@@ -26,39 +19,49 @@ export interface ParsedBusinessIntel {
   craft_identity?: string;
   description?: string;
   isInferred?: boolean;
+
+  interior_layout?: {
+    counter_position?: string;
+    seating_style_density?: string;
+    open_plan_or_divided_spaces?: string;
+    lighting_mood?: string;
+    distinctive_design_feature?: string;
+  };
+  storefront_architecture?: {
+    building?: {
+      door?: string;
+      stories?: string;
+      material?: string;
+      window_type?: string;
+      facade_style?: string;
+    };
+    features?: {
+      patio?: string;
+      planters?: string;
+      corner_unit?: string;
+      street_furniture?: string;
+    };
+  };
 }
 
 export interface PromptBuilderConfig {
-  // Core business info
   business_name: string;
   niche: string;
   fullAddress: string;
-  
-  // Lens system (from selectGroupAngle)
-  lens: string;  // e.g., "Invisible Causality"
-  lensDefinition: string;  // Random variant of lens
-  groupContext: string;  // From group-angle-selector (replaces categoryContext)
-  
-  // Voice and generation
-  voice: string;  // e.g., "Warm & Conversational"
-  postType: PostType;  // Determines which MODE template
-  
-  // Optional variables
-  recentHistory?: string;  // Recently used lenses
-  varietyRules?: string;  // Constraints for variety
-  
-  // Context (time, weather, season)
+  lens: string;
+  lensDefinition: string;
+  groupContext: string;
+  voice: string;
+  postType: PostType;
+  recentHistory?: string;
+  varietyRules?: string;
   currentTime?: string;
-  currentDate?: string;          // "May 9, 2026"  ← NEW
+  currentDate?: string;
   currentWeather?: string;
   currentSeason?: string;
-  
-  // Business intelligence
   businessSummary?: string;
-  businessIntel?: ParsedBusinessIntel;   // Structured parsed data
-
+  businessIntel?: ParsedBusinessIntel;
   event_or_shoutout?: string;
-  
   offer_name?: string;
   offer_category?: string;
   whats_included?: string;
@@ -68,24 +71,174 @@ export interface PromptBuilderConfig {
   value_framing?: string;
 }
 
+/**
+ * MODE-SPECIFIC DATA REQUIREMENTS
+ * Defines exactly what data each mode category needs
+ */
+const MODE_DATA_REQUIREMENTS = {
+  // EDUCATION modes: Focus on expertise and process
+  EDUCATION: {
+    modes: ['Myth-busting', 'Tip of the Day'],
+    needs: {
+      craft_identity: true,
+      products_services: true,
+      description: true,
+      neighbourhood: false,
+      landmarks: false,
+      transit: false,
+      local_trends: false,
+      interior_layout: false,
+      storefront_architecture: false,
+    }
+  },
+  
+  // OBSERVATION modes: Physical space and operations matter
+  OBSERVATION: {
+    modes: ['Behind the scenes', 'Promotion / offer'],
+    needs: {
+      craft_identity: true,
+      products_services: true,
+      description: true,
+      neighbourhood: true,
+      landmarks: true,
+      transit: false,
+      local_trends: true,
+      interior_layout: true,      // ✅ Needs interior details
+      storefront_architecture: true, // ✅ Needs storefront details
+    }
+  },
+  
+  // COMMUNITY modes: Location and neighbourhood context
+  COMMUNITY: {
+    modes: ['Local event / news', 'Community moment'],
+    needs: {
+      craft_identity: true,
+      products_services: false,
+      description: true,
+      neighbourhood: true,
+      landmarks: true,
+      transit: true,
+      local_trends: true,
+      interior_layout: false,     // ❌ Don't need interior
+      storefront_architecture: false, // ❌ Don't need storefront
+    }
+  },
+};
+
+/**
+ * Get the data requirements for a specific post type
+ */
+function getDataRequirements(postType: string) {
+  for (const [category, config] of Object.entries(MODE_DATA_REQUIREMENTS)) {
+    if (config.modes.includes(postType)) {
+      return config.needs;
+    }
+  }
+  // Default: include everything (safest fallback)
+  return {
+    craft_identity: true,
+    products_services: true,
+    description: true,
+    neighbourhood: true,
+    landmarks: true,
+    transit: true,
+    local_trends: true,
+    interior_layout: true,
+    storefront_architecture: true,
+  };
+}
+
+/**
+ * Build business intelligence section based on MODE requirements
+ * NO STRIPPING - we build only what's needed from the start
+ */
 function buildBusinessIntelSection(
   intel?: ParsedBusinessIntel, 
-  summary?: string
+  postType?: string 
 ): string {
-  if (intel) {
-    const parts: string[] = [];
-    if (intel.neighbourhood) parts.push(`Neighbourhood: ${intel.neighbourhood}`);
-    if (intel.landmarks?.length) parts.push(`Nearby: ${intel.landmarks.join(", ")}`);
-    if (intel.transit?.length) parts.push(`Transit: ${intel.transit.join(", ")}`);
-    if (intel.local_trends?.length) parts.push(`Vibe: ${intel.local_trends.join(", ")}`);
-    if (intel.products_services?.length) parts.push(`Offerings: ${intel.products_services.join(", ")}`);
-    if (intel.craft_identity) parts.push(`Craft: ${intel.craft_identity}`);
-    if (intel.isInferred) parts.push("Note: Craft identity was inferred — use as background context only.");
-    if (intel.description) parts.push(`Description: ${intel.description}`);
-    
-    return parts.length > 0 ? `[BUSINESS INTELLIGENCE]\n${parts.join("\n")}` : "";
+  if (!intel || !postType) return "";
+
+  const needs = getDataRequirements(postType);
+  const parts: string[] = [];
+
+  // Core business info (almost always needed)
+  if (needs.craft_identity && intel.craft_identity) {
+    parts.push(`Craft: ${intel.craft_identity}`);
   }
-  return summary ? `${summary}` : "Standard business.";
+  
+  if (intel.isInferred) {
+    parts.push("Note: Craft identity was inferred — use as background context only.");
+  }
+  
+  if (needs.description && intel.description) {
+    parts.push(`Description: ${intel.description}`);
+  }
+
+  if (needs.products_services && intel.products_services?.length) {
+    parts.push(`Offerings: ${intel.products_services.join(", ")}`);
+  }
+
+  // Location context (conditional)
+  if (needs.neighbourhood && intel.neighbourhood) {
+    parts.push(`Neighbourhood: ${intel.neighbourhood}`);
+  }
+
+  if (needs.landmarks && intel.landmarks?.length) {
+    parts.push(`Nearby: ${intel.landmarks.join(", ")}`);
+  }
+
+  if (needs.transit && intel.transit?.length) {
+    parts.push(`Transit: ${intel.transit.join(", ")}`);
+  }
+
+  if (needs.local_trends && intel.local_trends?.length) {
+    parts.push(`Vibe: ${intel.local_trends.join(", ")}`);
+  }
+
+  // Physical space details (only for OBSERVATION modes)
+  if (needs.interior_layout && intel.interior_layout) {
+    const interiorParts: string[] = [];
+    
+    if (intel.interior_layout.distinctive_design_feature) {
+      interiorParts.push(`Layout: ${intel.interior_layout.distinctive_design_feature}`);
+    }
+    if (intel.interior_layout.lighting_mood) {
+      interiorParts.push(`Lighting: ${intel.interior_layout.lighting_mood}`);
+    }
+    if (intel.interior_layout.seating_style_density) {
+      interiorParts.push(`Seating: ${intel.interior_layout.seating_style_density}`);
+    }
+    if (intel.interior_layout.open_plan_or_divided_spaces) {
+      interiorParts.push(`Space: ${intel.interior_layout.open_plan_or_divided_spaces}`);
+    }
+    
+    if (interiorParts.length > 0) {
+      parts.push(`\n[INTERIOR DETAILS]\n${interiorParts.join("\n")}`);
+    }
+  }
+
+  if (needs.storefront_architecture && intel.storefront_architecture) {
+    const storefrontParts: string[] = [];
+    
+    if (intel.storefront_architecture.building?.facade_style) {
+      storefrontParts.push(`Facade: ${intel.storefront_architecture.building.facade_style}`);
+    }
+    if (intel.storefront_architecture.building?.door) {
+      storefrontParts.push(`Entrance: ${intel.storefront_architecture.building.door}`);
+    }
+    if (intel.storefront_architecture.features?.patio) {
+      storefrontParts.push(`Patio: ${intel.storefront_architecture.features.patio}`);
+    }
+    if (intel.storefront_architecture.features?.planters) {
+      storefrontParts.push(`Landscaping: ${intel.storefront_architecture.features.planters}`);
+    }
+    
+    if (storefrontParts.length > 0) {
+      parts.push(`\n[STOREFRONT]\n${storefrontParts.join("\n")}`);
+    }
+  }
+
+  return parts.length > 0 ? `[BUSINESS INTELLIGENCE]\n${parts.join("\n")}` : "";
 }
 
 function getCurrentDate(): string {
@@ -94,74 +247,6 @@ function getCurrentDate(): string {
   });
 }
 
-/**
- * Build a complete prompt by:
- * 1. Selecting the MODE template based on postType
- * 2. Injecting all variables
- * 3. Handling optional variables gracefully
- * 
- * @param config - All variables needed for the prompt
- * @returns Complete prompt ready to send to Haiku
- */
-export function buildPrompt(config: PromptBuilderConfig): string {
-  // Step 1: Get the MODE template
-  const template = getModeTemplate(config.postType);
-  
-  // Step 2: Get voice description text
-  const voiceDescription = VOICE_PROMPTS[config.voice] || config.voice;
-
-  const businessSection = buildBusinessIntelSection(config.businessIntel, config.businessSummary);
-  
-  // Step 3: Build variables object with all placeholders
-  const variables: Record<string, string> = {
-    business_name: config.business_name,
-    niche: config.niche,
-    fullAddress: config.fullAddress,
-    lens: config.lens,
-    lensDefinition: config.lensDefinition,
-    groupContext: config.groupContext,  // Replaces categoryContext
-    voice_description: voiceDescription,
-    postType: config.postType,
-    recentHistory: config.recentHistory || "None",
-    varietyRules: config.varietyRules || "",
-    current_time: config.currentTime || getCurrentTime(),
-    current_date: config.currentDate || getCurrentDate(),
-    current_weather: config.currentWeather || "Unknown",
-    current_season: config.currentSeason || getCurrentSeason(),
-    business_summary: businessSection, 
-    event_or_shoutout: config.event_or_shoutout || "",
-    offer_name: config.offer_name || "",
-    offer_category: config.offer_category || "",
-    whats_included: config.whats_included || "",
-    available_timeframe: config.available_timeframe || "",
-    eligibility: config.eligibility || "",
-    offer_hook: config.offer_hook || "",
-    value_framing: config.value_framing || "",
-  };
-  
-  // Step 4: Inject variables into template
-  let prompt = template;
-  
-  // Replace all {{placeholder}} with corresponding values
-  Object.entries(variables).forEach(([key, value]) => {
-    const placeholder = `{{${key}}}`;
-    
-    // Replace all occurrences of this placeholder
-    // Use a regex to handle multiple occurrences
-    prompt = prompt.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value);
-  });
-  
-  // Step 5: Handle optional variables - remove any unused placeholders
-  // This handles cases where a MODE doesn't use all variables
-  prompt = prompt.replace(/{{[^}]+}}/g, '');
-  
-  return prompt;
-}
-
-/**
- * Helper: Get current time in readable format
- * Format: "2:30 PM, Tuesday"
- */
 function getCurrentTime(): string {
   const now = new Date();
   const time = now.toLocaleTimeString('en-US', { 
@@ -173,12 +258,8 @@ function getCurrentTime(): string {
   return `${time}, ${day}`;
 }
 
-/**
- * Helper: Get current season
- */
 function getCurrentSeason(): string {
   const month = new Date().getMonth();
-  
   if (month >= 2 && month <= 4) return "Spring";
   if (month >= 5 && month <= 7) return "Summer";
   if (month >= 8 && month <= 10) return "Fall";
@@ -186,11 +267,54 @@ function getCurrentSeason(): string {
 }
 
 /**
- * Validate that all required variables are present
- * 
- * @param config - Configuration object
- * @throws Error if required variables are missing
+ * Build a complete prompt by selecting the MODE template and injecting variables
  */
+export function buildPrompt(config: PromptBuilderConfig): string {
+  const template = getModeTemplate(config.postType);
+  const voiceDescription = VOICE_PROMPTS[config.voice] || config.voice;
+  
+  // Build ONLY what this mode needs
+  const businessSection = buildBusinessIntelSection(config.businessIntel, config.postType);
+  
+  const variables: Record<string, string> = {
+    business_name: config.business_name,
+    niche: config.niche,
+    fullAddress: config.fullAddress,
+    lens: config.lens,
+    lensDefinition: config.lensDefinition,
+    groupContext: config.groupContext,
+    voice_description: voiceDescription,
+    postType: config.postType,
+    recentHistory: config.recentHistory || "None",
+    varietyRules: config.varietyRules || "",
+    current_time: config.currentTime || getCurrentTime(),
+    current_date: config.currentDate || getCurrentDate(),
+    current_weather: config.currentWeather || "Unknown",
+    current_season: config.currentSeason || getCurrentSeason(),
+    business_summary: businessSection,
+    event_or_shoutout: config.event_or_shoutout || "",
+    offer_name: config.offer_name || "",
+    offer_category: config.offer_category || "",
+    whats_included: config.whats_included || "",
+    available_timeframe: config.available_timeframe || "",
+    eligibility: config.eligibility || "",
+    offer_hook: config.offer_hook || "",
+    value_framing: config.value_framing || "",
+  };
+  
+  let prompt = template;
+  
+  Object.entries(variables).forEach(([key, value]) => {
+    const placeholder = `{{${key}}}`;
+    prompt = prompt.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value);
+  });
+  
+  // Remove unused placeholders
+  prompt = prompt.replace(/{{[^}]+}}/g, '');
+  
+  return prompt;
+}
+
 export function validatePromptConfig(config: PromptBuilderConfig): void {
   const required = [
     'business_name',
@@ -210,20 +334,9 @@ export function validatePromptConfig(config: PromptBuilderConfig): void {
   }
 }
 
-/**
- * Build prompt with validation
- * Throws error if required fields are missing
- * 
- * @param config - All variables needed for the prompt
- * @returns Complete prompt ready to send to Haiku
- */
 export function buildPromptSafe(config: PromptBuilderConfig): string {
   validatePromptConfig(config);
   return buildPrompt(config);
 }
 
-/**
- * Helper type for extracting PostType values
- * Use like: type PT = PostTypeValue; // "Tip of the Day" | "Myth-busting" | ...
- */
 export type PostTypeValue = PostType;

@@ -10,7 +10,7 @@ import Groq from "groq-sdk"; // <-- NEW
 import { createClient } from '@supabase/supabase-js';
 import { getFramework, BUSINESS_ARCHETYPES, Framework, FRAMEWORKS   } from "@/lib/frameworks";
 import { TIP_MODE, CTA_BY_POST_TYPE, SEASONAL_NICHE_NARRATIVE, getSeason, NARRATIVE_COMBINATIONS, NarrativeEntry, ANGLE_POOL} from "@/lib/frameworks";
-import { getBrandIdentity, discoverAndSaveBrandIdentity, parseBusinessIntel  } from "@/lib/brandDiscovery";
+import { getBrandIdentity, discoverAndSaveBrandIdentity, parseBusinessIntel, parseInteriorLayout  } from "@/lib/brandDiscovery";
 import { ColorTheme, BusinessVisuals } from '@/lib/constants';
 import { auth } from "@clerk/nextjs/server"; 
 import { selectAngle } from "@/lib/angle-selector";
@@ -744,6 +744,8 @@ export async function POST(req: Request) {
       products_services: intel.products_services || [],
       craft_identity: intel.craft_identity,
       description: intel.description,
+      interior_layout: parseInteriorLayout(business.interior_layout),
+      storefront_architecture: business.storefront_architecture,
       isInferred: intel.isInferred,
     } : undefined;
 

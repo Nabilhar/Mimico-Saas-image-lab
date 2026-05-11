@@ -1,6 +1,5 @@
-// MAIN HANDLER
-// ─────────────────────────────────────────────
 // app/api/prepare-image-prompt/route.ts
+// REFACTORED VERSION - Post-type-specific data selection
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import Groq from "groq-sdk";
@@ -9,14 +8,13 @@ import { createClient } from '@supabase/supabase-js';
 import { FRAMEWORK_POST_TYPE_COMBINATIONS, getSeason, SEASONALITY_CONTEXT, SEASONAL_NICHE_CONTEXT } from "@/lib/frameworks";
 import { auth } from "@clerk/nextjs/server";
 
-
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
-const tools = [  { googleSearch: {},}, ] as any;
+const tools = [{ googleSearch: {} }] as any;
 
 const gemmaModel = genAI.getGenerativeModel({ 
   model: "models/gemma-4-31b-it", 
-  tools: tools, // <--- INTEGRATING THE RESEARCH TOOL
+  tools: tools,
   generationConfig: {
     temperature: 0.7,
     maxOutputTokens: 1000,
@@ -39,7 +37,7 @@ const VOICE_VISUAL_MAP: Record<string, string> = {
   "Authoritative & Precise": 
     "Tight composition. Minimal props — only what earns its place. Precise, controlled lighting. No warmth padding. Every element is intentional.",
   "Warm & Conversational": 
-    "Wider scene with breathing room. Human presence welcome if it serves the hero. Soft natural light. Props that suggest lived-in familiarity — a worn edge, a fingerprint on glass.",
+    "Wider scene with breathing room. Human presence welcome if it serves the hero. Soft natural light. Props that suggest lived-in familiarity — a worn edge, a fingerprint on glass. One imperfection for realism",
   "Bold & Direct": 
     "High contrast. Single strong subject, nothing competing. Punchy framing — close or dramatic angle. Light is decisive, not ambient.",
   "Clean & Understated": 
@@ -59,8 +57,272 @@ const POST_TYPE_VISUAL_INTENT: Partial<Record<string, string>> = {
     "This image supports educational content. The visual job is 'craft knowledge made visible' — one specific detail that embodies the tips. Not generic. Specific enough that it could only illustrate this post.",
   "Community moment":
     "This image supports a community moment post. The visual job is 'belonging' — real people in a genuine scene of enjoyment or connection, with the product or space as context not subject. Medium-to-wide environmental composition. No posed shots, no direct camera eye contact. The viewer should feel they are witnessing something worth being part of. People are the hero. The product or space is in the scene but never the subject.",
+};
 
+// ============================================================================
+// POST-TYPE-SPECIFIC DATA REQUIREMENTS
+// ============================================================================
+// Defines what brand data each visual job actually needs
+
+const POST_TYPE_DATA_REQUIREMENTS = {
+  // Detail shots - focus on craft/product, not space
+  EDUCATION: {
+    postTypes: ['Myth-busting', 'Tip of the Day'],
+    needs: {
+      color_theme: true,
+      logo_colors: false,
+      storefront: false,        // Detail shots don't need building context
+      interior_layout: true,   // Detail shots don't need room layout
+      interior_colors: true,   // Detail shots don't need wall colors
+    }
+  },
+  
+  // Process/space shots - interior environment matters
+  OBSERVATION: {
+    postTypes: ['Behind the scenes', 'Promotion / offer'],
+    needs: {
+      color_theme: true,
+      logo_colors: true,
+      storefront: true,          // Might shoot exterior
+      interior_layout: true,     // ⭐ Show the workspace
+      interior_colors: true,     // Accurate color rendering
+    }
+  },
+  
+  // Street/community shots - exterior and neighbourhood matter
+  COMMUNITY: {
+    postTypes: ['Local event / news', 'Community moment'],
+    needs: {
+      color_theme: true,
+      logo_colors: false,
+      storefront: true,          // ⭐ Street-level exterior shots
+      interior_layout: true,    // Outdoor/street scenes
+      interior_colors: true,    // Outdoor/street scenes
+    }
+  },
+};
+
+/**
+ * Get data requirements for a specific post type
+ */
+function getVisualDataRequirements(postType: string) {
+  for (const category of Object.values(POST_TYPE_DATA_REQUIREMENTS)) {
+    if (category.postTypes.includes(postType)) {
+      return category.needs;
+    }
+  }
+  // Default: include everything (safest fallback)
+  return {
+    color_theme: true,
+    logo_colors: true,
+    storefront: true,
+    interior_layout: true,
+    interior_colors: true,
   };
+}
+
+// ============================================================================
+// HELPER FUNCTIONS - Format structured data into readable blocks
+// ============================================================================
+
+/**
+ * Format interior_layout JSONB into readable text
+ * Converts: {"counter_position": "...", "lighting_mood": "..."}
+ * Into: Clean, structured text the Architect can use
+ */
+function formatInteriorLayout(layout: any): string {
+  if (!layout) return "Infer from business type and niche";
+  
+  // Handle string (legacy data)
+  if (typeof layout === 'string') {
+    return layout;
+  }
+  
+  // Handle JSONB object
+  const parts: string[] = [];
+  
+  if (layout.distinctive_design_feature) {
+    parts.push(`Key Feature: ${layout.distinctive_design_feature}`);
+  }
+  if (layout.lighting_mood) {
+    parts.push(`Lighting: ${layout.lighting_mood}`);
+  }
+  if (layout.seating_style_density) {
+    parts.push(`Seating: ${layout.seating_style_density}`);
+  }
+  if (layout.counter_position) {
+    parts.push(`Counter: ${layout.counter_position}`);
+  }
+  if (layout.open_plan_or_divided_spaces) {
+    parts.push(`Layout: ${layout.open_plan_or_divided_spaces}`);
+  }
+  
+  return parts.length > 0 
+    ? parts.join("\n  ") 
+    : "Infer from business type and niche";
+}
+
+/**
+ * Format storefront_architecture JSONB into readable text
+ */
+function formatStorefrontArchitecture(arch: any): string {
+  if (!arch) return "Infer from neighbourhood and business type";
+  
+  // Handle string (legacy data)
+  if (typeof arch === 'string') {
+    return arch;
+  }
+  
+  // Handle JSONB object
+  const parts: string[] = [];
+  
+  if (arch.building) {
+    // Check if building is a string or object
+    if (typeof arch.building === 'string') {
+      parts.push(`Building: ${arch.building}`);
+    } else {
+      // Handle nested building object (if it exists)
+      const building = arch.building;
+      const buildingParts: string[] = [];
+      
+      if (building.facade_style) buildingParts.push(building.facade_style);
+      if (building.material) buildingParts.push(building.material);
+      if (building.stories) buildingParts.push(`${building.stories} stories`);
+      if (building.window_type) buildingParts.push(building.window_type);
+      if (building.door) buildingParts.push(`door: ${building.door}`);
+      
+      if (buildingParts.length > 0) {
+        parts.push(`Building: ${buildingParts.join(", ")}`);
+      }
+    }
+  }
+  
+  if (arch.features) {
+    // Check if features is a string or object
+    if (typeof arch.features === 'string') {
+      parts.push(`Features: ${arch.features}`);
+    } else {
+      // Handle nested features object (if it exists)
+      const features = arch.features;
+      const featureParts: string[] = [];
+      
+      if (features.patio) featureParts.push(`patio: ${features.patio}`);
+      if (features.corner_unit) featureParts.push(features.corner_unit);
+      if (features.planters) featureParts.push(`planters: ${features.planters}`);
+      if (features.street_furniture) featureParts.push(`street furniture: ${features.street_furniture}`);
+      
+      if (featureParts.length > 0) {
+        parts.push(`Features: ${featureParts.join(", ")}`);
+      }
+    }
+  }
+  
+  return parts.length > 0 
+    ? parts.join("\n  ") 
+    : "Infer from neighbourhood and business type";
+}
+
+/**
+ * Format logoColors object into readable text
+ */
+function formatLogoColors(logoColors: any): string {
+  if (!logoColors) return "N/A";
+  if (typeof logoColors === 'string') return logoColors;
+  
+  // Handle nested object
+  const parts: string[] = [];
+  if (logoColors.wordmark_primary) parts.push(logoColors.wordmark_primary);
+  if (logoColors.graphic_secondary) parts.push(logoColors.graphic_secondary);
+  if (logoColors.background) parts.push(`background: ${logoColors.background}`);
+  
+  return parts.length > 0 ? parts.join(", ") : "N/A";
+}
+
+/**
+ * Format storefrontColors object into readable text
+ */
+function formatStorefrontColors(colors: any): string {
+  if (!colors) return "N/A";
+  if (typeof colors === 'string') return colors;
+  
+  // Handle nested object
+  const parts: string[] = [];
+  if (colors.facade_color) parts.push(`facade: ${colors.facade_color}`);
+  if (colors.door_color) parts.push(`door: ${colors.door_color}`);
+  if (colors.awning_color) parts.push(`awning: ${colors.awning_color}`);
+  if (colors.signage_color) parts.push(`signage: ${colors.signage_color}`);
+  
+  return parts.length > 0 ? parts.join(", ") : "N/A";
+}
+
+/**
+ * Format interiorColors object into readable text
+ */
+function formatInteriorColors(colors: any): string {
+  if (!colors) return "N/A";
+  if (typeof colors === 'string') return colors;
+  
+  // Handle nested object
+  const parts: string[] = [];
+  if (colors.wall_color) parts.push(`walls: ${colors.wall_color}`);
+  if (colors.floor_material_color) parts.push(`floor: ${colors.floor_material_color}`);
+  if (colors.ceiling_color) parts.push(`ceiling: ${colors.ceiling_color}`);
+  if (colors.counter_material_color) parts.push(`counter: ${colors.counter_material_color}`);
+  
+  return parts.length > 0 ? parts.join(", ") : "N/A";
+}
+
+/**
+ * Build brand identity blocks based on what this post type needs
+ */
+function buildBrandBlocks(brandIdentity: any, postType: string) {
+  const needs = getVisualDataRequirements(postType);
+  
+  // COLOR & MOOD — always included (drives palette)
+  const colorBlock = `
+Mood:      ${brandIdentity.color_theme?.description || "Derive from niche and neighbourhood context"}
+Primary:   ${brandIdentity.color_theme?.primary || "N/A"}
+Secondary: ${brandIdentity.color_theme?.secondary || "N/A"}
+Accent:    ${brandIdentity.color_theme?.accent || "N/A"}${needs.logo_colors ? `
+Logo:      ${formatLogoColors(brandIdentity.business_visuals?.logoColors)}` : ''}
+  `.trim();
+  
+  // STRUCTURE & SPACE — conditional based on post type needs
+  const structureParts: string[] = [];
+  
+  if (needs.storefront) {
+    structureParts.push(`
+[STOREFRONT — for exterior shots]
+  Colors: ${formatStorefrontColors(brandIdentity.business_visuals?.storefrontColors)}
+  ${formatStorefrontArchitecture(brandIdentity.storefront_architecture)}
+    `.trim());
+  }
+  
+  if (needs.interior_layout || needs.interior_colors) {
+    const interiorParts: string[] = [];
+    
+    if (needs.interior_colors) {
+      interiorParts.push(`Colors: ${formatInteriorColors(brandIdentity.business_visuals?.interiorColors)}`);
+    }
+    
+    if (needs.interior_layout) {
+      interiorParts.push(formatInteriorLayout(brandIdentity.interior_layout));
+    }
+    
+    if (interiorParts.length > 0) {
+      structureParts.push(`
+[INTERIOR — for indoor shots]
+  ${interiorParts.join("\n  ")}
+      `.trim());
+    }
+  }
+  
+  const structureBlock = structureParts.length > 0 
+    ? structureParts.join("\n\n") 
+    : "No spatial context needed — focus on subject detail.";
+  
+  return { colorBlock, structureBlock };
+}
 
 // Extract and store composition type when saving the prompt
 const detectComposition = (prompt: string): string => {
@@ -71,8 +333,11 @@ const detectComposition = (prompt: string): string => {
   return "Unknown";
 };
 
+// ============================================================================
+// MAIN HANDLER
+// ============================================================================
+
 export async function POST(req: Request) {
-  // 1. Authenticate with Clerk
   const { userId } = await auth();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -83,14 +348,14 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { postId: bodyPostId, currentMonth, generatedPost, framework, postType, currentWeather } = body;
-    postId = bodyPostId; 
-
+    postId = bodyPostId;
 
     if (!postId) {
       return NextResponse.json({ error: "Missing Post ID" }, { status: 400 });
     }
-    // 2. Fetch the "Ground Truth" profile using the secure userId
-    const { data: business, error: businessError  } = await supabase
+
+    // Fetch brand data
+    const { data: business, error: businessError } = await supabase
       .from('businesses')
       .select(`
         business_name, street, city, province_state, country, postal_code,
@@ -98,7 +363,7 @@ export async function POST(req: Request) {
         storefront_architecture, interior_layout
       `)
       .eq('user_id', userId)
-      .eq('is_active', true) // <--- Only get the active business
+      .eq('is_active', true)
       .single();
 
     if (businessError || !business) {
@@ -106,14 +371,12 @@ export async function POST(req: Request) {
     }
 
     const fullAddress = `${business.street}, ${business.city}, ${business.province_state}, ${business.country} ${business.postal_code}`;
-
-    // Map the profile data to variables used later in the script
     const business_name = business.business_name;
-    const brandIdentity = business; 
+    const brandIdentity = business;
     const niche = business.niche;
     const voice = business.voice;
 
-    // ── CALCULATE STRATEGY & SEASON ────────────────────────────────────────
+    // Calculate strategy & season
     const season = getSeason(currentMonth);
     const combinationKey = `${body.framework}_${body.postType}`;
     const visualStrategy = (FRAMEWORK_POST_TYPE_COMBINATIONS as any)[combinationKey] || "Create a compelling visual for this post type.";
@@ -121,16 +384,16 @@ export async function POST(req: Request) {
     const seasonalNicheContext = SEASONAL_NICHE_CONTEXT[season]?.[niche] || 
       `Create a visual that captures the essence of ${niche} in ${season}.`;
 
-    // ── FETCH RECENT IMAGE PROMPTS ─────────────────────────────────────────
+    // Fetch recent image prompts for variety
     const { data: recentPrompts } = await supabase
       .from("community_posts")
-      .select("image_prompt, composition_type") 
+      .select("image_prompt, composition_type")
       .eq("business_id", userId)
       .neq("image_prompt", "EMPTY")
       .order("created_at", { ascending: false })
       .limit(3);
 
-      const recentImageHistory = recentPrompts?.length
+    const recentImageHistory = recentPrompts?.length
       ? recentPrompts
           .map((p, i) => {
             const firstSentence = (p.image_prompt || "").split(/[.]/)[0].trim();
@@ -140,110 +403,122 @@ export async function POST(req: Request) {
           .join("\n")
       : null;
 
-    console.log("--- RECENT IMAGE PROMPTS ---");
-    console.log("🎨 Recent history passed to architect:", recentImageHistory);
-    console.log("----------------------------");
+    console.log("--- ARCHITECT DATA SELECTION ---");
+    console.log("Post Type:", postType);
+    const needs = getVisualDataRequirements(postType);
+    console.log("Data Needs:", needs);
+    console.log("--------------------------------");
 
     const currentTime = new Date().toLocaleTimeString('en-US', { 
-      hour: 'numeric', minute: '2-digit', hour12: true });
+      hour: 'numeric', minute: '2-digit', hour12: true 
+    });
 
-    // ── BUILD BRAND IDENTITY BLOCK ─────────────────────────────────────────
-    // Separates color/mood data from structural/spatial data so the Architect
-    // can use them for different purposes in the prompt (palette vs. setting).
-    //
-    // COLOR & MOOD — drives palette, lighting vocabulary, emotional tone
-    const brandColorBlock = `
-      Mood:      ${brandIdentity.color_theme?.description         || "Derive from niche and neighbourhood context"}
-      Primary:   ${brandIdentity.color_theme?.primary             || "N/A"}
-      Secondary: ${brandIdentity.color_theme?.secondary           || "N/A"}
-      Accent:    ${brandIdentity.color_theme?.accent              || "N/A"}
-      Logo:      ${brandIdentity.business_visuals?.logoColors     || "N/A"}
-    `.trim();
+    // ✨ NEW: Build brand blocks based on what this post type needs
+    const { colorBlock, structureBlock } = buildBrandBlocks(brandIdentity, postType);
 
-        // STRUCTURE & SPACE — drives physical setting, camera angle, composition
-    // storefront_architecture is now a JSON object: { building, features }
-    const arch = (brandIdentity as any).storefront_architecture;
-    const archBuilding = typeof arch === "object" ? arch?.building : arch;
-    const archFeatures = typeof arch === "object" ? arch?.features : null;
+    // Legacy the architect prompt
+    const architectLegacyPrompt = `
+[SYSTEM]: Expert image prompt engineer for FLUX.1-schnell. Hyper-local commercial/lifestyle photography.
 
-    // STRUCTURE & SPACE — drives physical setting, camera angle, composition
-    const brandStructureBlock = `
-      Storefront Colors:    ${brandIdentity.business_visuals?.storefrontColors  || "N/A"}
-      Storefront Structure: ${archBuilding || "Infer from neighbourhood and business type"}
-      Location Features:    ${archFeatures || "None identified"}
-      Interior Colors:      ${brandIdentity.business_visuals?.interiorColors    || "N/A"}
-      Interior Layout:      ${(brandIdentity as any).interior_layout            || "Infer from business type and niche"}
-    `.trim();
+[SUBJECT EXTRACTION — DO THIS FIRST]:
+Read the post and identify:
+1. The specific craft truth the post is built around — this is the image hero.
+   Not a generic business shot. The specific thing the post is about.
+   Example: espresso extraction post → hero is the pour, not a café interior.
+   Example: dry skin post → hero is a skincare texture, not a spa room.
+2. The single product, material, or process moment that best embodies that truth.
+3. Whether human presence serves the hero or distracts — if distraction, no people.
+Every subsequent decision flows from this extraction.
 
-    // ── ARCHITECT PROMPT ───────────────────────────────────────────────────
-    const architectPrompt = `
-      [SYSTEM]: Expert image prompt engineer for FLUX.1-schnell. Hyper-local commercial/lifestyle photography.
+[ANALYSIS]:
+Post: "${generatedPost}"
+Business: ${business_name} (${niche}) | ${fullAddress}
+Visual Strategy: ${visualStrategy}
 
-      [SUBJECT EXTRACTION — DO THIS FIRST]:
-      Read the post and identify:
-      1. The specific craft truth the post is built around — this is the image hero.
-        Not a generic business shot. The specific thing the post is about.
-        Example: espresso extraction post → hero is the pour, not a café interior.
-        Example: dry skin post → hero is a skincare texture, not a spa room.
-      2. The single product, material, or process moment that best embodies that truth.
-      3. Whether human presence serves the hero or distracts — if distraction, no people.
-      Every subsequent decision flows from this extraction.
+[VOICE]:
+"${voice}" — ${VOICE_VISUAL_MAP[voice] || "Clean and intentional. Every element earns its place."}
 
-      [ANALYSIS]:
-      Post: "${generatedPost}"
-      Business: ${business_name} (${niche}) | ${fullAddress}
-      Visual Strategy: ${visualStrategy}
+[POST TYPE — VISUAL JOB]:
+${postType}: ${POST_TYPE_VISUAL_INTENT[postType] || "Create a compelling visual that supports the post content."}
 
-      [VOICE]:
-      "${voice}" — ${VOICE_VISUAL_MAP[voice] || "Clean and intentional. Every element earns its place."}
+[SEASONAL_CONTEXT]:
+${season} | ${currentMonth} | ${currentTime}
+Elements: ${seasonInfo?.visual_elements}
+Lighting: ${seasonInfo?.time_of_day_guidance}
+Weather: ${currentWeather || "N/A"} — one atmospheric touch only.
+Niche: ${seasonalNicheContext}
 
-      [POST TYPE — VISUAL JOB]:
-      ${postType}: ${POST_TYPE_VISUAL_INTENT[postType] || "Create a compelling visual that supports the post content."}
+[BRAND — COLOR & MOOD]:
+${colorBlock}
+Integrate colors into palette, props, lighting. No color commentary. Derive from niche/season if N/A.
 
-      [SEASONAL_CONTEXT]:
-      ${season} | ${currentMonth} | ${currentTime}
-      Elements: ${seasonInfo?.visual_elements}
-      Lighting: ${seasonInfo?.time_of_day_guidance}
-      Weather: ${currentWeather || "N/A"} — one atmospheric touch only.
-      Niche: ${seasonalNicheContext}
+[BRAND — STRUCTURE & SPACE]:
+${structureBlock}
+${needs.storefront ? "Exterior shots: use Storefront details for architecture and location context." : ""}
+${needs.interior_layout ? "Interior shots: use Interior details as spatial blueprint." : ""}
+${!needs.storefront && !needs.interior_layout ? "Focus on subject detail — no spatial context needed." : ""}
+These are ground truth — not suggestions. If "Infer", construct from business type and niche.
 
-      [BRAND — COLOR & MOOD]:
-      ${brandColorBlock}
-      Integrate colors into palette, props, lighting. No color commentary. Derive from niche/season if N/A.
+[FORBIDDEN]:
+${recentImageHistory ? `Already used — strictly forbidden:
+${recentImageHistory}
 
-      [BRAND — STRUCTURE & SPACE]:
-      ${brandStructureBlock}
-      Exterior shots: use Storefront Structure for architecture and Location Features for context.
-      Interior shots: use Interior Layout as spatial blueprint.
-      These are ground truth — not suggestions. If "Infer", construct from business type and niche.
+Composition: if last was Detail → Wide or Medium. If last was Wide → Detail or Medium. Never repeat same composition twice in a row.
+Subject: Food/Drink → Space or Exterior. Detail close-up → Wide or Medium. Exterior → Interior or Texture. Waterfront → Interior or Close-up.` : "No history. Full creative freedom."}
 
-      [FORBIDDEN]:
-      ${recentImageHistory ? `Already used — strictly forbidden:
-      ${recentImageHistory}
+[RESEARCH]:
+Search "${business_name}" at "${fullAddress}" for seasonal offerings, branding details, visible landmarks.
+Brand Identity blocks take priority — search fills gaps only.
 
-      Composition: if last was Detail → Wide or Medium. If last was Wide → Detail or Medium. Never repeat same composition twice in a row.
-      Subject: Food/Drink → Space or Exterior. Detail close-up → Wide or Medium. Exterior → Interior or Texture. Waterfront → Interior or Close-up.` : "No history. Full creative freedom."}
+[SPEC]:
+Write a 60-70 word prompt for FLUX.1-schnell in this sequence:
+1. Composition: Wide environmental / Medium scene / Detail close-up — apply, don't label.
+2. Subject: Hero from [SUBJECT EXTRACTION]. Grounded in craft truth. Specific detail from research. No legible faces — people are secondary, never dominating.
+3. Setting: Physical space from [BRAND — STRUCTURE & SPACE].
+4. Lighting: ${currentMonth}, ${currentTime}, ${fullAddress}. Use ${seasonInfo?.lighting_mood}.
+5. Mood + one imperfection (condensation ring, scuff on brick, steam curl) to remove AI sheen.
+6. End with: "Shot on Sony A7, f/1.8, shallow depth of field, 1:1 square crop, no watermark, no legible text."
 
-      [RESEARCH]:
-      Search "${business_name}" at "${fullAddress}" for seasonal offerings, branding details, visible landmarks.
-      Brand Identity blocks take priority — search fills gaps only.
+Storefront/signage: secondary only, mid/background, slightly out of focus if exterior.
 
-      [SPEC]:
-      Write a 60-70 word prompt for FLUX.1-schnell in this sequence:
-      1. Composition: Wide environmental / Medium scene / Detail close-up — apply, don't label.
-      2. Subject: Hero from [SUBJECT EXTRACTION]. Grounded in craft truth. Specific detail from research. No legible faces — people are secondary, never dominating.
-      3. Setting: Physical space from [BRAND — STRUCTURE & SPACE].
-      4. Lighting: ${currentMonth}, ${currentTime}, ${fullAddress}. Use ${seasonInfo?.lighting_mood}.
-      5. Mood + one imperfection (condensation ring, scuff on brick, steam curl) to remove AI sheen.
-      6. End with: "Shot on Sony A7, f/1.8, shallow depth of field, 1:1 square crop, no watermark, no legible text."
-
-      Storefront/signage: secondary only, mid/background, slightly out of focus if exterior.
-
-      [OUTPUT]: <<<PROMPT_BEGIN>>> then prompt only. No labels, no preamble, no commentary.
+[OUTPUT]: <<<PROMPT_BEGIN>>> then prompt only. No labels, no preamble, no commentary.
     `;
-  
+
+    // New the architect prompt
+    const architectPrompt = `
+    [SYSTEM]: Image prompt engineer for FLUX.1-schnell. Commercial/lifestyle photography.
+
+    [TASK]:
+    Post: "${generatedPost}"
+    Business: ${business_name} (${niche})
+    Visual job: ${POST_TYPE_VISUAL_INTENT[postType]}
+
+    [HERO]:
+    What specific subject/process/moment does the post describe?
+    That's your hero. Determine appropriate composition (wide/medium/detail) based on subject.
+
+    [VOICE]: ${VOICE_VISUAL_MAP[voice]}
+
+    [BRAND AUTHENTICITY]:
+    Colors: ${colorBlock}
+    ${structureBlock}
+    Layer the subject INTO this real business environment.
+
+    [AVOID]: ${recentImageHistory}
+
+    [SPEC]:
+    60-70 word FLUX prompt:
+    - Composition + subject from post
+    - Authentic setting from Brand blocks
+    - ${currentMonth}, ${currentTime}, Weather: ${currentWeather || "N/A"} lighting
+    - Storefront/signage: background only if visible
+    - End: "Shot on Sony A7, f/1.8, 1:1 crop, no text"
+
+    [OUTPUT]: <<<PROMPT_BEGIN>>> then prompt only. No labels, no preamble, no commentary.
+    `;
+
     let visualDescription = "";
-  
+
     if (ARCHITECT_MODE === "GEMINI") {
       const result = await textModel.generateContent(architectPrompt);
       visualDescription = result.response.text();
@@ -255,8 +530,13 @@ export async function POST(req: Request) {
       visualDescription = result.choices[0]?.message?.content || "";
     } else if (ARCHITECT_MODE === "GEMMA") {
       console.log("Shoreline Architect: Requesting Gemma 4 via Google AI SDK...");
-      const result = await gemmaModel.generateContent(architectPrompt);
 
+      console.log("\n\n🚀 === [FULL ARCH GEMMA PROMPT START] === \n");
+      console.log(architectPrompt);
+      console.log("\n === [FULL ARCH GEMMA PROMPT END] === \n\n");
+      console.log(`--- PROMPT LENGTH: ${architectPrompt.length} characters, ~${Math.round(architectPrompt.length / 4)} tokens ---`);
+              
+      const result = await gemmaModel.generateContent(architectPrompt);
       const response = result.response;
 
       const groundingMeta = (response as any).candidates?.[0]
@@ -271,14 +551,14 @@ export async function POST(req: Request) {
 
     let cleanDescription = visualDescription;
 
-    // ── SIGNAL SEARCH (Last Signal Strategy) ──────────────────────────────
+    // Signal search (last signal strategy)
     const signal = "<<<PROMPT_BEGIN>>>";
 
     if (cleanDescription.includes(signal)) {
       const lastSignalIndex = cleanDescription.lastIndexOf(signal);
       cleanDescription = cleanDescription.substring(lastSignalIndex + signal.length).trim();
     } else {
-      // fallback: strip any preamble before the first photography term
+      // Fallback: strip any preamble before the first photography term
       const photographyTerms = ["Shot on", "Cinematic", "Close-up", "Wide", "Medium shot", "A ", "An "];
       for (const term of photographyTerms) {
         const idx = cleanDescription.indexOf(term);
@@ -289,7 +569,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // ── THE REFINERY ───────────────────────────────────────────────────────
+    // The refinery
     cleanDescription = cleanDescription
       .replace(/\*?[A-Z][a-z]+:\*/g, "") 
       .replace(/\*?[A-Z][a-z]+\s+Section:\*/gi, "")
@@ -297,7 +577,7 @@ export async function POST(req: Request) {
       .replace(/\s+/g, ' ')
       .trim();
 
-    // ── FINAL SANITY CHECK ─────────────────────────────────────────────────
+    // Final sanity check
     if (cleanDescription.length < 10) {
       console.error("⚠️ Architect generated an empty or too-short prompt.");
       cleanDescription = "Cinematic lifestyle photography, high quality, detailed.";
@@ -305,7 +585,7 @@ export async function POST(req: Request) {
     
     const detectedComposition = detectComposition(cleanDescription);
     
-    // ── SAVE TO SUPABASE ───────────────────────────────────────────────────
+    // Save to Supabase
     const { error: rpcError } = await supabase.rpc('update_post_image_prompt', {
       post_id: postId,
       new_prompt: cleanDescription
