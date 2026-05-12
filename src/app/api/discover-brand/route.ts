@@ -15,6 +15,8 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+const TEXT_DISCOVERY_COST = 3; 
+
 export async function POST(req: Request) {
   try {
 
@@ -23,8 +25,32 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { business_id, business_name, address, photos, category, niche } = await req.json();
+    const { business_id, business_name, address, photos, category, niche, run_text_discovery = false  } = await req.json();
     const uploadedPhotos: UploadedPhoto[] = photos || [];
+
+        // ─────────────────────────────────────────────────────────────────
+    // STEP 1: Fetch user profile (tier, credits, free discovery status)
+    // ─────────────────────────────────────────────────────────────────
+    const { data, error: profileError } = await supabase
+    .rpc('get_user_profile', { p_user_id: userId });
+   
+    if (profileError) {
+      console.error("Failed to fetch user profile:", profileError);
+      return NextResponse.json({ error: "Profile fetch failed" }, { status: 500 });
+    }
+    
+    // Handle array return (get first item)
+    const userProfile = Array.isArray(data) ? data[0] : data;
+    
+    const userTier = userProfile?.tier || 1;
+    const userCredits = userProfile?.credits || 0;
+    const freeDiscoveryUsed = userProfile?.free_text_discovery_used || false;
+
+    console.log(`--- [Discovery API] User Tier: ${userTier}, Credits: ${userCredits}, Free Used: ${freeDiscoveryUsed} ---`);
+
+    // ─────────────────────────────────────────────────────────────────
+    // STEP 2: Get current brand identity
+    // ─────────────────────────────────────────────────────────────────
 
     const currentBrandIdentity = await getBrandIdentity(business_id);
     const currentBrandSource = currentBrandIdentity.brand_source;
@@ -32,7 +58,7 @@ export async function POST(req: Request) {
     console.log(`--- [Discovery API] User: ${business_name}, brandSource: '${currentBrandSource}', Photos: ${uploadedPhotos.length} ---`);
 
     // ─────────────────────────────────────────────────────────────────
-    // PATH 1: TEXT SEARCH (Haiku) — Independent trigger
+    // STEP 3: Determine if text discovery should run (haiku)
     // ─────────────────────────────────────────────────────────────────
     // Triggers: New user OR business name changed
     
@@ -44,7 +70,41 @@ export async function POST(req: Request) {
       (currentBrandIdentity.last_analyzed_business_name || "") !==
       (business_name || "");
 
-    const shouldTriggerTextDiscovery = hasNeverAnalyzed || nameChanged;
+      const shouldTriggerTextDiscovery = 
+      run_text_discovery && (hasNeverAnalyzed || nameChanged);
+
+        // ─────────────────────────────────────────────────────────────────
+    // STEP 4: Credit Check for Tier 1 Users
+    // ─────────────────────────────────────────────────────────────────
+    let isFirstFreeDiscovery = false;
+
+    if (userTier === 1 && shouldTriggerTextDiscovery) {
+      // Check if this is their first free discovery
+      if (!freeDiscoveryUsed && hasNeverAnalyzed) {
+        console.log(`🎁 [Discovery API] First free text discovery for Tier 1 user`);
+        isFirstFreeDiscovery = true;
+      } else {
+        // Need to check credits
+        if (userCredits < TEXT_DISCOVERY_COST) {
+          console.log(`❌ [Discovery API] Insufficient credits. Required: ${TEXT_DISCOVERY_COST}, Available: ${userCredits}`);
+          return NextResponse.json({ 
+            error: "Insufficient credits", 
+            required: TEXT_DISCOVERY_COST,
+            available: userCredits
+          }, { status: 402 }); // 402 Payment Required
+        }
+        console.log(`💳 [Discovery API] Tier 1 user will be charged ${TEXT_DISCOVERY_COST} credits after successful discovery`);
+      }
+    }
+
+    if (userTier === 2) {
+      console.log(`👑 [Discovery API] Tier 2 user - text discovery is free`);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // STEP 5: Run Text Discovery (if approved)
+    // ─────────────────────────────────────────────────────────────────
+    let textDiscoverySuccess = false;
 
     if (shouldTriggerTextDiscovery) {
       if (hasNeverAnalyzed) {
@@ -62,17 +122,60 @@ export async function POST(req: Request) {
           category || "",
           niche || ""
         );
+
+        // Update last_text_discovery_at timestamp
+        await supabase
+          .from('businesses')
+          .update({ last_text_discovery_at: new Date().toISOString() })
+          .eq('id', business_id);
+
+        textDiscoverySuccess = true;
         console.log(`✅ [Discovery API] PATH 1: Text research complete`);
+
+        // ─────────────────────────────────────────────────────────────
+        // STEP 6: Deduct Credits AFTER Successful Discovery
+        // ─────────────────────────────────────────────────────────────
+        if (userTier === 1) {
+          if (isFirstFreeDiscovery) {
+            // Mark free discovery as used
+            await supabase.rpc('mark_free_discovery_used', { p_user_id: userId });
+            console.log(`🎁 [Discovery API] Marked free discovery as used`);
+          } else {
+            // Deduct credits
+            const { data: deductResult, error: deductError } = await supabase
+              .rpc('deduct_credits', {
+                p_user_id: userId,
+                p_amount: TEXT_DISCOVERY_COST,
+                p_reason: 'text_discovery',
+                p_business_id: business_id,
+                p_metadata: { business_name, timestamp: new Date().toISOString() }
+              });
+
+            if (deductError) {
+              console.error(`❌ [Discovery API] Credit deduction failed:`, deductError);
+              // Discovery succeeded but credit deduction failed - log this critical error
+              // Consider implementing a retry queue or manual reconciliation
+            } else {
+              const result = typeof deductResult === 'string' ? JSON.parse(deductResult) : deductResult;
+              console.log(`💳 [Discovery API] Credits deducted. New balance: ${result.balance}`);
+            }
+          }
+        }
+
       } catch (textError) {
         console.error(`❌ [Discovery API] PATH 1 failed:`, textError);
-        throw textError;
+        // Don't deduct credits if discovery failed
+        return NextResponse.json({ 
+          error: "Text discovery failed", 
+          details: textError instanceof Error ? textError.message : String(textError)
+        }, { status: 500 });
       }
     } else {
-      console.log(`⏭️  [Discovery API] PATH 1: Text research skipped (no changes)`);
+      console.log(`⏭️  [Discovery API] PATH 1: Text research skipped (user did not request or no changes)`);
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // PATH 2: VISION ANALYSIS (Gemini) — Independent trigger
+    // STEP 7: Vision Analysis (Gemini) - Always Free
     // ─────────────────────────────────────────────────────────────────
     // Triggers: At least 1 photo uploaded
 

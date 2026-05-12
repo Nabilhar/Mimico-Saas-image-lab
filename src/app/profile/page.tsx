@@ -179,6 +179,18 @@ export default function ProfilePage() {
   }, []);
 
   // ── Form state ────────────────────────────────────────────────────────────
+  // Add new state for user profile
+  const [userTier, setUserTier] = useState<number>(1);
+  const [userCredits, setUserCredits] = useState<number>(0);
+  const [freeDiscoveryUsed, setFreeDiscoveryUsed] = useState<boolean>(false);
+  const [runTextDiscovery, setRunTextDiscovery] = useState<boolean>(false);
+  const [businessCount, setBusinessCount] = useState<number>(0);
+
+  // Track original values to detect changes
+  const [originalBusinessName, setOriginalBusinessName] = useState<string>("");
+  const [originalStreet, setOriginalStreet] = useState<string>("");
+  const [originalCity, setOriginalCity] = useState<string>("");
+
   const [loading, setLoading] = useState(false);
   const [testResult, setTestResult] = useState("");
   const [profileLoaded, setProfileLoaded] = useState(false);
@@ -260,6 +272,10 @@ export default function ProfilePage() {
           // We set the business description from the parsed JSON 'description' field.
           setBusinessDescription(intel?.description || ""); 
 
+          setOriginalBusinessName(data.business_name || "");
+          setOriginalStreet(data.street || "");
+          setOriginalCity(data.city || "");
+
           setProfileLoaded(true);
         } else {
           // No active business found for this user. This might be a new user.
@@ -279,6 +295,46 @@ export default function ProfilePage() {
     }
 
   }, [isLoaded, user?.id, supabase, profileLoaded]); // Dependencies remain the same
+
+  // Fetch user profile (tier, credits)
+useEffect(() => {
+  const fetchUserProfile = async () => {
+    if (!user?.id) return;
+
+    try {
+      const response = await fetch('/api/user/profile');
+      if (response.ok) {
+        const data = await response.json();
+        setUserTier(data.tier || 1);
+        setUserCredits(data.credits || 0);
+        setFreeDiscoveryUsed(data.free_text_discovery_used || false);
+        console.log("User profile loaded:", data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch user profile:", err);
+    }
+  };
+
+  const fetchBusinessCount = async () => {
+    if (!user?.id) return;
+
+    try {
+      const response = await fetch('/api/user/businesses/count');
+      if (response.ok) {
+        const data = await response.json();
+        setBusinessCount(data.count || 0);
+        console.log("Business count:", data.count);
+      }
+    } catch (err) {
+      console.error("Failed to fetch business count:", err);
+    }
+  };
+
+  if (user?.id) {
+    fetchUserProfile();
+    fetchBusinessCount();
+  }
+}, [user?.id]);
 
 
   if (!isLoaded || !user || !session || !profileLoaded) { 
@@ -320,6 +376,13 @@ export default function ProfilePage() {
     }
   };
 
+  const getDiscoveryCost = (): number => {
+    if (userTier === 2) return 0; // Tier 2 is free
+    if (!freeDiscoveryUsed) return 0; // First discovery free
+    return 3; // Tier 1 subsequent discoveries
+  };
+   
+
   const categories = Object.keys(BUSINESS_ARCHETYPES);
   const voices = ["Authoritative & Precise", "Warm & Conversational", "Bold & Direct", "Clean & Understated"];
 
@@ -329,8 +392,26 @@ export default function ProfilePage() {
     e.preventDefault();
     if (!user || !supabase) return;
 
+    // ─────────────────────────────────────────────────────────────────
+    // VALIDATION: Tier 1 restrictions
+    // ─────────────────────────────────────────────────────────────────
+    if (userTier === 1) {
+      // Block create mode if already has a business
+      if (saveMode === 'create' && businessCount >= 1) {
+        toast.error("Tier 1 users can only have one business. Please upgrade to Tier 2 for multiple businesses.");
+        return;
+      }
+  
+      // Check credits if text discovery is requested
+      const discoveryCost = getDiscoveryCost();
+      if (runTextDiscovery && discoveryCost > 0 && userCredits < discoveryCost) {
+        toast.error(`Insufficient credits. You need ${discoveryCost} credits but have ${userCredits}.`);
+        return;
+      }
+    }
+  
     setLoading(true);
-    const statusToast = toast.loading("🤖 Business saved & AI analysis running to extract your visuals...");
+    const statusToast = toast.loading("💾 Saving your business profile...");
 
     try {
       // 1. RPC Call
@@ -368,12 +449,16 @@ export default function ProfilePage() {
         }
       }
 
-      // 3. Conditional Discovery Trigger
-      // Trigger if it's a NEW business OR if we have photos to analyze
-      const needsDiscovery = (saveMode === 'create') || (uploadedPhotoData.length > 0);
+        // 3. Trigger Discovery API
+        const shouldRunDiscovery = 
+        (uploadedPhotoData.length > 0) ||  // Always run if photos uploaded (vision)
+        (userTier === 1 && runTextDiscovery) ||  // Tier 1: only if checkbox checked
+        (userTier === 2 && saveMode === 'create');  // Tier 2: only on first creat
 
-      if (needsDiscovery) {
-        await fetch("/api/discover-brand", {
+      if (shouldRunDiscovery) {
+        toast.loading("🤖 Running AI brand analysis...", { id: statusToast });
+
+        const discoveryResponse = await fetch("/api/discover-brand", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -383,12 +468,48 @@ export default function ProfilePage() {
             photos: uploadedPhotoData,
             category,
             niche,
+            run_text_discovery: runTextDiscovery || userTier === 2, // Tier 2 always runs
           }),
         });
-        toast.success("AI analysis completed & Business saved", { id: statusToast });
+
+        if (!discoveryResponse.ok) {
+          const errorData = await discoveryResponse.json();
+          
+          if (discoveryResponse.status === 402) {
+            toast.error(`Insufficient credits: Need ${errorData.required}, have ${errorData.available}`, { id: statusToast });
+            return;
+          }
+          
+          throw new Error(errorData.error || "Discovery failed");
+        }
+
+        const discoveryResult = await discoveryResponse.json();
+        
+        // Update local credit count after successful discovery
+        if (discoveryResult.credits_charged > 0) {
+          setUserCredits(prev => prev - discoveryResult.credits_charged);
+          toast.success(`AI analysis complete! (${discoveryResult.credits_charged} credits used)`, { id: statusToast });
+        } else {
+          toast.success("AI analysis completed & Business saved", { id: statusToast });
+        }
+
+        // Refresh user profile to get updated free_discovery_used status
+        const profileResponse = await fetch('/api/user/profile');
+        if (profileResponse.ok) {
+          const profileData = await profileResponse.json();
+          setFreeDiscoveryUsed(profileData.free_text_discovery_used);
+        }
       } else {
         toast.success("Business details updated.", { id: statusToast });
       }
+
+      // Reset checkbox after successful save
+      setRunTextDiscovery(false);
+
+      // Update original values
+      setOriginalBusinessName(business_name);
+      setOriginalStreet(street);
+      setOriginalCity(city);
 
       setTimeout(() => router.push("/dashboard"), 1000);
     } catch (err: any) {
@@ -416,11 +537,30 @@ export default function ProfilePage() {
       <SiteHeader />
       <main className="mx-auto max-w-3xl px-0 sm:px-6 py-6 sm:py-16">
         <div className="bg-white shadow-none sm:shadow-xl border-y sm:border border-slate-200 sm:rounded-3xl p-6 sm:p-10">
-          <header className="mb-8 border-b border-slate-100 pb-6">
-            <p className="text-[10px] font-black uppercase tracking-widest text-cyan-800 bg-cyan-50 px-2 py-1 rounded inline-block mb-2">Step 1: Setup</p>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">Your Business Profile</h1>
-            <p className="text-slate-500 text-sm mt-2">Tell the Shoreline AI about your business to generate more accurate, local content.</p>
-          </header>
+        <header className="mb-8 border-b border-slate-100 pb-6">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-cyan-800 bg-cyan-50 px-2 py-1 rounded inline-block mb-2">
+                Step 1: Setup
+              </p>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+                Your Business Profile
+              </h1>
+            </div>
+            {/* Tier & Credits Display - Right aligned */}
+            <div className="flex flex-col items-end gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-700 bg-slate-100 px-3 py-1.5 rounded-full whitespace-nowrap">
+                {userTier === 2 ? "👑 Tier 2" : "🌟 Tier 1"}
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-cyan-700 bg-cyan-50 border border-cyan-200 px-3 py-1.5 rounded-full whitespace-nowrap">
+                💳 {userCredits} Credits
+              </span>
+            </div>
+          </div>
+          <p className="text-slate-500 text-sm mt-2">
+            Tell the Shoreline AI about your business to generate more accurate, local content.
+          </p>
+        </header>
 
           <form onSubmit={handleSave} className="space-y-6">
 
@@ -677,13 +817,72 @@ export default function ProfilePage() {
               </div>
             </div>
 
+            {/* Text Discovery Control - Always visible for Tier 1 */}
+            {userTier === 1 && (
+              <div className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-2xl">
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    id="runTextDiscovery"
+                    checked={runTextDiscovery}
+                    onChange={(e) => setRunTextDiscovery(e.target.checked)}
+                    className="mt-1 w-5 h-5 text-purple-600 rounded border-purple-300 focus:ring-purple-500"
+                  />
+                  <div className="flex-1">
+                    <label htmlFor="runTextDiscovery" className="text-sm font-semibold text-purple-900 cursor-pointer flex items-center gap-2">
+                      <span>🔍 Re-run Brand Discovery</span>
+                      {getDiscoveryCost() === 0 ? (
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                          FREE
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+                          3 CREDITS
+                        </span>
+                      )}
+                    </label>
+                    <p className="text-xs text-purple-700 mt-1.5 leading-relaxed">
+                      {getDiscoveryCost() === 0 ? (
+                        <>
+                          <strong>🎁 Your first discovery is FREE!</strong> We'll research your business online to learn about your brand identity, neighborhood, and local context.
+                        </>
+                      ) : (
+                        <>
+                          Check this box to refresh your brand research. We'll search the web for updated information about your business, location, and local trends. <strong className="text-purple-900">Cost: 3 credits</strong>
+                        </>
+                      )}
+                    </p>
+                    {runTextDiscovery && getDiscoveryCost() > 0 && (
+                      <div className="mt-2 text-[11px] text-purple-800 bg-purple-100 border border-purple-200 rounded-lg px-3 py-2">
+                        ⚠️ <strong>Confirmation:</strong> 3 credits will be deducted when you save.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+            {/* Tier 2 Notice - Show they get automatic discovery on create */}
+            {userTier === 2 && saveMode === 'create' && (
+              <div className="p-4 bg-cyan-50 border border-cyan-200 rounded-2xl">
+                <div className="flex items-start gap-3">
+                  <span className="text-xl">👑</span>
+                  <div>
+                    <p className="text-sm font-semibold text-cyan-900">Tier 2 Premium</p>
+                    <p className="text-xs text-cyan-700 mt-1">
+                      Your brand research will automatically run for new businesses. No credit charge for premium users!
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* ── Brand Photos — 3-state section driven by brandSource ──────── */}
             <div className="space-y-4">
               <div className="flex items-start justify-between">
                 <div>
                   <label className="text-sm font-semibold text-slate-700">Brand Photos</label>
                   <p className="text-[11px] text-slate-400 mt-0.5">
-                    Upload your own photos so the AI learns your exact brand colors and style.
+                    Upload your own photos so the AI learns your exact brand visuals and style.
                   </p>
                 </div>
                 {/* Badge changes based on what we know */}
@@ -696,8 +895,8 @@ export default function ProfilePage() {
                     ⚡ Estimated
                   </span>
                 ) : (
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 bg-slate-100 px-2 py-1 rounded-full mt-0.5">
-                    Optional
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-cyan-400 bg-cyan-100 px-2 py-1 rounded-full mt-0.5">
+                    Recommended
                   </span>
                 )}
               </div>
@@ -766,19 +965,6 @@ export default function ProfilePage() {
               )}
             </div>
 
-            {/* ── dropdown 'update' | 'create' ─────────────────────────────── */}
-            <div className="mb-6 p-4 bg-slate-50 rounded-2xl border border-slate-200">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 block">Action</label>
-              <select 
-                className="w-full p-3 rounded-xl border border-slate-200 bg-white"
-                value={saveMode}
-                onChange={(e) => setSaveMode(e.target.value as 'update' | 'create')}
-              >
-                <option value="update">Update current business details</option>
-                <option value="create">Create a new business</option>
-              </select>
-            </div>
-
             {/* ── Save button ───────────────────────────────────────────────── */}
             <button
               type="submit"
@@ -790,27 +976,6 @@ export default function ProfilePage() {
               {loading ? 'Saving Your Identity...' : 'Save Profile & Open Dashboard'}
             </button>
           </form>
-
-          {/* ── Framework Debugger ────────────────────────────────────────── */}
-          <div className="mt-12 p-6 bg-slate-50 border border-dashed border-slate-300 rounded-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest">Framework Debugger</h3>
-              <button
-                type="button"
-                onClick={runLogicCheck}
-                className="text-xs font-bold text-cyan-800 hover:underline"
-              >
-                Run Matrix Check
-              </button>
-            </div>
-            {testResult ? (
-              <div className="p-4 bg-slate-900 rounded-lg font-mono text-[10px] text-cyan-400 shadow-inner overflow-x-auto">
-                {">"} {testResult}
-              </div>
-            ) : (
-              <p className="text-xs text-slate-500 italic">No logic check performed yet.</p>
-            )}
-          </div>
 
         </div>
       </main>
