@@ -468,7 +468,7 @@ useEffect(() => {
             photos: uploadedPhotoData,
             category,
             niche,
-            run_text_discovery: runTextDiscovery || userTier === 2, // Tier 2 always runs
+            run_text_discovery: (userTier === 1 && runTextDiscovery) || (userTier === 2 && saveMode === 'create'),
           }),
         });
 
@@ -517,16 +517,6 @@ useEffect(() => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const runLogicCheck = () => {
-    if (!category || !voice) {
-      setTestResult("Please select a category and voice first!");
-      return;
-    }
-    const result = getFramework(category, "Tip of the Day", voice);
-    const archetype = BUSINESS_ARCHETYPES[category];
-    setTestResult(`Logic: ${category} is "${archetype}". Using ${voice} voice for "Tip of the Day" results in: ${result} framework.`);
   };
 
   if (!isLoaded) return <div className="p-10 text-center text-slate-500">Loading Profile...</div>;
@@ -861,15 +851,47 @@ useEffect(() => {
                 </div>
               </div>
             )}
-            {/* Tier 2 Notice - Show they get automatic discovery on create */}
+
+            {/* ═══════════════════════════════════════════════════════════════════ */}
+            {/* TIER 2: Mode Selector (update vs create) */}
+            {/* ═══════════════════════════════════════════════════════════════════ */}
+            {userTier === 2 && (
+              <div className="mb-6 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 block">
+                  Action
+                </label>
+                <select 
+                  className="w-full p-3 rounded-xl border border-slate-200 bg-white"
+                  value={saveMode}
+                  onChange={(e) => setSaveMode(e.target.value as 'update' | 'create')}
+                >
+                  <option value="update">Update current business details</option>
+                  <option value="create">Create a new business</option>
+                </select>
+              </div>
+            )}
+                        
             {userTier === 2 && saveMode === 'create' && (
               <div className="p-4 bg-cyan-50 border border-cyan-200 rounded-2xl">
                 <div className="flex items-start gap-3">
                   <span className="text-xl">👑</span>
                   <div>
-                    <p className="text-sm font-semibold text-cyan-900">Tier 2 Premium</p>
+                    <p className="text-sm font-semibold text-cyan-900">Tier 2 Premium - Auto Discovery</p>
                     <p className="text-xs text-cyan-700 mt-1">
-                      Your brand research will automatically run for new businesses. No credit charge for premium users!
+                      Your brand research will automatically run when creating a new business. No credit charge for premium users!
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            {userTier === 2 && saveMode === 'update' && (
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                <div className="flex items-start gap-3">
+                  <span className="text-xl">💾</span>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-700">Update Mode</p>
+                    <p className="text-xs text-slate-600 mt-1">
+                      Your changes will be saved. Brand discovery will not re-run (use Create mode for new businesses with fresh discovery).
                     </p>
                   </div>
                 </div>
