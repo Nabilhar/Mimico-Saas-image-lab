@@ -35,7 +35,7 @@
 
 ### Migration 001: Tier System Foundation
 **Date Created:** 2026-05-11  
-**Status:** 🟡 DEV ONLY  
+**Status:** ✅ APPLIED  
 **Category:** Schema Change + New Tables  
 **Priority:** HIGH (Required for credit system)
 
@@ -62,7 +62,7 @@ Adds tier system to profiles table and creates credit transaction logging infras
 
 ### Migration 002: Discovery Timestamp Tracking
 **Date Created:** 2026-05-11  
-**Status:** 🟡 DEV ONLY  
+**Status:** ✅ APPLIED  
 **Category:** Schema Change  
 **Priority:** MEDIUM (Supports tier system)
 
@@ -87,7 +87,7 @@ Adds timestamp tracking for when text discovery last ran on each business.
 
 ### Migration 003: Tier System RPC Functions
 **Date Created:** 2026-05-11  
-**Status:** 🟡 DEV ONLY  
+**Status:** ✅ APPLIED 
 **Category:** Functions  
 **Priority:** HIGH (Required for tier system)
 
@@ -114,7 +114,7 @@ Creates RPC functions for tier system operations: profile fetching, credit deduc
 
 ### Migration 004: Tier System Data Migration
 **Date Created:** 2026-05-11  
-**Status:** ⏳ PLANNED  
+**Status:** ✅ APPLIED 
 **Category:** Data Migration  
 **Priority:** HIGH (Must run after 001 applied to PROD)
 
@@ -307,6 +307,6 @@ Use this before each PROD deployment:
 ---
 
 **Document Version:** 1.0  
-**Last Updated:** 2026-05-11  
+**Last Updated:** 2026-05-12  
 **Maintained By:** Development Team  
 **Review Frequency:** After each DEV database change
