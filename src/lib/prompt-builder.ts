@@ -2,7 +2,7 @@
 // Instead of building everything then stripping, we build only what each mode needs
 
 import { getModeTemplate, PostType } from './mode-templates';
-import { VOICE_PROMPTS } from "@/lib/VOICE_PROMPTS";
+import { VOICE_PROMPTS, VOICE_EMOJI_GUIDANCE } from "@/lib/VOICE_PROMPTS";
 
 export interface ParsedBusinessIntel {
   neighbourhood?: string;
@@ -271,6 +271,7 @@ function getCurrentSeason(): string {
 export function buildPrompt(config: PromptBuilderConfig): string {
   const template = getModeTemplate(config.postType);
   const voiceDescription = VOICE_PROMPTS[config.voice] || config.voice;
+  const emojiGuidance = VOICE_EMOJI_GUIDANCE[config.voice] || "Emojis: Use sparingly and appropriately.";
   
   // Build ONLY what this mode needs
   const businessSection = buildBusinessIntelSection(config.businessIntel, config.postType);
@@ -283,6 +284,7 @@ export function buildPrompt(config: PromptBuilderConfig): string {
     lensDefinition: config.lensDefinition,
     groupContext: config.groupContext,
     voice_description: voiceDescription,
+    emoji_guidance: emojiGuidance,
     postType: config.postType,
     recentHistory: config.recentHistory || "None",
     varietyRules: config.varietyRules || "",

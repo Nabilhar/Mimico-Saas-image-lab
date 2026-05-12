@@ -58,7 +58,7 @@ const POST_TYPE_VISUAL_INTENT: Partial<Record<string, string>> = {
   "Myth-busting":
     "This image supports a myth correction. The visual job is 'truth revealed' — the hero should be the real thing, not the assumed thing. Precise and authoritative. No warmth padding. The image should make the viewer feel they're seeing something they got wrong.",
   "Tip of the Day":
-    "This image supports educational content. The visual job is 'craft knowledge made visible' — one specific detail that embodies the tips. Not generic. Specific enough that it could only illustrate this post.",
+    "This image supports educational content. The visual job is 'craft knowledge made visible' — one specific detail that embodies the tip. Not generic. Specific enough that it could only illustrate this post.",
   "Community moment":
     "This image supports a community moment post. The visual job is 'belonging' — real people in a genuine scene of enjoyment or connection, with the product or space as context not subject. Medium-to-wide environmental composition. No posed shots, no direct camera eye contact. The viewer should feel they are witnessing something worth being part of. People are the hero. The product or space is in the scene but never the subject.",
 };
@@ -351,7 +351,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { postId: bodyPostId, currentMonth, generatedPost, framework, postType, currentWeather } = body;
+    const { postId: bodyPostId, currentMonth, generatedPost, postType, currentWeather } = body;
     postId = bodyPostId;
 
     if (!postId) {
@@ -416,6 +416,27 @@ export async function POST(req: Request) {
     const currentTime = new Date().toLocaleTimeString('en-US', { 
       hour: 'numeric', minute: '2-digit', hour12: true 
     });
+
+        /**
+     * Get imperfection guidance based on niche
+     * Prevents unsafe imperfections (skin texture, product damage, etc.)
+     */
+    function getImperfectionGuidance(niche: string): string {
+      // Food/Beverage - workspace imperfections acceptable
+      if (['Bakery', 'Coffee Shop', 'Restaurant', 'Café', 'Bistro'].some(n => niche.includes(n))) {
+        return 'Flour dust, condensation, steam, or soft shadow variation';
+      }
+      
+      // Healthcare/Beauty/Wellness - lighting variation only
+      if (['Medical Esthetician', 'Dermatologist', 'Spa', 'Salon', 'Fitness', 'Physiotherapist', 'Chiropractor', 'Massage', 'Wellness'].some(n => niche.includes(n))) {
+        return 'Lighting variation only: soft shadow edge, gentle reflection';
+      }
+      
+      // Default - safe environmental imperfections
+      return 'Soft shadow, floor texture, or natural reflection';
+    }
+ 
+    const imperfectionGuidance = getImperfectionGuidance(niche);
 
     // ✨ NEW: Build brand blocks based on what this post type needs
     const { colorBlock, structureBlock } = buildBrandBlocks(brandIdentity, postType);
@@ -489,13 +510,13 @@ Storefront/signage: secondary only, mid/background, slightly out of focus if ext
     `;
 
     // New the architect prompt
-    const architectPrompt = `
+    const architectlongPrompt = `
     [SYSTEM]: Image prompt engineer for FLUX-2-pro. Commercial/lifestyle photography.
 
     [TASK]:
     Post: "${generatedPost}"
     Business: ${business_name} (${niche})
-    Visual job: ${POST_TYPE_VISUAL_INTENT[postType]}
+    Job: ${POST_TYPE_VISUAL_INTENT[postType]}
 
  
     [HERO — VISUAL TRUTH EXTRACTION]:
@@ -537,29 +558,123 @@ Storefront/signage: secondary only, mid/background, slightly out of focus if ext
     [BRAND AUTHENTICITY]:
     Colors: ${colorBlock}
     ${structureBlock}
-    Layer the subject INTO this real business environment.
+
+    Layer the hero INTO this real business environment.
 
     [AVOID]: ${recentImageHistory || 'None'}
 
-    [SPEC]:
-    60-70 word FLUX prompt:
-    - Hero from above (the visual truth, not generic activity)
-    - Composition that reveals it best
-    - Authentic setting from Brand blocks
-    - ${currentMonth}, ${currentTime}, Weather: ${currentWeather || "N/A"} lighting
-    - IMPERFECTION (choose ONE safe option):
-      ${['Bakery', 'Coffee Shop', 'Restaurant', 'Café'].some(n => niche.includes(n))
-        ? 'Flour dust, condensation, steam, or soft shadow variation'
-        : ['Medical Esthetician', 'Dermatologist', 'Spa', 'Salon', 'Fitness'].some(n => niche.includes(n))
-          ? 'Lighting variation only: soft shadow edge, gentle reflection'
-          : 'Soft shadow, floor texture, or natural reflection'}
-      Never: people, products, clinical equipment
-    ${postType !== 'Community moment' ? '- No legible faces, people secondary if visible' : '- Genuine moment, no posed shots'}
+    [SPEC — HIERARCHICAL FLUX-2-PRO PROMPT]:
+    
+    Write a 60-70 word prompt with STRICT VISUAL HIERARCHY for FLUX-2-pro:
+    
+    LAYER 1 — SHARP FOCUS (Hero Only):
+    The visual truth from [HERO] above. This gets ALL the detail and sharpness.
+    
+    LAYER 2 — SOFT FOCUS (Secondary Elements):
+    Brand colors and materials mentioned softly.
+    Decorative elements (ornate furniture, patterned fabrics, elaborate details) MUST be de-emphasized.
+    Use: "softly blurred", "out of focus", "barely visible", "blurred behind/below"
+    
+    LAYER 3 — BACKGROUND (Minimal Description):
+    General setting, ambient lighting. Keep brief.
+    
+    CRITICAL FLUX-2-PRO INSTRUCTIONS:
+    ✅ Start with composition type: "Macro detail:" / "Close detail:" / "Medium shot:" / "Wide shot:"
+    ✅ Immediately after hero, state: "Shallow depth of field" or "Shallow focus on [hero]"
+    ✅ De-emphasize decorative patterns explicitly: "pattern softly blurred", "ornate details out of focus"
+    ✅ Lighting: ONE dominant source, others mentioned softly (avoid complex multi-source descriptions)
+    ✅ For detail/macro shots: Keep background descriptions to ONE sentence maximum
+    
+    AVOID THESE PATTERNS (they cause visual clutter):
+    ❌ Equal detail to multiple elements: "Client wears ornate cape. Hexagonal lights overhead. Concrete floor with clippings."
+    ❌ Brand-name patterns: "Versace-style cape" (too visually strong)
+    ❌ Foreground clutter: "Scattered clippings", "Various tools"
+    ❌ Complex lighting: "Warm amber blends with cool LED mixed with natural window light"
+    
+    GOOD PATTERN (Visual Hierarchy):
+    ✅ "Macro detail: [hero]. Shallow focus on [hero element]. [Decoration] softly blurred [position]. [Background] out of focus. [Simple lighting]."
+    
+    EXAMPLE — GOOD (Hero-Focused):
+    "Macro detail: barber's fingertip lifting single hair strand at temple, checking growth direction. Shallow focus on finger and hair. Gold chair pattern softly blurred behind. Charcoal walls out of focus. Warm morning light. Shot on Sony A7, f/1.8, 1:1 crop, no text."
+    
+    EXAMPLE — BAD (Flat Hierarchy):
+    "Barber's fingertip lifting hair at temple. Client wears ornate black and gold Versace cape. Hexagonal LED ceiling lights overhead. Concrete floor with scattered hair clippings. Charcoal walls. Morning light blends with LED glow."
+    
+    Notice: GOOD starts with hero, uses explicit blur language. BAD lists everything equally.
+    
+    YOUR PROMPT MUST INCLUDE:
+    - Composition type first (Macro/Close/Medium/Wide)
+    - Hero with specific action/gesture
+    - "Shallow depth of field" or "Shallow focus on [hero]"
+    - Decorative elements de-emphasized: "softly blurred", "out of focus"
+    - ${currentMonth}, ${currentTime} lighting (simple, one dominant source)
+    - One subtle imperfection: ${imperfectionGuidance}
+    - Never add imperfections to: people, products, clinical equipment
+    ${postType !== 'Community moment' 
+      ? '- No legible faces, people secondary if visible' 
+      : '- Genuine human connection, no posed shots, no eye contact'}
     - Storefront/signage: background only if visible
-    - End: "Shot on Sony A7, f/1.8, 1:1 crop, no text"
-
-    [OUTPUT]: <<<PROMPT_BEGIN>>> then prompt only. No labels, no preamble, no commentary.
+    - End with: "Shot on Sony A7, f/1.8, 1:1 crop, no text"
+    
+    <<<PROMPT_BEGIN>>> Write your hierarchical, hero-focused FLUX-2-pro prompt now:
     `;
+
+    // New the architect short prompt
+    const architectPrompt = `
+    [SYSTEM]: Image prompt engineer for FLUX-2-pro. Commercial/lifestyle photography.
+
+    [TASK]:
+    Post: "${generatedPost}"
+    Business: ${business_name} (${niche})
+    Job: ${POST_TYPE_VISUAL_INTENT[postType]}
+
+    
+    [HERO]:
+    What SPECIFIC truth does this post teach?
+    What visual detail would prove it to an expert?
+    That detail is your hero.
+    
+    Examples:
+    - "Buffer prevents rushing" → Scissors at steep angle (precision visible)
+    - "Water pH matters" → pH meter reading (measurement visible)  
+    - "Assessment catches patterns" → Hands measuring angle (detection visible)
+        
+    Choose composition (Detail/Medium/Wide) that reveals hero best.
+    ${postType === 'Community moment' 
+    ? 'EXCEPTION: For Community moment only, people ARE the hero. Show genuine human connection, business as backdrop. Medium-to-wide composition.' 
+    : ''}
+
+    [VOICE]: ${VOICE_VISUAL_MAP[voice]}
+
+    [BRAND AUTHENTICITY]:
+    Colors: ${colorBlock}
+    ${structureBlock}
+
+    Layer the hero INTO this real business environment.
+
+    [AVOID]: ${recentImageHistory || 'None'}
+
+    [OUTPUT]:
+    60-70 word FLUX-2-pro prompt with visual hierarchy:
+    
+    Format:
+    [Composition]: [Hero action]. Shallow focus on [hero]. [Decoration] softly blurred [position]. [Background] out of focus. [Light source], ${currentMonth} ${currentTime}. [Imperfection]: ${imperfectionGuidance}. Shot on Sony A7, f/1.8, 1:1 crop, no text.
+    
+    Example:
+    "Macro detail: scissors snipping hair at steep angle. Shallow focus on blade. Gold chair bokeh behind. Charcoal walls blurred. Midday light. Chrome fingerprint. Shot on Sony A7, f/1.8, 1:1 crop, no text."
+
+    Rules:
+    - Hero sharp, decorations blurred, background minimal
+    - No brand names (e.g. "Versace")
+    - No clutter (e.g. "scattered clippings")
+    ${postType !== 'Community moment' 
+    ? '- No legible faces, people secondary if visible' 
+    : '- Genuine human connection, no posed shots, no eye contact'}
+    - Storefront/signage: background only if visible
+    
+    <<<PROMPT_BEGIN>>>
+        `;
+
 
     let visualDescription = "";
 

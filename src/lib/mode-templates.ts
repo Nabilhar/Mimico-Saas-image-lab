@@ -87,9 +87,10 @@ but only if it flows. Don't force local references if they don't serve the messa
 
 [VOICE]
 {{voice_description}}
+{{emoji_guidance}}
 
-Direct and authoritative. No hedging. The truth stated clearly.
-Short sentences.
+Teaching, not lecturing.
+Short sentences. No hedging.
 
 [CONSTRAINTS]
 - 130-180 words (strict maximum: 185 words)
@@ -170,8 +171,8 @@ but only if it flows. Don't force local references if they don't serve the messa
 
 [VOICE]
 {{voice_description}}
+{{emoji_guidance}}
 
-Direct and clear. Authoritative without being condescending.
 Teaching, not lecturing.
 Short sentences. No hedging.
 
@@ -264,6 +265,7 @@ but only if it flows. Don't force local references if they don't serve the messa
 
 [VOICE]
 {{voice_description}}
+{{emoji_guidance}
 
 Present-tense witness. Grounded and specific.
 Short sentences. No abstraction.
@@ -352,8 +354,9 @@ but only if it flows. Don't force local references if they don't serve the messa
 
 [VOICE]
 {{voice_description}}
+{{emoji_guidance}}
 
-Warm and natural. The offer feels like a suggestion, not a push.
+The offer feels like a suggestion, not a push.
 Short sentences. Grounded.
 
 [CONSTRAINTS]
@@ -445,8 +448,8 @@ Do NOT:
 
 [VOICE]
 {{voice_description}}
+{{emoji_guidance}}
 
-Extra casual. Brief. Warm.
 Like talking to someone you know about something you noticed.
 
 Short sentences. Conversational.
@@ -561,10 +564,10 @@ but only if it flows. Don't force local references if they don't serve the messa
 
 [VOICE]
 {{voice_description}}
+{{emoji_guidance}}
 
-Present tense. Short sentences.
+Present tense. Short sentences. Grounded.
 Sensory over conceptual.
-Warm but grounded.
 
 Fragmented sentences are fine if natural.
 
