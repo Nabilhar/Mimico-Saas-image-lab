@@ -29,24 +29,32 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const ARCHITECT_MODE: "GEMINI" | "GROQ" | "GEMMA" = "GEMMA";
+const ARCHITECT_MODE: "GEMINI" | "GROQ" | "GEMMA" | "OPENROUTER" = "OPENROUTER";
 
 const textModel = genAI.getGenerativeModel({ model: "models/gemini-2.5-flash" }, { apiVersion: 'v1beta' });
 
 const VOICE_VISUAL_MAP: Record<string, string> = {
+  "Authoritative & Precise": 
+    "Precise, controlled lighting with clinical clarity. Minimal props — only what earns its place. No warmth, no softness. Every element must justify its presence. Composition: centered, frontal, detail-focused. Show the correction clearly.",
+  
+  "Warm & Conversational": 
+    "Soft, natural lighting with gentle shadows. Props suggest lived-in familiarity — worn surfaces, flour dust, fingerprints, condensation. One visible imperfection for authenticity. Human hands welcome if they reveal the moment. Composition: over-shoulder, mid-action, environmental context. Feel like you're working alongside.",
+  
+  "Bold & Direct": 
+    "High-contrast lighting with decisive shadows. Punchy framing, dramatic angles when authentic. One hero, nothing competing. Make the moment impossible to miss. Composition: tight framing, strong visual hierarchy, dynamic without feeling staged.",
+  
+  "Clean & Understated": 
+    "Flat, even lighting with no harsh shadows. Generous negative space. Minimal palette — two colors maximum. Restraint over richness. Remove anything that doesn't serve the moment. Composition: breathing room, geometric balance, elegant simplicity.",
+};
 
-    "Authoritative & Precise": 
-      "Precise, controlled lighting with clinical clarity. Minimal props — only what earns its place. No warmth, no softness. Every element must justify its presence.",
-    
-    "Warm & Conversational": 
-      "Soft, natural lighting with gentle shadows. Props suggest lived-in familiarity — worn surfaces, flour dust, fingerprints. One visible imperfection for authenticity. Human hands welcome if they reveal the truth.",
-    
-    "Bold & Direct": 
-      "High-contrast lighting with decisive shadows. Punchy framing, dramatic angles. One hero, nothing competing. Make the truth impossible to miss.",
-    
-    "Clean & Understated": 
-      "Flat, even lighting with no harsh shadows. Generous negative space. Minimal palette — two colors maximum. Restraint over richness. Remove anything that doesn't serve the truth.",
-  };
+const POST_TYPE_TO_VOICE: Record<string, string> = {
+  "Behind the scenes": "Warm & Conversational",
+  "Myth-busting": "Authoritative & Precise",
+  "Tip of the Day": "Warm & Conversational",
+  "Promotion / offer": "Bold & Direct",
+  "Local event / news": "Warm & Conversational", // or Bold & Direct for big events
+  "Community moment": "Warm & Conversational",
+};
 
 const POST_TYPE_VISUAL_INTENT: Partial<Record<string, string>> = {
   "Promotion / offer": 
@@ -60,7 +68,7 @@ const POST_TYPE_VISUAL_INTENT: Partial<Record<string, string>> = {
   "Tip of the Day":
     "This image supports educational content. The visual job is 'craft knowledge made visible' — one specific detail that embodies the tip. Not generic. Specific enough that it could only illustrate this post.",
   "Community moment":
-    "This image supports a community moment post. The visual job is 'belonging' — real people in a genuine scene of enjoyment or connection, with the product or space as context not subject. Medium-to-wide environmental composition. No posed shots, no direct camera eye contact. The viewer should feel they are witnessing something worth being part of. People are the hero. The product or space is in the scene but never the subject.",
+    "This image supports a community moment post. The visual job is 'belonging' — if people are present, they are the hero in genuine scenes of enjoyment or connection. If the moment is atmospheric without people, capture the sensory environment that creates the feeling of presence. Product or space provides context. The viewer should feel they are part of something worth being part of.",
 };
 
 // ============================================================================
@@ -441,6 +449,11 @@ export async function POST(req: Request) {
     // ✨ NEW: Build brand blocks based on what this post type needs
     const { colorBlock, structureBlock } = buildBrandBlocks(brandIdentity, postType);
 
+    const voiceDescription = VOICE_VISUAL_MAP[POST_TYPE_TO_VOICE[postType]];
+
+    const visualIntent = POST_TYPE_VISUAL_INTENT[postType]
+
+
     // Legacy the architect prompt
     const architectLegacyPrompt = `
 [SYSTEM]: Expert image prompt engineer for FLUX.1-schnell. Hyper-local commercial/lifestyle photography.
@@ -626,51 +639,164 @@ Storefront/signage: secondary only, mid/background, slightly out of focus if ext
     [TASK]:
     Post: "${generatedPost}"
     Business: ${business_name} (${niche})
-    Job: ${POST_TYPE_VISUAL_INTENT[postType]}
 
+    Primary Job: This image captures the moment described in the post.
+
+    Visual Intent: ${visualIntent}
+
+    Approach: Start with the moment. Layer in the mode-specific intent.
     
+    [MOMENT EXTRACTION]:
+    Read the post carefully and identify:
+
+    1. **The Moment**: What specific moment is happening?
+      - Time of day mentioned or implied
+      - Location/setting (kitchen, counter, prep area, etc.)
+      - What phase of work (prep, service, cleanup, observation)
+
+    2. **The Action**: What is the person doing?
+      - Active work (pulling, cutting, adjusting, assembling)
+      - Checking/monitoring (watching, measuring, testing)
+      - Observing (noticing a pattern, seeing a detail)
+      - Even "standing and watching" is an action
+
+    3. **Point of Attention**: What are they looking at or focused on?
+      - A material/ingredient in a specific state
+      - A tool in use
+      - A change happening (steam rising, color shifting, texture forming)
+      - A measurement or indicator
+
+    4. **Sensory Anchor**: What makes this moment specific and grounded?
+      - Temperature (heat, cold, steam, condensation)
+      - Light quality (morning, afternoon, evening, overhead, natural)
+      - Sound implied (simmering, chopping, quiet)
+      - Texture visible (worn surfaces, condensation, flour dust)
+
+    The image captures THIS MOMENT, not a proof point for the claim.
+
     [HERO]:
-    What SPECIFIC truth does this post teach?
-    What visual detail would prove it to an expert?
-    That detail is your hero.
-    
-    Examples:
-    - "Buffer prevents rushing" → Scissors at steep angle (precision visible)
-    - "Water pH matters" → pH meter reading (measurement visible)  
-    - "Assessment catches patterns" → Hands measuring angle (detection visible)
-        
-    Choose composition (Detail/Medium/Wide) that reveals hero best.
-    ${postType === 'Community moment' 
-    ? 'EXCEPTION: For Community moment only, people ARE the hero. Show genuine human connection, business as backdrop. Medium-to-wide composition.' 
-    : ''}
+    The hero is the main visual element that anchors the moment.
 
-    [VOICE]: ${VOICE_VISUAL_MAP[voice]}
+    **For observational posts (BTS, Community Moment, Local Event):**
+    Determine the hero based on what's happening in the moment (see action-based logic below).
+
+    **For instructional posts (Tip of the Day, Myth-busting):**
+    The hero must show BOTH the moment AND the technique/correction being taught.
+    - Tip: Show the action at the key step where the tip applies
+    - Myth: Show the correct technique that disproves the myth
+
+    The moment grounds it. The technique must be visible.
+
+    Determine the hero based on what's happening:
+
+    **If the person is checking/watching/monitoring:**
+    Hero = what they're looking at + evidence of the checking action
+    Examples:
+    - Hands near dough, fingers testing texture
+    - Thermometer in frame with the thing being measured
+    - Looking into pot/oven (view of what they see)
+
+    **If the person is mid-process:**
+    Hero = the materials + hands in action
+    Examples:
+    - Knife mid-cut through ingredient
+    - Hands pulling noodles from water
+    - Spoon stirring/tasting
+
+    **If the person is observing a pattern:**
+    Hero = what they're noticing
+    Examples:
+    - Steam rising (if noticing condensation)
+    - Color change in cooking material
+    - Gap/space/timing they're watching
+
+    **If the person is standing/waiting/pausing:**
+    Hero = what occupies the space during the pause
+    Examples:
+    - The thing simmering/resting/holding
+    - The workspace in that moment
+    - The environmental detail they're noticing
+
+    The hero creates presence: "I am here, looking at this, in this moment."
+
+    [COMPOSITION LOGIC]:
+    Choose composition based on how to best capture the moment's perspective:
+
+    **Detail (close-up):**
+    Use when: The moment is about noticing something small or specific
+    Shows: What they're focused on, intimate view
+    Feel: Over-the-shoulder, "looking closely at..."
+    Example: Checking texture, measuring precisely, watching a small change
+
+    **Medium (mid-shot):**
+    Use when: The moment involves an action with materials
+    Shows: Hands + materials + immediate context
+    Feel: Mid-work, "doing this right now"
+    Example: Assembling, adjusting, mid-process steps
+
+    **Wide (environmental):**
+    Use when: The moment is about the space/atmosphere or positioning
+    Shows: Where this happens, spatial context
+    Feel: "This is where I'm standing"
+    Example: Observing the whole kitchen, waiting during a long process
+
+    Not asking: "What proves the claim?"
+    Asking: "What does being there look like?"
+
+    [VOICE]:
+    ${voiceDescription}
+
+    First-person presence. You are in the scene, not observing from outside.
 
     [BRAND AUTHENTICITY]:
     Colors: ${colorBlock}
     ${structureBlock}
 
-    Layer the hero INTO this real business environment.
+    Layer the hero INTO this real business environment naturally.
 
-    [AVOID]: ${recentImageHistory || 'None'}
+    [LIGHTING & CONTEXT]
+    Time: ${currentTime}, ${currentMonth}
+    Weather: ${currentWeather}
 
+    [AVOID]:
+    - Generic "prep area" shots without specific moment
+    - Perfectly styled food photography (this is mid-work, not final presentation)  
+    - Static product shots (show process, not result)
+    - Proof-of-concept visuals (focus on moment, not demonstration)
+    - Hands that look staged (they should be working, not posing)
+    
+    [MOMENT-TO-VISUAL TRANSLATION]:
+    
+    Step 1: Identify the moment's core action
+    Step 2: Determine POV (whose perspective/where are they)
+    Step 3: Choose hero (what they're focused on)
+    Step 4: Select composition (how close/how much context)
+    Step 5: Add sensory details (light, texture, temperature cues)
+    
     [OUTPUT]:
-    60-70 word FLUX-2-pro prompt with visual hierarchy:
+    60-70 word FLUX-2-pro prompt with visual hierarchy capturing the moment:
     
     Format:
-    [Composition]: [Hero action]. Shallow focus on [hero]. [Decoration] softly blurred [position]. [Background] out of focus. [Light source], ${currentMonth} ${currentTime}. [Imperfection]: ${imperfectionGuidance}. Shot on Sony A7, f/1.8, 1:1 crop, no text.
+    [Composition]: [Hero action/state in the moment]. Shallow focus on [hero]. [Hands/perspective element if relevant]. [Decoration/context] softly blurred [position]. [Background environment] out of focus. [Light source and time]. [Imperfection/authenticity detail]. Shot on Sony A7, f/1.8, 1:1 crop, no text.
     
-    Example:
-    "Macro detail: scissors snipping hair at steep angle. Shallow focus on blade. Gold chair bokeh behind. Charcoal walls blurred. Midday light. Chrome fingerprint. Shot on Sony A7, f/1.8, 1:1 crop, no text."
-
+    Example (Moment-First):
+    "Medium shot: Hands pulling fresh ramen noodles from boiling water, strands lifting with steam. Shallow focus on noodles mid-lift. Stainless steel pot edge and kitchen counter softly blurred below. Dark grey ceiling and pendant lights out of focus. Evening service light, 6:30 PM. Water droplets on counter. Shot on Sony A7, f/1.8, 1:1 crop, no text."
+    
+    Example (Moment-First):
+    "Detail close-up: Fingertips pressing into proofed pizza dough surface, slight indent visible. Shallow focus on hand-dough contact point. Flour-dusted stainless steel tray edge softly blurred. Wood prep table and kitchen background out of focus. Morning prep light, 9 AM. Flour fingerprint on tray edge. Shot on Sony A7, f/1.8, 1:1 crop, no text."
+    
     Rules:
-    - Hero sharp, decorations blurred, background minimal
-    - No brand names (e.g. "Versace")
-    - No clutter (e.g. "scattered clippings")
-    ${postType !== 'Community moment' 
-    ? '- No legible faces, people secondary if visible' 
-    : '- Genuine human connection, no posed shots, no eye contact'}
+    - Hero sharp, context blurred, background minimal
+    - Hands visible when they're part of the moment's action
+    - Perspective should feel present (not observational)
+    - Actions should be physically visible, not conceptual ("checking heat" not "observing thermal distribution")
+    - Authenticity details should be broad textures FLUX can render ("flour dust" not "fine grain flour residue")
+    - Human elements (hands, arms, silhouette) when moment involves checking/doing
+    - No brand names in prompt
+    - No clutter or staged styling
+    - No legible faces (people are hands/bodies in action)
     - Storefront/signage: background only if visible
+    - Include one authenticity detail (wear, smudge, condensation, flour dust)
     
     <<<PROMPT_BEGIN>>>
         `;
@@ -687,28 +813,59 @@ Storefront/signage: secondary only, mid/background, slightly out of focus if ext
         model: "llama-3.1-8b-instant",
       });
       visualDescription = result.choices[0]?.message?.content || "";
-    } else if (ARCHITECT_MODE === "GEMMA") {
-      console.log("Shoreline Architect: Requesting Gemma 4 via Google AI SDK...");
-
-      console.log("\n\n🚀 === [FULL ARCH GEMMA PROMPT START] === \n");
+    } else if (ARCHITECT_MODE === "OPENROUTER") {
+      // ========================================
+      // NEW: OpenRouter Handler
+      // ========================================
+      console.log("Shoreline Architect: Routing to OpenRouter (Haiku 4.5)...");
+      
+      console.log("\n\n🚀 === [FULL ARCH OPENROUTER PROMPT START] === \n");
       console.log(architectPrompt);
-      console.log("\n === [FULL ARCH GEMMA PROMPT END] === \n\n");
+      console.log("\n === [FULL ARCH OPENROUTER PROMPT END] === \n\n");
       console.log(`--- PROMPT LENGTH: ${architectPrompt.length} characters, ~${Math.round(architectPrompt.length / 4)} tokens ---`);
-              
-      const result = await gemmaModel.generateContent(architectPrompt);
-      const response = result.response;
-
-      const groundingMeta = (response as any).candidates?.[0]
-        ?.groundingMetadata?.webSearchQueries;  
-      if (groundingMeta) {
-        console.log("--- GEMMA SEARCHED FOR ---");
-        console.log(groundingMeta);
+      
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          "HTTP-Referer": "https://shorlinestudio.ca",  // Required by OpenRouter
+          "X-Title": "Shoreline Architect",              // Recommended
+        },
+        body: JSON.stringify({
+          model: "anthropic/claude-haiku-4.5",  // Removed :beta suffix
+          messages: [
+            { role: "system", content: "Output only what is requested. No preamble." },
+            { role: "user", content: architectPrompt }
+          ],
+          temperature: 0.7,
+          max_tokens: 3000,
+        }),
+      });
+    
+      const raw = await response.text();
+      
+      // Check for HTML error page
+      if (raw.startsWith("<!DOCTYPE") || raw.startsWith("<html")) {
+        throw new Error("OpenRouter API endpoint not found or invalid request");
       }
-
-      visualDescription = result.response.text();
+    
+      const data = JSON.parse(raw);
+      
+      // Check for API errors
+      if (data.error) {
+        throw new Error(`OpenRouter API error: ${data.error.message}`);
+      }
+      
+      visualDescription = data.choices[0]?.message?.content || "";
     }
 
     let cleanDescription = visualDescription;
+
+    console.log("\n=== RAW VISUAL DESCRIPTION (BEFORE CLEANUP) ===");
+    console.log("Length:", visualDescription.length, "characters");
+    console.log("Content:", visualDescription);
+    console.log("=== END RAW DESCRIPTION ===\n");
 
     // Signal search (last signal strategy)
     const signal = "<<<PROMPT_BEGIN>>>";
@@ -718,13 +875,22 @@ Storefront/signage: secondary only, mid/background, slightly out of focus if ext
       cleanDescription = cleanDescription.substring(lastSignalIndex + signal.length).trim();
     } else {
       // Fallback: strip any preamble before the first photography term
-      const photographyTerms = ["Shot on", "Cinematic", "Close-up", "Wide", "Medium shot", "A ", "An "];
+      const photographyTerms = ["Medium shot", "Detail close-up", "Wide shot", "Close-up", "Cinematic", "Shot on"];
+
+      let earliestIdx = -1;
+      let earliestTerm = "";
+
+      // Find the EARLIEST occurrence among all terms
       for (const term of photographyTerms) {
         const idx = cleanDescription.indexOf(term);
-        if (idx > 0) {
-          cleanDescription = cleanDescription.substring(idx).trim();
-          break;
+        if (idx >= 0 && (earliestIdx === -1 || idx < earliestIdx)) {
+          earliestIdx = idx;
+          earliestTerm = term;
         }
+      }
+
+      if (earliestIdx >= 0) {
+        cleanDescription = cleanDescription.substring(earliestIdx).trim();
       }
     }
 
