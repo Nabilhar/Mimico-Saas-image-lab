@@ -109,19 +109,14 @@ You have neighborhood name, vibe, and landmark info above. Use it naturally when
 but only if it flows. Don't force local references if they don't serve the message.
 
 [VOICE]
-Direct.
-Corrective without being condescending.
-Grounded in what actually occurs.
-
-Do not sound:
-- Inspirational or philosophical
-- Like a consultant or thought leader
-- Like you're revealing hidden wisdom
-
+Corrective,
+Grounded in what actually occurs. Teaching, not lecturing,
 Sound like someone correcting a misconception with observable fact.
 
-Teaching, not lecturing.
-Short sentences. No hedging.
+{{voice_description}}
+
+Do not sound:
+Inspirational or philosophical\n- Like a consultant or thought leader\n- Like you're revealing hidden wisdom.
 
 {{emoji_guidance}}
 
@@ -226,19 +221,14 @@ You have neighborhood name, vibe, and landmark info above. Use it naturally when
 but only if it flows. Don't force local references if they don't serve the message.
 
 [VOICE]
-Direct.
-Instructional without being preachy.
-Grounded in observable mechanics.
-
-Do not sound:
-- Inspirational or motivational
-- Like a life coach or guru
-- Like you're revealing secret wisdom
-
+Instructional,
+Grounded in observable mechanics. Teaching, not lecturing.
 Sound like someone teaching a practical technique with observable results.
 
-Teaching, not lecturing.
-Short sentences. No hedging.
+{{voice_description}}
+
+Do not sound:
+Inspirational or motivational\n- Like a life coach or guru\n- Like you're revealing secret wisdom
 
 {{emoji_guidance}}
 
@@ -352,17 +342,16 @@ but only if it flows. Don't force local references if they don't serve the messa
 End inside the moment, not above it.
 
 [VOICE]
+Observational,
+Present-tense, operational. Grounded in physical detail and workflow.
+Write like someone mid-shift noticing something specific.
 
 {{voice_description}}
 
-Present-tense, Operational.
-Grounded in physical detail and workflow.
-Write like someone mid-shift noticing something specific.
+Do not sound:
+Philosophical or abstract\n- Like you're teaching a lesson\n- Building narrative arc.
 
 {{emoji_guidance}}
-
-Present-tense witness. Grounded and specific.
-Short sentences. No abstraction.
 
 [CONSTRAINTS]
 - 130-180 words (strict maximum: 185 words)
@@ -460,19 +449,13 @@ but only if it flows. Don't force local references if they don't serve the messa
 
 [VOICE]
 Observational, then informational.
-Present-tense for the work.
-Factual for the offer.
+Present-tense for the work. Factual for the offer.
+Sound like someone describing work, then stating what's available. The offer feels like a suggestion, not a push.
+
+{{voice_description}}
 
 Do not sound:
-- Sales-y or promotional
-- Like you're building up to a pitch
-- Inspirational about the work
-- Philosophical about timing or value
-
-Sound like someone describing work, then stating what's available.
-
-The offer feels like a suggestion, not a push.
-Short sentences. Grounded.
+Sales-y or promotional\n- Like you're building up to a pitch\n- Inspirational about the work\n- Philosophical about timing or value
 
 {{emoji_guidance}}
 
@@ -605,20 +588,14 @@ Do NOT:
 - Justify why the reader should care
 
 [VOICE]
-Conversational.
 Observational, then informational.
-
-Do not sound:
-- Like you're building up to something
-- Like you're explaining why things matter
-- Inspirational about community or local events
-
+Casual and neighbourly.
 Sound like someone mentioning something they noticed, then mentioning a related local thing.
 
-Like talking to someone you know about something you noticed.
+{{voice_description}}
 
-Short sentences. Conversational.
-"We" language is fine, neighborly.
+Do not sound:
+Like you're building up to something\n- Like you're explaining why things matter\n- Inspirational about community or local events
 
 {{emoji_guidance}}
 
@@ -778,20 +755,14 @@ You have neighborhood name, vibe, and landmark info above. Use it naturally when
 but only if it flows. Don't force local references if they don't serve the message.
 
 [VOICE]
-Present tense.
-Sensory.
-Concrete.
-
-Do not sound:
-- Poetic or literary
-- Reflective or meditative
-- Like you're extracting meaning from the scene
-
+Atmospheric
+Present tense. Sensory. Concrete. Sensory over conceptual.
 Sound like someone describing exactly what they see, hear, and feel (temperature/texture) right now.
 
-Short sentences. Grounded.
-Sensory over conceptual.
-Fragmented sentences are fine if natural.
+{{voice_description}}
+
+Do not sound:
+Poetic or literary\n- Reflective or meditative\n- Like you're extracting meaning from the scene
 
 {{emoji_guidance}}
 
