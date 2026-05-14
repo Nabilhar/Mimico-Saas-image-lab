@@ -18,6 +18,7 @@ import { buildPrompt as buildModePrompt } from "@/lib/prompt-builder";  // ← N
 import { type PostType } from "@/lib/mode-templates";  // ← NEW
 import { CognitiveLens } from "@/lib/cognitive-lenses";
 import { VOICE_PROMPTS } from "@/lib/VOICE_PROMPTS";
+import { getBusinessTime, getTimezoneForCity } from "@/lib/timezone";
 
 // 1. Initialize Groq (The New Engine)
 const groq = new Groq({
@@ -605,7 +606,7 @@ export async function POST(req: Request) {
     
     const { data: business, error: businessError  } = await supabase
     .from('businesses')
-    .select(' id, business_name, street, city, province_state, country, postal_code, business_description, color_theme, business_visuals,storefront_architecture, interior_layout')
+    .select(' id, business_name, street, city, province_state, country, postal_code, business_description, color_theme, business_visuals,storefront_architecture, interior_layout, timezone')
     .eq('user_id', userId)
     .eq('is_active', true)
     .single();
@@ -744,24 +745,13 @@ export async function POST(req: Request) {
       isInferred: intel.isInferred,
     } : undefined;
 
-    // Step 4: Get current date/time/season
-    const currentTime = new Date().toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit',
-      hour12: true
-    });
-
-    const currentDay = new Date().toLocaleDateString('en-US', { 
-      weekday: 'long' 
-    }); // Returns: "Monday", "Tuesday", etc.
-
-    const currentDate = new Date().toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-
-    const currentSeason = getSeason(month); // You already have this function!
+    // Step 4: Get current date/time/season (TIMEZONE-AWARE)
+    const businessTime = getBusinessTime(business.timezone || "America/Toronto");
+    
+    const currentTime = businessTime.time;      // "4:30 PM" in business timezone
+    const currentDay = businessTime.day;        // "Wednesday"
+    const currentDate = businessTime.date;      // "Wednesday, May 14, 2026"
+    const currentSeason = getSeason(month);
 
     // Step 5: Build complete prompt using MODE template
     const finalPrompt = buildModePrompt({

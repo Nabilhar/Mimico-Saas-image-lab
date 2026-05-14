@@ -8,6 +8,7 @@ import { createClient } from '@supabase/supabase-js';
 import { FRAMEWORK_POST_TYPE_COMBINATIONS, getSeason, SEASONALITY_CONTEXT, SEASONAL_NICHE_CONTEXT } from "@/lib/frameworks";
 import { auth } from "@clerk/nextjs/server";
 
+
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 const tools = [{ googleSearch: {} }] as any;
@@ -359,7 +360,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { postId: bodyPostId, currentMonth, generatedPost, postType, currentWeather } = body;
+    const { postId: bodyPostId, currentMonth, generatedPost, postType, currentWeather, currentTime } = body;
     postId = bodyPostId;
 
     if (!postId) {
@@ -372,7 +373,7 @@ export async function POST(req: Request) {
       .select(`
         business_name, street, city, province_state, country, postal_code,
         niche, voice, business_description, color_theme, business_visuals, 
-        storefront_architecture, interior_layout
+        storefront_architecture, interior_layout, timezone
       `)
       .eq('user_id', userId)
       .eq('is_active', true)
@@ -420,10 +421,6 @@ export async function POST(req: Request) {
     const needs = getVisualDataRequirements(postType);
     console.log("Data Needs:", needs);
     console.log("--------------------------------");
-
-    const currentTime = new Date().toLocaleTimeString('en-US', { 
-      hour: 'numeric', minute: '2-digit', hour12: true 
-    });
 
         /**
      * Get imperfection guidance based on niche
