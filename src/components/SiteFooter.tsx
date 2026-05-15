@@ -4,7 +4,7 @@ import Image from 'next/image';
 export default function SiteFooter() {
   return (
     <footer className="bg-white border-t border-gray-200 mt-auto">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 pb-32 sm:pb-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           
           {/* Brand Column */}
@@ -80,7 +80,7 @@ export default function SiteFooter() {
               </li>
               <li>
                 <a 
-                  href="https://www.instagram.com/ShorelineStudioAI/" 
+                  href="https://www.instagram.com/shoreline_studio.ai/" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-sm text-cyan-600 hover:text-cyan-900 transition-colors"
@@ -90,7 +90,7 @@ export default function SiteFooter() {
               </li>
               <li>
                 <a 
-                  href="https://www.facebook.com/shoreline_studio.ai/" 
+                  href="https://www.facebook.com/SholrelineStudioAI/" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-sm text-cyan-600 hover:text-cyan-900 transition-colors"
@@ -146,7 +146,7 @@ export default function SiteFooter() {
             </p>
             <div className="flex items-center space-x-6">
               <a 
-                href="https://www.instagram.com/ShorelineStudioAI/"
+                href="https://www.instagram.com/shoreline_studio.ai/"
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-gray-500 transition-colors"
@@ -157,7 +157,7 @@ export default function SiteFooter() {
                 </svg>
               </a>
               <a 
-                href="https://www.facebook.com/shoreline_studio.ai/"  
+                href="https://www.facebook.com/SholrelineStudioAI/"  
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-gray-500 transition-colors"
