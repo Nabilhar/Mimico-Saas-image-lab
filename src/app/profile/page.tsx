@@ -228,6 +228,7 @@ export default function ProfilePage() {
       }
 
       try {
+        console.log('🔍 Fetching active business for user:', user.id);
         // --- THIS IS THE KEY CHANGE ---
         // We now call the SQL function to get the user's active business.
         // Define the shape of the business data coming from your SQL function
@@ -249,54 +250,60 @@ export default function ProfilePage() {
           .rpc('get_active_business', { p_user_id: user.id })
           .maybeSingle<BusinessData>();
 
-        console.log('Active Business fetch:', { data, error });
+          console.log('📦 Active Business result:', { data, error });
 
         if (error) {
           console.error("Supabase active business fetch error:", error.message);
           toast.error("Error loading business: " + error.message);
           setProfileLoaded(true); // ← CRITICAL FIX
-        return;
-        } else if (data) {
-          // Note: The 'business_description' from the DB is now a JSON object.
-          const intel = parseBusinessIntel(data.business_description);
-
-          setbusiness_name(data.business_name || "");
-          setStreet(data.street || "");
-          setCity(data.city || "");
-          setProvinceState(data.province_state || "");
-          setCountry(data.country || "Canada");
-          setPostalCode(data.postal_code || "");
-          setCategory(data.category || "");
-          setVoice(data.voice || "");
-          setNiche(data.niche || "");
-          setBrandSource(data.brand_source || null);
-          
-          // We set the business description from the parsed JSON 'description' field.
-          setBusinessDescription(intel?.description || ""); 
-
-          setOriginalBusinessName(data.business_name || "");
-          setOriginalStreet(data.street || "");
-          setOriginalCity(data.city || "");
-
-          setProfileLoaded(true);
-        } else {
-          // No active business found for this user. This might be a new user.
-          console.log("No active business found for this user.");
-          setProfileLoaded(true); // Still set to true to unblock the UI.
+          return;
         }
-
+        
+        if (!data) {
+          // No active business found - this is a new user or all businesses are inactive
+          console.log("ℹ️ No active business found - showing empty form");
+          setProfileLoaded(true);
+          return;
+        }
+   
+        // ✅ Business found - populate the form
+        console.log('✅ Loading business data:', data.business_name);
+        
+        const intel = parseBusinessIntel(data.business_description);
+   
+        setbusiness_name(data.business_name || "");
+        setStreet(data.street || "");
+        setCity(data.city || "");
+        setProvinceState(data.province_state || "");
+        setCountry(data.country || "Canada");
+        setPostalCode(data.postal_code || "");
+        setCategory(data.category || "");
+        setVoice(data.voice || "");
+        setNiche(data.niche || "");
+        setBrandSource(data.brand_source || null);
+        setBusinessDescription(intel?.description || "");
+   
+        // Store original values for change detection
+        setOriginalBusinessName(data.business_name || "");
+        setOriginalStreet(data.street || "");
+        setOriginalCity(data.city || "");
+   
+        setProfileLoaded(true);
+        console.log('✅ Profile loaded successfully');
+   
       } catch (err) {
-        console.error("Catch block error fetching business:", err);
+        console.error("❌ Unexpected error:", err);
         toast.error("An unexpected error occurred while loading your business profile.");
+        setProfileLoaded(true); // ✅ CRITICAL: Set to true even on error
       }
     };
-
+   
     if (isLoaded && user?.id && supabase && !profileLoaded) {
-      console.log("Attempting to fetch active business...");
+      console.log("🚀 Attempting to fetch active business...");
       fetchActiveBusiness();
     }
-
-  }, [isLoaded, user?.id, supabase, profileLoaded]); // Dependencies remain the same
+   
+  }, [isLoaded, user?.id, supabase, profileLoaded]);
 
   // Fetch user profile (tier, credits)
 useEffect(() => {
