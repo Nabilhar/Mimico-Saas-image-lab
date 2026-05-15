@@ -254,6 +254,8 @@ export default function ProfilePage() {
         if (error) {
           console.error("Supabase active business fetch error:", error.message);
           toast.error("Error loading business: " + error.message);
+          setProfileLoaded(true); // ← CRITICAL FIX
+        return;
         } else if (data) {
           // Note: The 'business_description' from the DB is now a JSON object.
           const intel = parseBusinessIntel(data.business_description);
