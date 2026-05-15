@@ -90,7 +90,7 @@ export default function SiteFooter() {
               </li>
               <li>
                 <a 
-                  href="https://www.facebook.com/SholrelineStudioAI/" 
+                  href="https://www.facebook.com/ShorelineStudioAI/" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-sm text-cyan-600 hover:text-cyan-900 transition-colors"
@@ -157,7 +157,7 @@ export default function SiteFooter() {
                 </svg>
               </a>
               <a 
-                href="https://www.facebook.com/SholrelineStudioAI/"  
+                href="https://www.facebook.com/ShorelineStudioAI/"  
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-gray-500 transition-colors"
