@@ -311,14 +311,17 @@ export default function ProfilePage() {
     console.log('📧 Email:', user?.primaryEmailAddress?.emailAddress);
   }, [user]);
 
-  // Fetch user profile (tier, credits)
+    // Fetch user profile (tier, credits)
   useEffect(() => {
     const fetchUserProfile = async () => {
-      if (!user?.id) return;
+      if (!user?.id) {
+        console.log('❌ No user.id available');
+        return;
+      }
 
       try {
         console.log('🔍 Fetching user profile for:', user.id);
-        console.log('🌍 Environment:', process.env.NEXT_PUBLIC_APP_ENV);
+        console.log('📧 User email:', user.primaryEmailAddress?.emailAddress);
         
         const response = await fetch('/api/user/profile');
         console.log('📡 Profile API response status:', response.status);
@@ -326,6 +329,10 @@ export default function ProfilePage() {
         if (response.ok) {
           const data = await response.json();
           console.log('✅ Profile data received:', data);
+          console.log('   - Tier:', data.tier);
+          console.log('   - Credits:', data.credits);
+          console.log('   - Free discovery used:', data.free_text_discovery_used);
+          
           setUserTier(data.tier || 1);
           setUserCredits(data.credits || 0);
           setFreeDiscoveryUsed(data.free_text_discovery_used || false);
@@ -343,10 +350,12 @@ export default function ProfilePage() {
 
       try {
         const response = await fetch('/api/user/businesses/count');
+        console.log('📊 Business count API status:', response.status);
+        
         if (response.ok) {
           const data = await response.json();
+          console.log('✅ Business count received:', data.count);
           setBusinessCount(data.count || 0);
-          console.log("✅ Business count:", data.count);
         } else {
           const errorText = await response.text();
           console.error('❌ Business count API failed:', response.status, errorText);
