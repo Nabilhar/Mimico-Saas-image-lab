@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { ClerkProvider } from '@clerk/nextjs';
+import SiteFooter from '@/components/SiteFooter';
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import { MobileNav } from "@/components/MobileNav";
@@ -9,9 +10,9 @@ import { Analytics } from '@vercel/analytics/react';
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Shoreline Studio — Social posts for Toronto businesses",
+  title: "Shoreline Studio - AI Content for Local Businesses",
   description:
-    "AI-assisted social content for dentists, realtors, and cafés in Toronto.",
+    "Generate authentic, brand-consistent social media content powered by AI",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -40,6 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               },
             }}
           />
+          <SiteFooter />
           <Analytics /> 
         </ClerkProvider>
       </body>

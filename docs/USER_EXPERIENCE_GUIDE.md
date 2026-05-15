@@ -941,7 +941,7 @@ No. Credits are non-refundable, but they never expire. Take your time using them
 | **Support** | Email support | Priority support |
 
 **Q: How do I upgrade to Tier 2?**  
-Contact us at support@shorelinestudio.ca — we're rolling out subscriptions soon!
+Contact us at contact@shorelinestudio.ca — we're rolling out subscriptions soon!
 
 ---
 
@@ -1019,7 +1019,7 @@ Not in the current version. Images are generated to match your brand's aesthetic
 Only with AI service providers (Anthropic for text, Google for images) to generate content. We do not sell your data or share it for advertising.
 
 **Q: Can I delete my account and data?**  
-Yes. Contact support@shorelinestudio.ca to request account deletion. All your data (profile, posts, images) will be permanently deleted within 30 days.
+Yes. Contact contact@shorelinestudio.ca to request account deletion. All your data (profile, posts, images) will be permanently deleted within 30 days.
 
 **Q: Do you use my posts to train AI models?**  
 No. Your posts are private to you. We do not use customer content to train or improve AI models.
@@ -1079,7 +1079,7 @@ No. Your posts are private to you. We do not use customer content to train or im
 2. ✅ **Claim welcome credits** (first-time users)
    - Look for banner or button on Dashboard
 3. ✅ **Purchase more credits**
-   - Contact support@shorelinestudio.ca for now
+   - Contact contact@shorelinestudio.ca for now
    - Credit packages launching soon
 
 ---
@@ -1127,7 +1127,7 @@ No. Your posts are private to you. We do not use customer content to train or im
 ### Still Having Issues?
 
 **Contact Support:**
-- **Email:** support@shorelinestudio.ca
+- **Email:** contact@shorelinestudio.ca
 - **Response Time:** Usually within 24 hours
 - **Include:**
   - Your email address
@@ -1225,7 +1225,7 @@ Shoreline Studio is constantly evolving. Here's what's coming:
 
 We'd love to hear from you:
 - **Email:** hello@shorelinestudio.ca
-- **Support:** support@shorelinestudio.ca
+- **Support:** contact@shorelinestudio.ca
 
 ---
 

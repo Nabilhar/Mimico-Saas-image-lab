@@ -2,10 +2,12 @@
 
 'use client';
 
-import { useState } from 'react';
-import { SiteHeader } from '@/components/SiteHeader'; // Assuming you have this
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { SiteHeader } from '@/components/SiteHeader';
 
 export default function ContactPage() {
+  const searchParams = useSearchParams();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [subject, setSubject] = useState('');
@@ -13,6 +15,14 @@ export default function ContactPage() {
 
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState({ type: '', message: '' });
+
+  // Pre-fill subject from URL parameter
+  useEffect(() => {
+    const subjectParam = searchParams.get('subject');
+    if (subjectParam) {
+      setSubject(decodeURIComponent(subjectParam));
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

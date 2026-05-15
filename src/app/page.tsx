@@ -157,7 +157,7 @@ export default function Home() {
         </section>
 
         {/* How It Works Section */}
-        <section className="bg-slate-50 py-16 md:py-24 border-b">
+        <section id="how-it-works" className="bg-slate-50 py-16 md:py-24 border-b">
           <div className="mx-auto max-w-6xl px-6 sm:px-6">
             <div className="mb-12">
               <h2 className="text-3xl font-bold mb-4 text-slate-900">How It Works</h2>
