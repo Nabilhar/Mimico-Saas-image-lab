@@ -305,45 +305,62 @@ export default function ProfilePage() {
    
   }, [isLoaded, user?.id, supabase, profileLoaded]);
 
+  useEffect(() => {
+    console.log('🆔 Current User ID:', user?.id);
+    console.log('🌍 Environment:', process.env.NEXT_PUBLIC_APP_ENV);
+    console.log('📧 Email:', user?.primaryEmailAddress?.emailAddress);
+  }, [user]);
+
   // Fetch user profile (tier, credits)
-useEffect(() => {
-  const fetchUserProfile = async () => {
-    if (!user?.id) return;
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!user?.id) return;
 
-    try {
-      const response = await fetch('/api/user/profile');
-      if (response.ok) {
-        const data = await response.json();
-        setUserTier(data.tier || 1);
-        setUserCredits(data.credits || 0);
-        setFreeDiscoveryUsed(data.free_text_discovery_used || false);
-        console.log("User profile loaded:", data);
+      try {
+        console.log('🔍 Fetching user profile for:', user.id);
+        console.log('🌍 Environment:', process.env.NEXT_PUBLIC_APP_ENV);
+        
+        const response = await fetch('/api/user/profile');
+        console.log('📡 Profile API response status:', response.status);
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('✅ Profile data received:', data);
+          setUserTier(data.tier || 1);
+          setUserCredits(data.credits || 0);
+          setFreeDiscoveryUsed(data.free_text_discovery_used || false);
+        } else {
+          const errorText = await response.text();
+          console.error('❌ Profile API failed:', response.status, errorText);
+        }
+      } catch (err) {
+        console.error("❌ Failed to fetch user profile:", err);
       }
-    } catch (err) {
-      console.error("Failed to fetch user profile:", err);
-    }
-  };
+    };
 
-  const fetchBusinessCount = async () => {
-    if (!user?.id) return;
+    const fetchBusinessCount = async () => {
+      if (!user?.id) return;
 
-    try {
-      const response = await fetch('/api/user/businesses/count');
-      if (response.ok) {
-        const data = await response.json();
-        setBusinessCount(data.count || 0);
-        console.log("Business count:", data.count);
+      try {
+        const response = await fetch('/api/user/businesses/count');
+        if (response.ok) {
+          const data = await response.json();
+          setBusinessCount(data.count || 0);
+          console.log("✅ Business count:", data.count);
+        } else {
+          const errorText = await response.text();
+          console.error('❌ Business count API failed:', response.status, errorText);
+        }
+      } catch (err) {
+        console.error("❌ Failed to fetch business count:", err);
       }
-    } catch (err) {
-      console.error("Failed to fetch business count:", err);
-    }
-  };
+    };
 
-  if (user?.id) {
-    fetchUserProfile();
-    fetchBusinessCount();
-  }
-}, [user?.id]);
+    if (user?.id) {
+      fetchUserProfile();
+      fetchBusinessCount();
+    }
+  }, [user?.id]);
 
 
   if (!isLoaded || !user || !session || !profileLoaded) { 
