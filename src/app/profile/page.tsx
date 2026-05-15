@@ -247,7 +247,7 @@ export default function ProfilePage() {
 
         const { data, error } = await supabase
           .rpc('get_active_business', { p_user_id: user.id })
-          .single<BusinessData>();
+          .maybeSingle<BusinessData>();
 
         console.log('Active Business fetch:', { data, error });
 
