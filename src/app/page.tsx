@@ -532,12 +532,11 @@ We are in the office if you want to sit down and look at the actual numbers.
               {/* Starter */}
               <div className="flex flex-col gap-2 p-5 rounded-2xl border border-slate-200 bg-white">
                 <span className="text-[11px] font-semibold px-2 py-1 rounded-md bg-cyan-50 text-cyan-800 w-fit">Starter</span>
-                <p className="text-sm font-semibold text-slate-900 mt-1">75 credits / month</p>
+                <p className="text-sm font-semibold text-slate-900 mt-1">75 credits / Top up</p>
                 <p className="text-sm text-slate-500 leading-relaxed">Up to 15 complete posts. Perfect for posting a few times a week.</p>
                 <div className="flex items-baseline gap-2 mt-1">
                   <span className="text-sm text-slate-400 line-through">$49</span>
                   <span className="text-2xl font-bold text-slate-900">$25</span>
-                  <span className="text-sm text-slate-500">/mo</span>
                 </div>
                 <span className="text-[11px] font-semibold text-cyan-700">50% off — first 6 months</span>
                 <hr className="border-slate-100 my-1" />
@@ -548,12 +547,11 @@ We are in the office if you want to sit down and look at the actual numbers.
               {/* Daily — featured */}
               <div className="flex flex-col gap-2 p-5 rounded-2xl border-2 border-blue-600 bg-white">
                 <span className="text-[11px] font-semibold px-2 py-1 rounded-md bg-cyan-700 text-white w-fit">Most popular</span>
-                <p className="text-sm font-semibold text-slate-900 mt-1">160 credits / month</p>
+                <p className="text-sm font-semibold text-slate-900 mt-1">160 credits / Top up</p>
                 <p className="text-sm text-slate-500 leading-relaxed">Up to 32 complete posts. One post every day, with room to spare.</p>
                 <div className="flex items-baseline gap-2 mt-1">
                   <span className="text-sm text-slate-400 line-through">$89</span>
                   <span className="text-2xl font-bold text-slate-900">$45</span>
-                  <span className="text-sm text-slate-500">/mo</span>
                 </div>
                 <span className="text-[11px] font-semibold text-cyan-700">50% off — first 6 months</span>
                 <hr className="border-slate-100 my-1" />
@@ -564,12 +562,11 @@ We are in the office if you want to sit down and look at the actual numbers.
               {/* Growth */}
               <div className="flex flex-col gap-2 p-5 rounded-2xl border border-slate-200 bg-white">
                 <span className="text-[11px] font-semibold px-2 py-1 rounded-md bg-cyan-50 text-cyan-800 w-fit">Growth</span>
-                <p className="text-sm font-semibold text-slate-900 mt-1">350 credits / month</p>
+                <p className="text-sm font-semibold text-slate-900 mt-1">350 credits / Top up</p>
                 <p className="text-sm text-slate-500 leading-relaxed">Up to 70 complete posts. For businesses posting multiple times a day.</p>
                 <div className="flex items-baseline gap-2 mt-1">
                   <span className="text-sm text-slate-400 line-through">$169</span>
                   <span className="text-2xl font-bold text-slate-900">$85</span>
-                  <span className="text-sm text-slate-500">/mo</span>
                 </div>
                 <span className="text-[11px] font-semibold text-cyan-700">50% off — first 6 months</span>
                 <hr className="border-slate-100 my-1" />
