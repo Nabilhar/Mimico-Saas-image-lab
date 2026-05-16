@@ -23,6 +23,8 @@ import toast from "react-hot-toast";
 import { HeroSection } from "@/components/HeroSection";
 import { GallerySection } from "@/components/GallerySection";
 import "flag-icons/css/flag-icons.min.css";
+import { MythbustingFeature } from "@/components/MythbustingFeature";
+import { PostTypesGrid } from "@/components/PostTypesGrid";
 
 /**
  * Landing Page for Shoreline Content AI
@@ -105,6 +107,12 @@ export default function Home() {
 
         {/* Gallery Section */}
         <GallerySection />
+
+        {/* Myth busting section */}
+        <MythbustingFeature />
+
+        {/* Post Types Grid section */}
+        <PostTypesGrid />
 
         {/* Features Section */}
         <section className="bg-white py-16 md:py-24 border-b">

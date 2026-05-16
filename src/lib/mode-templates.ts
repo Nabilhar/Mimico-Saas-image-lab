@@ -96,7 +96,7 @@ The myth must be:
 - The lens makes this myth visible to you, but doesn't shape how you explain it
 
 [CONTEXT]
-Current date & time: {{current_time}}. {{current_day}}, {{current_date}}.
+Current date & time: {{current_time}}. {{current_date}}.
 Weather: {{current_weather}}
 Season: {{current_season}}
 
@@ -121,7 +121,7 @@ Inspirational or philosophical\n- Like a consultant or thought leader\n- Like yo
 {{emoji_guidance}}
 
 [CONSTRAINTS]
-- 80-100 words (strict maximum: 185 words)
+- 80-100 words
 - 3 short paragraphs (myth setup, what actually happens, correction)
 - 1st person ("I" or "we")
 - No CTA
@@ -203,10 +203,10 @@ The tip must be:
 - Observable and testable (the person can do this immediately)
 - Grounded in your actual practice
 - The lens made this tip noticeable to you, but doesn't determine how you explain it
-- Deep enough to teach something real in 100-140 words
+- Deep enough to teach something real in 70-90 words
 
 [CONTEXT]
-Current date & time: {{current_time}}. {{current_day}}, {{current_date}}.
+Current date & time: {{current_time}}. {{current_date}}.
 Weather: {{current_weather}}
 Season: {{current_season}}
 
@@ -233,7 +233,7 @@ Inspirational or motivational\n- Like a life coach or guru\n- Like you're reveal
 {{emoji_guidance}}
 
 [CONSTRAINTS]
-- 70 - 90 words (strict maximum: 145 words)
+- 70 - 90 words
 - 2-3 short paragraphs
 - 1st person ("I" or "we")
 - Exactly 1 tip (no more)
@@ -327,7 +327,7 @@ The moment must be:
 - Specific enough to be believable and memorable
 
 [CONTEXT]
-Current date & time: {{current_time}}. {{current_day}}, {{current_date}}.
+Current date & time: {{current_time}}. {{current_date}}.
 Weather: {{current_weather}}
 Season: {{current_season}}
 
@@ -354,7 +354,7 @@ Philosophical or abstract\n- Like you're teaching a lesson\n- Building narrative
 {{emoji_guidance}}
 
 [CONSTRAINTS]
-- 80-120 words (strict maximum: 185 words)
+- 80-120 words
 - 2-3 short paragraphs
 - 1st person ("I" or "we") only when directly observing
 - Max 3 emojis in body only
@@ -435,7 +435,7 @@ Do not end with:
 End with availability and access, not meaning.
 
 [CONTEXT]
-Current date & time: {{current_time}}. {{current_day}}, {{current_date}}.
+Current date & time: {{current_time}}. {{current_date}}.
 Weather: {{current_weather}}
 Season: {{current_season}}
 
@@ -600,7 +600,7 @@ Like you're building up to something\n- Like you're explaining why things matter
 {{emoji_guidance}}
 
 [CONSTRAINTS]
-- 70-90 words (strict maximum: 155 words)
+- 70-90 words
 - 2-3 short paragraphs
 - 1st person ("I" or "we")
 - Max 2 emojis in body only
@@ -608,7 +608,7 @@ Like you're building up to something\n- Like you're explaining why things matter
 - No marketing speak
 
 [CONTEXT]
-Current date & time: {{current_time}}. {{current_day}}, {{current_date}}.
+Current date & time: {{current_time}}. {{current_date}}.
 Weather: {{current_weather}}
 Season: {{current_season}}
 
@@ -738,7 +738,7 @@ The observation must be:
 - Brief and present-tense
 
 [CONTEXT]
-Current date & time: {{current_time}}. {{current_day}}, {{current_date}}.
+Current date & time: {{current_time}}. {{current_date}}.
 Weather: {{current_weather}}
 Season: {{current_season}}
 
@@ -767,7 +767,7 @@ Poetic or literary\n- Reflective or meditative\n- Like you're extracting meaning
 {{emoji_guidance}}
 
 [CONSTRAINTS]
-- 70-90 words (strict maximum: 145 words)
+- 70-90 words 
 - 2-3 short paragraphs
 - 1st person only when directly observing ("I'm watching", "we're in the middle of")
 - Max 2 emojis in body only (thematic, not celebratory)

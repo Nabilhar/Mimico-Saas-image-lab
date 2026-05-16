@@ -635,6 +635,7 @@ Storefront/signage: secondary only, mid/background, slightly out of focus if ext
 
     [TASK]:
     Post: "${generatedPost}"
+    
     Business: ${business_name} (${niche})
 
     Primary Job: This image captures the moment described in the post.
@@ -801,8 +802,16 @@ Storefront/signage: secondary only, mid/background, slightly out of focus if ext
 
     let visualDescription = "";
 
-    if (ARCHITECT_MODE === "GEMINI") {
-      const result = await textModel.generateContent(architectPrompt);
+    if (ARCHITECT_MODE === "GEMMA") {
+
+      console.log("Shoreline Architect: Routing to Gemma 4...");
+      
+      console.log("\n\n🚀 === [FULL ARCH GEMMA PROMPT START] === \n");
+      console.log(architectPrompt);
+      console.log("\n === [FULL ARCH GEMMA PROMPT END] === \n\n");
+      console.log(`--- PROMPT LENGTH: ${architectPrompt.length} characters, ~${Math.round(architectPrompt.length / 4)} tokens ---`);
+
+      const result = await gemmaModel.generateContent(architectPrompt);
       visualDescription = result.response.text();
     } else if (ARCHITECT_MODE === "GROQ") {
       const result = await groq.chat.completions.create({
