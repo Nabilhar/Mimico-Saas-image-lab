@@ -44,7 +44,7 @@ export default function PostTypesPage() {
         </section>
 
         {/* Sticky Navigation */}
-        <nav className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm">
+        <nav className="sticky top-[64px] z-30 bg-white border-b border-slate-200 shadow-sm backdrop-blur-sm bg-white/95">
           <div className="mx-auto max-w-6xl px-6 sm:px-6">
             <div className="flex gap-2 overflow-x-auto py-4 scrollbar-hide">
               <a href="#myth-busting" className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-cyan-800 hover:bg-slate-50 rounded-md whitespace-nowrap transition-colors">

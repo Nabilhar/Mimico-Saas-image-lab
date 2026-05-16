@@ -25,6 +25,7 @@ import { GallerySection } from "@/components/GallerySection";
 import "flag-icons/css/flag-icons.min.css";
 import { MythbustingFeature } from "@/components/MythbustingFeature";
 import { PostTypesGrid } from "@/components/PostTypesGrid";
+import PostTypesGridLanding from '@/components/PostTypesGridLanding';
 
 /**
  * Landing Page for Shoreline Content AI
@@ -107,6 +108,8 @@ export default function Home() {
 
         {/* Gallery Section */}
         <GallerySection />
+
+        <PostTypesGridLanding />
 
         {/* Myth busting section */}
         <MythbustingFeature />
