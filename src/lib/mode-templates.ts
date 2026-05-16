@@ -121,8 +121,8 @@ Inspirational or philosophical\n- Like a consultant or thought leader\n- Like yo
 {{emoji_guidance}}
 
 [CONSTRAINTS]
-- 130-180 words (strict maximum: 185 words)
-- 3 paragraphs (myth setup, what actually happens, correction)
+- 80-100 words (strict maximum: 185 words)
+- 3 short paragraphs (myth setup, what actually happens, correction)
 - 1st person ("I" or "we")
 - No CTA
 - Max 2 emojis in body only
@@ -233,8 +233,8 @@ Inspirational or motivational\n- Like a life coach or guru\n- Like you're reveal
 {{emoji_guidance}}
 
 [CONSTRAINTS]
-- 100-140 words (strict maximum: 145 words)
-- 2-3 paragraphs
+- 70 - 90 words (strict maximum: 145 words)
+- 2-3 short paragraphs
 - 1st person ("I" or "we")
 - Exactly 1 tip (no more)
 - Max 3 emojis in body only
@@ -354,8 +354,8 @@ Philosophical or abstract\n- Like you're teaching a lesson\n- Building narrative
 {{emoji_guidance}}
 
 [CONSTRAINTS]
-- 130-180 words (strict maximum: 185 words)
-- 2-3 paragraphs
+- 80-120 words (strict maximum: 185 words)
+- 2-3 short paragraphs
 - 1st person ("I" or "we") only when directly observing
 - Max 3 emojis in body only
 - No CTA — observation stands alone
@@ -460,8 +460,8 @@ Sales-y or promotional\n- Like you're building up to a pitch\n- Inspirational ab
 {{emoji_guidance}}
 
 [CONSTRAINTS]
-- 130-180 words (strict maximum: 185 words)
-- 2-4 paragraphs, naturally flowing
+- 90-130 words
+- 2-4 short paragraphs, naturally flowing
 - Present tense throughout
 - 1st person ("I" or "we")
 - Max 3 emojis in body only
@@ -600,8 +600,8 @@ Like you're building up to something\n- Like you're explaining why things matter
 {{emoji_guidance}}
 
 [CONSTRAINTS]
-- 110-150 words (strict maximum: 155 words)
-- 2-3 paragraphs
+- 70-90 words (strict maximum: 155 words)
+- 2-3 short paragraphs
 - 1st person ("I" or "we")
 - Max 2 emojis in body only
 - Conversational, not polished
@@ -767,8 +767,8 @@ Poetic or literary\n- Reflective or meditative\n- Like you're extracting meaning
 {{emoji_guidance}}
 
 [CONSTRAINTS]
-- 100-140 words (strict maximum: 145 words)
-- 2-3 paragraphs
+- 70-90 words (strict maximum: 145 words)
+- 2-3 short paragraphs
 - 1st person only when directly observing ("I'm watching", "we're in the middle of")
 - Max 2 emojis in body only (thematic, not celebratory)
 - No CTA — the moment stands alone

@@ -30,7 +30,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const ARCHITECT_MODE: "GEMINI" | "GROQ" | "GEMMA" | "OPENROUTER" = "OPENROUTER";
+const ARCHITECT_MODE: "GEMINI" | "GROQ" | "GEMMA" | "OPENROUTER" = "GEMMA";
 
 const textModel = genAI.getGenerativeModel({ model: "models/gemini-2.5-flash" }, { apiVersion: 'v1beta' });
 
