@@ -205,7 +205,7 @@ Cold butter is harder to handle, but it's not about ease—it's about structure 
 
                   <div className="w-full aspect-square bg-slate-100 border-y border-slate-100">
                     <img 
-                      src="/Baker-cutting-butter.PNG"
+                      src="/Baker-cutting-butter.png"
                       alt="Baker cutting cold butter for pastry dough" 
                       className="w-full h-full object-cover"
                     />
@@ -655,7 +655,7 @@ At our clinic, we see this pattern every spring as patients resume outdoor activ
 
                   <div className="w-full aspect-square bg-slate-100 border-y border-slate-100">
                     <img 
-                      src="/Physio-movement-range.PNG"
+                      src="/Physio-movement-range.png"
                       alt="Progressive movement range demonstration" 
                       className="w-full h-full object-cover"
                     />
