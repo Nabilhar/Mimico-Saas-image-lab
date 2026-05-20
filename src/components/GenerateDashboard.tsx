@@ -12,10 +12,11 @@ import { Post } from "@/app/dashboard/page";
 import { SavedImage } from "@/components/SavedImage";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
+import type { SavePostInput } from "@/app/dashboard/page";
 
 interface GenerateDashboardProps {
   businessData: any;
-  onGenerateSuccess?: (content: string, imageUrl: string, cognitiveLens?: string) => Promise<string | undefined>;
+  onGenerateSuccess?: (input: SavePostInput) => Promise<string | undefined>;
   onShare?: (content: string, imageUrl?: string) => void;
   canGenerate: boolean; 
   userCredits: number;
@@ -49,12 +50,13 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
   const [currentWeather, setCurrentWeather] = useState("");
 
   const [offerName, setOfferName] = useState("");
-  const [offerCategory, setOfferCategory] = useState("discount");
   const [whatsIncluded, setWhatsIncluded] = useState("");
   const [availableTimeframe, setAvailableTimeframe] = useState("");
   const [eligibility, setEligibility] = useState("anyone");
   const [offerHook, setOfferHook] = useState("");
   const [valueFraming, setValueFraming] = useState("discount");
+  const [showPrice, setShowPrice] = useState(false);
+  const [priceDetails, setPriceDetails] = useState("");
 
   // Generation States
   const [content, setContent] = useState<string | null>(null);
@@ -247,12 +249,12 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
             postal_code: postalCode,
             },
           offerName,
-          offerCategory,
           whatsIncluded,
           availableTimeframe,
           eligibility,
-          offerHook,
-          valueFraming
+          valueFraming,
+          showPrice,
+          priceDetails
         }),
       });
 
@@ -273,7 +275,11 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
         .replace(/Total words: \d+/gi, "") // Remove word count comments
         .trim();
         
-        setContent(cleanPost);
+        const fullPost = data.hashtags?.length 
+          ? `${cleanPost}\n\n${data.hashtags.join(' ')}` 
+          : cleanPost;
+
+        setContent(fullPost);
 
         const weather = data.currentWeather || "";
         setCurrentWeather(weather);
@@ -284,7 +290,23 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
         // --- THE FIX: Capture the ID ---
         if (onGenerateSuccess) {
           // Assuming your parent function returns the ID from the Supabase insert
-          const generatedUuid = await onGenerateSuccess(cleanPost, "", cognitiveLens);
+          const generatedUuid = await onGenerateSuccess({
+            content: fullPost,
+            imageUrl: "",
+            postType: data.post_type || postType,           // fallback to local state
+            contentCategory: data.content_category,
+            contentSummary: data.content_summary,
+            offeringsReferenced: data.offerings_referenced || [],
+            eventReferenced: data.event_referenced,
+            hookUsed: data.hook_used,
+            priceShown: postType === 'Promotion / offer' ? showPrice : null,                 
+            voiceUsed: data.voice_used || voice,
+            aiProvider: data.ai_provider,
+            wordCount: data.word_count,
+            tokensUsed: data.tokens_used,
+            cognitiveLens: data.cognitive_lens,
+          });          
+
           if (generatedUuid) {
             setLastPostId(generatedUuid); // Now we have the auto-generated Supabase ID!
 
@@ -470,7 +492,6 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
       // MODE 4: All 7 fields required (except offerHook which is optional)
       return (
         !offerName.trim() ||
-        !offerCategory ||
         !whatsIncluded.trim() ||
         !availableTimeframe.trim() ||
         !eligibility ||
@@ -530,12 +551,11 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
                 }} 
                 className="mt-1 w-full p-3 border rounded-xl bg-white focus:ring-2 focus:ring-cyan-100 outline-none transition-all"
               >
-                <option value="Behind the scenes">Behind the scenes</option>
-                <option value="Myth-busting">Myth-busting</option>
-                <option value="Tip of the Day">Tip of the Day</option>
+                <option value="Behind the scenes">Behind the Curtain</option>
+                <option value="Tip of the Day">Today's Tip</option>
+                <option value="Community moment">Community moment</option>
                 <option value="Promotion / offer">Promotion / offer</option>
                 <option value="Local event / news">Local event / news</option>
-                <option value="Community moment">Community moment</option>
                 
               </select>
             </div>
@@ -544,7 +564,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
           {/* --- CONDITIONAL PROMOTION BOXES --- */}
           {postType === "Promotion / offer" && (
             <div className="mt-4 space-y-4 animate-in fade-in slide-in-from-top-2">
-              
+
               {/* 1. OFFER NAME */}
               <div className="flex flex-col gap-2">
                 <label className="text-[10px] font-black uppercase text-slate-400 ml-1">
@@ -555,35 +575,15 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
                   value={offerName}
                   onChange={(e) => setOfferName(e.target.value)}
                   placeholder="e.g., Spring Hair Refresh Package"
-                  maxLength={40}
+                  maxLength={60}
                   className="w-full p-3 border rounded-xl bg-white border-slate-200 shadow-sm outline-none focus:ring-2 focus:ring-cyan-100 transition-all"
                 />
               </div>
 
-              {/* 2. OFFER CATEGORY */}
+              {/* 2. WHAT'S INCLUDED */}
               <div className="flex flex-col gap-2">
                 <label className="text-[10px] font-black uppercase text-slate-400 ml-1">
-                  Type of Offer
-                </label>
-                <select 
-                  value={offerCategory}
-                  onChange={(e) => setOfferCategory(e.target.value)}
-                  className="w-full p-3 border rounded-xl bg-white border-slate-200 shadow-sm outline-none focus:ring-2 focus:ring-cyan-100 transition-all"
-                >
-                  <option value="">Select type...</option>
-                  <option value="discount">Discount/Deal</option>
-                  <option value="bundle">Bundle (Things Grouped)</option>
-                  <option value="package">Service Package</option>
-                  <option value="limited">Limited Availability</option>
-                  <option value="seasonal">Seasonal/Timed</option>
-                  <option value="sample">Access/Sample</option>
-                </select>
-              </div>
-
-              {/* 3. WHAT'S INCLUDED */}
-              <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-black uppercase text-slate-400 ml-1">
-                  What's Included (What Do They Get?)
+                  What's Included
                 </label>
                 <textarea 
                   value={whatsIncluded}
@@ -593,7 +593,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
                 />
               </div>
 
-              {/* 4. AVAILABILITY */}
+              {/* 3. AVAILABILITY */}
               <div className="flex flex-col gap-2">
                 <label className="text-[10px] font-black uppercase text-slate-400 ml-1">
                   When's It Available?
@@ -607,7 +607,7 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
                 />
               </div>
 
-              {/* 5. ELIGIBILITY */}
+              {/* 4. ELIGIBILITY / WHO CAN ACCESS */}
               <div className="flex flex-col gap-2">
                 <label className="text-[10px] font-black uppercase text-slate-400 ml-1">
                   Who Can Access It?
@@ -621,27 +621,13 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
                   <option value="new_clients">New Clients Only</option>
                   <option value="walk_ins">Walk-Ins Welcome</option>
                   <option value="by_appointment">By Appointment (24-hr notice)</option>
-                  <option value="limited_qty">Limited to X Per Day</option>
+                  <option value="limited_qty">Limited Quantity Per Day</option>
                   <option value="first_time">First-Time Visitors</option>
                   <option value="anyone">Anyone — No Restrictions</option>
                 </select>
               </div>
 
-              {/* 6. OFFER HOOK (Optional) */}
-              <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-black uppercase text-slate-400 ml-1">
-                  Why Now? (Optional)
-                </label>
-                <textarea 
-                  value={offerHook}
-                  onChange={(e) => setOfferHook(e.target.value)}
-                  placeholder="e.g., Spring arrived and..., or We noticed customers..."
-                  className="w-full p-3 border rounded-xl border-slate-200 min-h-[60px] outline-none focus:ring-2 focus:ring-cyan-100 transition-all"
-                />
-                <p className="text-[9px] text-slate-400">Leave blank for system to generate</p>
-              </div>
-
-              {/* 7. VALUE FRAMING */}
+              {/* 5. POSITIONING */}
               <div className="flex flex-col gap-2">
                 <label className="text-[10px] font-black uppercase text-slate-400 ml-1">
                   How Is It Positioned?
@@ -654,12 +640,74 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
                   <option value="">Select...</option>
                   <option value="discount">Lighter on the wallet</option>
                   <option value="accessible">More accessible entry point</option>
-                  <option value="entry_level">Entry-level option</option>
-                  <option value="bundle_savings">Bundle savings</option>
-                  <option value="early_bird">Early bird special</option>
+                  <option value="entry_level">Entry-level / starter option</option>
+                  <option value="bundle_savings">Bundle / package value</option>
+                  <option value="early_bird">Early bird / limited window</option>
                   <option value="seasonal">Seasonal timing</option>
                 </select>
-                <p className="text-[9px] text-slate-400">Do NOT state actual prices (customer shows post in-store for details)</p>
+                <p className="text-[9px] text-slate-400">
+                  {showPrice 
+                    ? 'How the price is framed in the post.' 
+                    : 'How the offer is positioned (no actual prices stated).'}
+                </p>
+              </div>
+
+              {/* 6. WHY NOW (OPTIONAL) */}
+              <div className="flex flex-col gap-2 p-3 rounded-xl border border-dashed border-slate-200 bg-slate-50/50">
+                <label className="text-[10px] font-black uppercase text-slate-400 ml-1">
+                  Why Now? <span className="text-slate-400 normal-case font-normal">(Optional — leave blank and we'll fill it)</span>
+                </label>
+                <textarea 
+                  value={offerHook}
+                  onChange={(e) => setOfferHook(e.target.value)}
+                  placeholder="e.g., Spring arrived and people are asking..., or We noticed customers..."
+                  className="w-full p-3 border rounded-xl bg-white border-slate-200 min-h-[60px] outline-none focus:ring-2 focus:ring-cyan-100 transition-all"
+                />
+                <p className="text-[9px] text-slate-400">
+                  A real observation that grounds the offer in something happening now.
+                  If you skip this, the AI uses weather and season to make one up.
+                </p>
+              </div>
+
+              {/* 7. PRICE VISIBILITY TOGGLE */}
+              <div className="flex flex-col gap-2 p-3 border rounded-xl border-slate-200 bg-slate-50">
+                <label className="text-[10px] font-black uppercase text-slate-400 ml-1">
+                  Show Price In Post?
+                </label>
+                
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowPrice(!showPrice)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      showPrice ? 'bg-cyan-600' : 'bg-slate-300'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        showPrice ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                  <span className="text-sm text-slate-700">
+                    {showPrice ? 'Price will be shown' : 'Customer shows post in-store for price'}
+                  </span>
+                </div>
+
+                {showPrice && (
+                  <div className="flex flex-col gap-2 mt-2 animate-in fade-in slide-in-from-top-1">
+                    <label className="text-[10px] font-black uppercase text-slate-400 ml-1">
+                      Price Details
+                    </label>
+                    <input 
+                      type="text"
+                      value={priceDetails}
+                      onChange={(e) => setPriceDetails(e.target.value)}
+                      placeholder="e.g., $32 for the set, 20% off, $50 normally"
+                      className="w-full p-3 border rounded-xl bg-white border-slate-200 shadow-sm outline-none focus:ring-2 focus:ring-cyan-100 transition-all"
+                    />
+                  </div>
+                )}
               </div>
 
             </div>

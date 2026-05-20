@@ -4,6 +4,27 @@
 import { getModeTemplate, PostType } from './mode-templates';
 import { VOICE_PROMPTS, VOICE_EMOJI_GUIDANCE } from "@/lib/VOICE_PROMPTS";
 
+/**
+ * Maps post type to the placeholder name used in that mode's template.
+ * Allows passing a single generic `category` value that gets injected
+ * into the correct mode-specific placeholder.
+ */
+const CATEGORY_PLACEHOLDER: Partial<Record<PostType, string>> = {
+  "Tip of the Day":     "tip_category",
+  "Behind the scenes":  "moment_type",
+  "Community moment":   "scene_type",
+  "Local event / news": "scene_type",
+  // "Promotion / offer" — no category placeholder
+};
+
+const SUMMARY_PLACEHOLDER: Partial<Record<PostType, string>> = {
+  "Tip of the Day":     "recent_tip_topics",
+  "Behind the scenes":  "recent_bts_moments",
+  "Community moment":   "recent_scenes",
+  "Local event / news": "recent_observations",
+  "Promotion / offer":  "recent_promo_openings",
+};
+
 export interface ParsedBusinessIntel {
   neighbourhood?: string;
   landmarks?: string[];
@@ -23,17 +44,19 @@ export interface ParsedBusinessIntel {
   };
   storefront_architecture?: {
     building?: {
-      door?: string;
-      stories?: string;
       material?: string;
-      window_type?: string;
       facade_style?: string;
+      stories?: string;
+      window_type?: string;
+      door?: string;
+
+
     };
     features?: {
       patio?: string;
       planters?: string;
-      corner_unit?: string;
       street_furniture?: string;
+      corner_unit?: string;
     };
   };
 }
@@ -56,6 +79,7 @@ export interface PromptBuilderConfig {
   currentSeason?: string;
   businessSummary?: string;
   businessIntel?: ParsedBusinessIntel;
+  event_type?: string;
   event_or_shoutout?: string;
   offer_name?: string;
   offer_category?: string;
@@ -64,6 +88,8 @@ export interface PromptBuilderConfig {
   eligibility?: string;
   offer_hook?: string;
   value_framing?: string;
+  category?: string | null;    
+  recentSummariesFormatted?: string;
 }
 
 /**
@@ -79,10 +105,10 @@ const MODE_DATA_REQUIREMENTS = {
       products_services: true,
       description: true,
       neighbourhood: true,
-      landmarks: true,
-      transit: true,
+      landmarks: false,
+      transit: false,
       local_trends: true,
-      interior_layout: true,
+      interior_layout: false,
       storefront_architecture: false,
     }
   },
@@ -91,7 +117,7 @@ const MODE_DATA_REQUIREMENTS = {
   OBSERVATION: {
     modes: ['Behind the scenes', 'Promotion / offer'],
     needs: {
-      craft_identity: true,
+      craft_identity: false,
       products_services: true,
       description: true,
       neighbourhood: true,
@@ -99,7 +125,7 @@ const MODE_DATA_REQUIREMENTS = {
       transit: false,
       local_trends: true,
       interior_layout: true,      // ✅ Needs interior details
-      storefront_architecture: true, // ✅ Needs storefront details
+      storefront_architecture: false, // ✅ Needs storefront details
     }
   },
   
@@ -114,8 +140,8 @@ const MODE_DATA_REQUIREMENTS = {
       landmarks: true,
       transit: true,
       local_trends: true,
-      interior_layout: false,     // ❌ Don't need interior
-      storefront_architecture: false, // ❌ Don't need storefront
+      interior_layout: true,     // ❌ Don't need interior
+      storefront_architecture: true, // ❌ Don't need storefront
     }
   },
 };
@@ -275,6 +301,8 @@ export function buildPrompt(config: PromptBuilderConfig): string {
   
   // Build ONLY what this mode needs
   const businessSection = buildBusinessIntelSection(config.businessIntel, config.postType);
+
+  const intel = config.businessIntel;
   
   const variables: Record<string, string> = {
     business_name: config.business_name,
@@ -293,7 +321,43 @@ export function buildPrompt(config: PromptBuilderConfig): string {
     current_date: config.currentDate || getCurrentDate(),
     current_weather: config.currentWeather || "Unknown",
     current_season: config.currentSeason || getCurrentSeason(),
+
     business_summary: businessSection,
+
+    // GRANULAR BUSINESS INTEL FIELDS - Use these anywhere in templates!
+    // Core identity fields
+    craft_identity: intel?.craft_identity || "",
+    business_description: intel?.description || "",
+    
+    // Location fields
+    neighbourhood: intel?.neighbourhood || "",
+    landmarks: intel?.landmarks?.join(", ") || "",
+    transit: intel?.transit?.join(", ") || "",
+    local_trends: intel?.local_trends?.join(", ") || "",
+    
+    // Offerings
+    products_services: intel?.products_services?.join(", ") || "",
+    
+    // Interior layout fields
+    interior_counter_position: intel?.interior_layout?.counter_position || "",
+    interior_seating: intel?.interior_layout?.seating_style_density || "",
+    interior_space_plan: intel?.interior_layout?.open_plan_or_divided_spaces || "",
+    interior_lighting: intel?.interior_layout?.lighting_mood || "",
+    interior_distinctive_feature: intel?.interior_layout?.distinctive_design_feature || "",
+    
+    // Storefront architecture fields
+    storefront_facade: intel?.storefront_architecture?.building?.facade_style || "",
+    storefront_door: intel?.storefront_architecture?.building?.door || "",
+    storefront_stories: intel?.storefront_architecture?.building?.stories || "",
+    storefront_material: intel?.storefront_architecture?.building?.material || "",
+    storefront_windows: intel?.storefront_architecture?.building?.window_type || "",
+    storefront_patio: intel?.storefront_architecture?.features?.patio || "",
+    storefront_planters: intel?.storefront_architecture?.features?.planters || "",
+    storefront_corner: intel?.storefront_architecture?.features?.corner_unit || "",
+    storefront_furniture: intel?.storefront_architecture?.features?.street_furniture || "",
+    
+    // Other variables
+    event_type: config.event_type || "",
     event_or_shoutout: config.event_or_shoutout || "",
     offer_name: config.offer_name || "",
     offer_category: config.offer_category || "",
@@ -303,6 +367,19 @@ export function buildPrompt(config: PromptBuilderConfig): string {
     offer_hook: config.offer_hook || "",
     value_framing: config.value_framing || "",
   };
+
+  if (config.category) {
+    const categoryKey = CATEGORY_PLACEHOLDER[config.postType];
+    if (categoryKey) {
+      variables[categoryKey] = config.category;
+    }
+  }
+  
+  // Same for recent summaries
+  const summaryKey = SUMMARY_PLACEHOLDER[config.postType];
+  if (summaryKey && config.recentSummariesFormatted) {
+    variables[summaryKey] = config.recentSummariesFormatted;
+  }
   
   let prompt = template;
   

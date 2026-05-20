@@ -634,7 +634,10 @@ Storefront/signage: secondary only, mid/background, slightly out of focus if ext
     [SYSTEM]: Image prompt engineer for FLUX-2-pro. Commercial/lifestyle photography.
 
     [TASK]:
-    Post: "${generatedPost}"
+    
+    Post: ${postType}
+    
+    "${generatedPost}"
     
     Business: ${business_name} (${niche})
 

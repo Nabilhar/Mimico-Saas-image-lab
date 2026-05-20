@@ -133,7 +133,7 @@ export function parseBusinessIntel(raw: any) {
         products_services: Array.isArray(parsed.products_services) ? parsed.products_services : [],
 
         interior_layout: parsed.interior_layout ? parseInteriorLayout(parsed.interior_layout) : undefined,
-        storefront_architecture: parsed.storefront_architecture || undefined,
+        storefront_architecture: parsed.storefront_architecture ? parseExteriorLayout(parsed.storefront_architecture) : undefined,
 
         isJson:            true,
         isInferred:        (parsed.craft_identity || "").startsWith("INFERRED:"),
@@ -184,6 +184,54 @@ export function parseInteriorLayout(data: any): any {
     };
   }
   
+  return undefined;
+}
+
+/**
+ * Helper function to parse storefront_architecture from vision output.
+ * Returns the nested {building, features} structure the prompt-builder reads.
+ * Handles both string descriptions and nested objects from the AI.
+ */
+export function parseExteriorLayout(data: any): any {
+  if (!data) return undefined;
+
+  // String input — wrap as a facade description
+  if (typeof data === 'string') {
+    return {
+      building: { facade_style: data },
+      features: {},
+    };
+  }
+
+  // Object input (most common from Gemini Vision)
+  if (typeof data === 'object' && !Array.isArray(data)) {
+    // `building` can be a string OR a nested object — normalize both
+    const building = typeof data.building === 'string'
+      ? { facade_style: data.building }       // wrap whole string as facade
+      : (data.building || {});
+
+    // `features` can be a string OR a nested object — normalize both
+    const features = typeof data.features === 'string'
+      ? { patio: data.features }              // wrap whole string into patio field
+      : (data.features || {});
+
+    return {
+      building: {
+        material:     building.material,
+        facade_style: building.facade_style,
+        stories:      building.stories,
+        window_type:  building.window_type,
+        door:         building.door,
+      },
+      features: {
+        patio:            features.patio,
+        planters:         features.planters,
+        street_furniture: features.street_furniture,
+        corner_unit:      features.corner_unit,
+      },
+    };
+  }
+
   return undefined;
 }
 // ---------------------------------------------------------------------------
@@ -339,11 +387,19 @@ export async function analyzePhotosWithGemini(
         door color — precise descriptions 
         or Not visible in photos",
       "storefront_architecture": {
-        "building": "material, stories, facade style, 
-          window type, door — from photo only",
-        "features": "patio, corner unit, planters, 
-          street furniture — from photo only 
-          or Not visible in photos"
+        "building": {
+          "facade_style": "facade description or Not visible in photos",
+          "material": "material description or Not visible in photos",
+          "stories": "number of stories or Not visible in photos",
+          "window_type": "windows description or Not visible in photos",
+          "door": "doors description or Not visible in photos"
+        },
+        "features": {
+          "patio": "patio description or Not visible in photos",
+          "planters": "planters description or Not visible in photos",
+          "corner_unit": "position description or Not visible in photos",
+          "street_furniture": "street furniture description or Not visible in photos"
+        }
       },
       "interior_colors": "wall color, floor tone, 
         ceiling, counter material — precise descriptions 
@@ -354,7 +410,7 @@ export async function analyzePhotosWithGemini(
       "open_plan_or_divided_spaces": "spatial description or Not visible in photos",
       "lighting_mood": "lighting description or Not visible in photos",
       "distinctive_design_feature": "design feature description or Not visible in photos"
-}
+      }
     }
   }
   `;
@@ -577,8 +633,8 @@ ${niche ? `Niche: "${niche}"` : ""}
 [SEARCH INSTRUCTIONS]:
 You have exactly 5 web searches. Use them strategically:
 
-SEARCH 1 — CRAFT IDENTITY:
-Search the official website for owner-written language about how they work.
+SEARCH 1 — IDENTITY:
+Search the official website for owner-written language about who they are and how they work.
 Focus on: "About", "Menu", "Services", "Our Story", "Our Process" pages.
 This is your primary source for craft identity.
 

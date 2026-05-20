@@ -102,7 +102,7 @@ function parseBusinessIntel(raw: any) {
       
       // ✨ NEW: Interior and storefront data for MODE 3
       interior_layout: raw.interior_layout ? parseInteriorLayout(raw.interior_layout) : undefined,
-      storefront_architecture: raw.storefront_architecture || undefined,
+      storefront_architecture: raw.storefront_architecture ? parseExteriorLayout(raw.storefront_architecture) : undefined,
     };
   }
   
@@ -121,7 +121,7 @@ function parseBusinessIntel(raw: any) {
       
       // ✨ NEW: Interior and storefront data for MODE 3
       interior_layout: parsed.interior_layout ? parseInteriorLayout(parsed.interior_layout) : undefined,
-      storefront_architecture: parsed.storefront_architecture || undefined,
+      storefront_architecture: parsed.storefront_architecture ? parseExteriorLayout(parsed.storefront_architecture) : undefined,
     };
   } catch (e) {
     
@@ -155,6 +155,35 @@ function parseInteriorLayout(data: any): any {
   if (typeof data === 'string') {
     return {
       distinctive_design_feature: data,
+    };
+  }
+  
+  return undefined;
+}
+
+function parseExteriorLayout(data: any): any {
+  if (!data) return undefined;
+  
+  // If it's already structured (from Gemini vision), return as-is
+  if (typeof data === 'object' && !Array.isArray(data)) {
+    return {
+
+      storefront_facade: data.storefront_facade,
+      storefront_door: data.storefront_door,
+      storefront_stories: data.storefront_stories,
+      storefront_material: data.storefront_material,
+      storefront_windows: data.storefront_windows,
+      storefront_patio: data.storefront_patio,
+      storefront_planters: data.storefront_planters,
+      storefront_corner: data.storefront_corner,
+      storefront_furniture: data.storefront_furniture,
+    };
+  }
+  
+  // If it's a string description from research, return it as storefront_furniture
+  if (typeof data === 'string') {
+    return {
+      storefront_furniture: data,
     };
   }
   

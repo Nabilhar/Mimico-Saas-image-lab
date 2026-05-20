@@ -145,7 +145,7 @@ Cold butter is harder to handle, but it's not about ease—it's about structure 
               {/* Post Image */}
               <div className="w-full aspect-square bg-slate-100 border-y border-slate-100">
                 <img 
-                  src="/Baker-cutting-butter.PNG"  // or whatever your image path is
+                  src="/Baker-butter.png"  // or whatever your image path is
                   alt="Cold butter creating flaky pastry layers" 
                   className="w-full h-full object-cover"
                 />

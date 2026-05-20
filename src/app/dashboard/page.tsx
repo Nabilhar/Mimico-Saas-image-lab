@@ -10,8 +10,50 @@ import { useRouter } from "next/navigation";
 import PostActions from "@/components/PostActions";
 import { SavedImage } from "@/components/SavedImage";
 
-export interface Post { id: string; content: string; created_at: string; business_id: string; image_url?: string; business_name?: string; location_snapshot?: string; cognitive_lens?: string; }
-interface BusinessData { id: string; business_name: string; street: string; city: string; province_state: string; country: string; postal_code: string; category: string; niche: string; voice: string; credits: number; history: Post[]; }
+export type Post = { 
+  id: string; 
+  content: string; 
+  created_at: string; 
+  business_id: string; 
+  image_url?: string; 
+  business_name?: string; 
+  location_snapshot?: string; 
+  cognitive_lens?: string; 
+  post_type?: string;
+  content_category?: string | null;
+  content_summary?: string | null;
+  offerings_referenced?: string[];
+}
+interface BusinessData { 
+  id: string; 
+  business_name: string; 
+  street: string; 
+  city: string; 
+  province_state: string; 
+  country: string; 
+  postal_code: string; 
+  category: string; 
+  niche: string; 
+  voice: string; 
+  credits: number; 
+  history: Post[]; 
+}
+export interface SavePostInput {
+  content: string;
+  imageUrl?: string;
+  postType: string;
+  contentCategory?: string | null;
+  contentSummary?: string | null;
+  offeringsReferenced?: string[];
+  eventReferenced?: string | null;
+  hookUsed?: string | null;
+  priceShown?: boolean | null;
+  voiceUsed?: string;
+  aiProvider?: string;
+  wordCount?: number;
+  tokensUsed?: number;
+  cognitiveLens?: string;
+}
 
 export default function DashboardPage() {
   const { user, isLoaded } = useUser();
@@ -113,79 +155,105 @@ export default function DashboardPage() {
   }, [isLoaded, user, supabase, loadBusinessData]);
 
 
-  const savePostToCloud = useCallback(async (
-    newContent: string, 
-    imageUrl?: string, 
-    cognitiveLens?: string
-  ): Promise<string | undefined> => {  // ✅ Add explicit return type
-    
-    if (!user?.id || !businessData || !supabase) {
-      console.error("❌ Missing required data for saving post");
-      return undefined;
-    }
-  
-    const cost = 2 + (imageUrl ? 3 : 0);
-  
-    // Snapshot at save time
-    const locationSnapshot = [
-      businessData.street, 
-      businessData.city, 
-      businessData.postal_code
-    ]
-      .filter(Boolean)
-      .join(", ");
-  
-    try {
-      const { data: rpcResult, error: rpcError } = await supabase
-        .rpc('save_post_and_deduct', {
-          p_user_id: user.id,
-          p_content: newContent,
-          p_image_url: imageUrl || '',
-          p_amount: cost,
-          p_business_name: businessData.business_name,     
-          p_location_snapshot: locationSnapshot,
-          p_cognitive_lens: cognitiveLens || ''
-        });
+  const savePostToCloud = useCallback(async (input: SavePostInput): Promise<string | undefined> => {
+  const {
+    content,
+    imageUrl,
+    postType,
+    contentCategory,
+    contentSummary,
+    offeringsReferenced = [],
+    eventReferenced,
+    hookUsed,
+    priceShown,
+    voiceUsed,
+    aiProvider,
+    wordCount,
+    tokensUsed,
+    cognitiveLens,
+  } = input;
 
-  
-      if (rpcError || !rpcResult[0]?.success) {
-        console.error("❌ RPC Error or insufficient credits:", rpcError);
-        alert("Insufficient credits! Email Nabil for a refill.");
-        return undefined;
-      }
-  
-      // ✅ Extract the UUID immediately
-      const newPostId = rpcResult[0].post_id;
-      
-      if (!newPostId) {
-        console.error("❌ RPC succeeded but returned no post ID!");
-        return undefined;
-      }
-  
-      console.log("✅ Post saved successfully. UUID:", newPostId);
-      console.log("✅ New credit balance:", rpcResult[0].new_balance);
-  
-      // Update local state immediately for a fast UI
-      setPosts(prev => [{
-        id: newPostId,
-        content: newContent,
-        image_url: imageUrl,
-        created_at: new Date().toISOString(),
-        business_id: user.id,
-        cognitive_lens: cognitiveLens
-      }, ...prev]);
-  
-      // Sync the credit count
-      await loadBusinessData();
-      
-      // ✅ Return the UUID
-      return newPostId;
-  
-    } catch (err: any) {
-      console.error("❌ Deduction error:", err.message);
+  if (!user?.id || !businessData || !supabase) {
+    console.error("❌ Missing required data for saving post");
+    return undefined;
+  }
+
+  const cost = 2 + (imageUrl ? 3 : 0);
+
+  const locationSnapshot = [
+    businessData.street, 
+    businessData.city, 
+    businessData.postal_code
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  try {
+    const { data: rpcResult, error: rpcError } = await supabase
+      .rpc('save_post_and_deduct', {
+        // Existing
+        p_user_id: user.id,
+        p_content: content,
+        p_image_url: imageUrl || '',
+        p_amount: cost,
+        p_business_name: businessData.business_name,
+        p_location_snapshot: locationSnapshot,
+
+        // NEW fields
+        p_post_type: postType,
+        p_content_category: contentCategory ?? null,
+        p_content_summary: contentSummary ?? null,
+        p_offerings_referenced: offeringsReferenced,
+        p_event_referenced: eventReferenced ?? null,
+        p_price_shown: priceShown ?? null,
+        p_hook_used: hookUsed ?? null,
+        p_voice_used: voiceUsed ?? null,
+        p_ai_provider: aiProvider ?? null,
+        p_word_count: wordCount ?? null,
+        p_tokens_used: tokensUsed ?? null,
+
+        // Legacy
+        p_cognitive_lens: cognitiveLens || ''
+      });
+
+    if (rpcError || !rpcResult[0]?.success) {
+      console.error("❌ RPC Error or insufficient credits:", rpcError);
+      alert("Insufficient credits! Email Nabil for a refill.");
       return undefined;
     }
-  }, [user?.id, loadBusinessData, businessData, supabase]);
+
+    const newPostId = rpcResult[0].post_id;
+    
+    if (!newPostId) {
+      console.error("❌ RPC succeeded but returned no post ID!");
+      return undefined;
+    }
+
+    console.log("✅ Post saved successfully. UUID:", newPostId);
+    console.log("✅ New credit balance:", rpcResult[0].new_balance);
+
+    // Update local state — include new fields for library view
+    setPosts(prev => [{
+      id: newPostId,
+      content,
+      image_url: imageUrl,
+      created_at: new Date().toISOString(),
+      business_id: user.id,
+      post_type: postType,
+      content_category: contentCategory,
+      content_summary: contentSummary,
+      offerings_referenced: offeringsReferenced,
+      cognitive_lens: cognitiveLens
+    }, ...prev]);
+
+    await loadBusinessData();
+    return newPostId;
+
+  } catch (err: any) {
+    console.error("❌ Deduction error:", err.message);
+    return undefined;
+  }
+}, [user?.id, loadBusinessData, businessData, supabase]);
 
   const deletePost = async (postId: string) => {
     if (!window.confirm("Delete?") || !supabase) return;
@@ -254,7 +322,7 @@ export default function DashboardPage() {
                     setVoice(newVoice); // Update UI state
                     updateSavedVoice(newVoice); // Save to DB
                   }}
-                  onGenerateSuccess={(content, url, cognitiveLens) => savePostToCloud(content, url, cognitiveLens)}
+                  onGenerateSuccess={savePostToCloud}
                   canGenerate={(businessData?.credits ?? 0) > 0}
                   userCredits={businessData?.credits ?? 0}
                   onDelete={() => {}}

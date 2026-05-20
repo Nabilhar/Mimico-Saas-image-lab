@@ -205,7 +205,7 @@ Cold butter is harder to handle, but it's not about ease—it's about structure 
 
                   <div className="w-full aspect-square bg-slate-100 border-y border-slate-100">
                     <img 
-                      src="/Baker-cutting-butter.png"
+                      src="/Baker-butter.png"
                       alt="Baker cutting cold butter for pastry dough" 
                       className="w-full h-full object-cover"
                     />
@@ -1024,7 +1024,7 @@ It's basically there for students (or anyone) who needs actual food late. Sunday
                 Post Type #5
               </div>
               <h2 className="text-3xl font-bold mb-4 text-slate-900">
-                Local Event / News: Neighborly Mentions
+                Local Event / News: Neighbourly Mentions
               </h2>
               <p className="text-lg text-slate-600 leading-relaxed">
                 Notice a pattern at your business, then casually mention a related local event. No hype, no community preaching—just neighborly conversation.

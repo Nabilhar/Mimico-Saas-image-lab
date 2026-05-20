@@ -8,17 +8,30 @@ import {
 import { NextResponse } from "next/server";
 import Groq from "groq-sdk"; // <-- NEW
 import { createClient } from '@supabase/supabase-js';
-import { getFramework, BUSINESS_ARCHETYPES, Framework, FRAMEWORKS   } from "@/lib/frameworks";
+import { getFramework, Framework, FRAMEWORKS   } from "@/lib/frameworks";
 import { TIP_MODE, CTA_BY_POST_TYPE, SEASONAL_NICHE_NARRATIVE, getSeason, NARRATIVE_COMBINATIONS, NarrativeEntry, ANGLE_POOL} from "@/lib/frameworks";
-import { getBrandIdentity, discoverAndSaveBrandIdentity, parseBusinessIntel, parseInteriorLayout  } from "@/lib/brandDiscovery";
+import { getBrandIdentity, discoverAndSaveBrandIdentity, parseBusinessIntel, parseInteriorLayout, parseExteriorLayout  } from "@/lib/brandDiscovery";
 import { ColorTheme, BusinessVisuals } from '@/lib/constants';
 import { auth } from "@clerk/nextjs/server"; 
 import { selectAngle } from "@/lib/angle-selector";
 import { buildPrompt as buildModePrompt } from "@/lib/prompt-builder";  // ← NEW
-import { type PostType } from "@/lib/mode-templates";  // ← NEW
 import { CognitiveLens } from "@/lib/cognitive-lenses";
 import { VOICE_PROMPTS } from "@/lib/VOICE_PROMPTS";
 import { getBusinessTime, getTimezoneForCity } from "@/lib/timezone";
+import { selectCategory } from '@/lib/category-selector';
+import { 
+  getRecentPostHistory, 
+  getRecentOfferings, 
+  formatRecentSummaries 
+} from '@/lib/post-history';
+import { parseGeneratedPost, validateOfferings } from '@/lib/post-parser';
+import type { PostType } from '@/lib/mode-templates';
+
+interface AIProviderResponse {
+  content: string;
+  tokensUsed: number;
+  provider: string;
+}
 
 // 1. Initialize Groq (The New Engine)
 const groq = new Groq({
@@ -90,7 +103,9 @@ async function fetchWeather(lat: number, lng: number, city: string): Promise<str
 // HELPER: THE PROVIDER CALLER
 // This encapsulates the actual API calls so the router can call them in a loop
 // ─────────────────────────────────────────────────────────────────────────────
-async function callAIProvider(provider: string, finalPrompt: string, currentTime: string, address: any) {
+async function callAIProvider(provider: string, finalPrompt: string, currentTime: string, address: any
+
+) : Promise<AIProviderResponse> {
   const fullAddress = `${address.city}, ${address.province_state} ${address.country} ${address.postal_code}`;
 
   if (provider === "groq") {
@@ -112,9 +127,11 @@ async function callAIProvider(provider: string, finalPrompt: string, currentTime
       max_tokens: 3000,
     });
     const groqContent = chatCompletion.choices[0]?.message?.content;
+    const tokensUsed = chatCompletion.usage?.total_tokens ?? 0;
     console.log("--- GROQ FINISH REASON:", chatCompletion.choices[0]?.finish_reason);
-    return groqContent || "";
-  } 
+    console.log(`--- GROQ TOKENS: ${tokensUsed} ---`);
+    return { content: groqContent || "", tokensUsed, provider: "groq" };
+  }
 
     // ───────────────────────────────────────────────────────────────────────────
   // NEW CLAUDE PROVIDER
@@ -152,8 +169,10 @@ async function callAIProvider(provider: string, finalPrompt: string, currentTime
     if (data.error) throw new Error(`Anthropic error: ${data.error.message}`);
     
     const content = data.content[0]?.text;
+    const tokensUsed = (data.usage?.input_tokens ?? 0) + (data.usage?.output_tokens ?? 0);
     console.log("--- ANTHROPIC FINISH REASON:", data.stop_reason);
-    return content || "";
+    console.log(`--- ANTHROPIC TOKENS: ${tokensUsed} (in: ${data.usage?.input_tokens}, out: ${data.usage?.output_tokens}) ---`);
+    return { content: content || "", tokensUsed, provider: "anthropic" };
   }
 
     // ───────────────────────────────────────────────────────────────────────────
@@ -250,7 +269,10 @@ async function callAIProvider(provider: string, finalPrompt: string, currentTime
         maxOutputTokens: 6000,
       } as any,
     });
-    return result.response.text();
+    const content = result.response.text();
+    const tokensUsed = result.response.usageMetadata?.totalTokenCount ?? 0;
+    console.log(`--- GEMMA TOKENS: ${tokensUsed} ---`);
+    return { content, tokensUsed, provider: "gemma" };
   } 
   
   if (provider === "gemini") {
@@ -265,7 +287,11 @@ async function callAIProvider(provider: string, finalPrompt: string, currentTime
       // ... safety settings
     });
 
-    return result.response.text();
+    const content = result.response.text();
+    const tokensUsed = result.response.usageMetadata?.totalTokenCount ?? 0;
+    console.log(`--- GEMINI TOKENS: ${tokensUsed} ---`);
+    
+    return { content, tokensUsed, provider: "gemini" };
   }
   
   throw new Error(`Unsupported provider: ${provider}`);
@@ -337,11 +363,6 @@ function buildLegacyPrompt(
     ? anglePool[Math.floor(Math.random() * anglePool.length)]
     : null;
 
-  const wordCount = postType === "Tip of the Day" 
-  ? "200-260" 
-  : postType === "Community moment" 
-    ? "110-150" 
-    : "130-180";
 
   const currentTime = new Date().toLocaleTimeString('en-US', { 
     hour: 'numeric', 
@@ -495,7 +516,7 @@ function buildLegacyPrompt(
       ${CTA_BY_POST_TYPE[postType]}
 
       [HARD CONSTRAINTS]:
-      - ${wordCount} words. 1st person. Short paragraphs, double-spaced.
+      - words. 1st person. Short paragraphs, double-spaced.
       - Max 3 emojis in body only. Never in hashtags.
       - No labels (e.g. "Hook:", "Tip 1:"). No commentary or word counts.
       - No competing business references.
@@ -565,7 +586,6 @@ export async function POST(req: Request) {
       provider: requestedProvider,
       address,  // ✨ NEW: Accept address object from GenerateDashboard
       offerName = "",
-      offerCategory = "discount",
       whatsIncluded = "",
       availableTimeframe = "",
       eligibility = "anyone",
@@ -686,16 +706,20 @@ export async function POST(req: Request) {
       );
     }) || [];
 
-    const uniqueUsedOfferings = [...new Set(usedOfferings)] as string[];
+
     const uniqueUsedLandmarks = [...new Set(usedLandmarks)] as string[];
 
+    // NEW — offerings from structured column, not substring matching
+const recentOfferings = await getRecentOfferings(supabase, userId);
+
     const varietyRules = [
-      uniqueUsedOfferings.length
-        ? `  - Products/offerings to avoid: ${uniqueUsedOfferings.join(", ")}`
-        : "  - No recent product patterns to avoid.",
+      recentOfferings.length
+      ? `- Products/offerings recently covered: ${recentOfferings.join(", ")}`
+      : "- No recent product patterns to avoid.",
+      // Landmarks still string-matched for now — fine until we add landmarks_referenced
       uniqueUsedLandmarks.length
-        ? `  - Landmarks to avoid: ${uniqueUsedLandmarks.join(", ")}`
-        : "  - No recent landmark patterns to avoid.",
+      ? `- Landmarks recently mentioned: ${uniqueUsedLandmarks.join(", ")}`
+      : "- No recent landmark patterns to avoid.",
       recentLenses.length
         ? `  - Cognitive lenses recently used: ${recentLenses.join(", ")} — select a completely different lens.`
         : "  - No recent lens patterns to avoid."
@@ -731,6 +755,18 @@ export async function POST(req: Request) {
     // Step 1: Get lens from all 4 available lenses (history prevents repetition)
     const angle = selectAngle(recentLenses as CognitiveLens[]);
 
+    // NEW — fetch mode-specific history directly from Supabase
+    const { categories: recentCategories, summaries: recentSummaries } = 
+    await getRecentPostHistory(supabase, userId, postType as PostType);
+
+    const selectedCategory = selectCategory(postType as PostType, recentCategories);
+    const recentSummariesFormatted = formatRecentSummaries(recentSummaries);
+
+    console.log(`[generate] post_type: ${postType}`);
+    console.log(`[generate] recent categories: ${JSON.stringify(recentCategories)}`);
+    console.log(`[generate] selected category: ${selectedCategory}`);
+    console.log(`[generate] recent summaries count: ${recentSummaries.length}`);
+
     // Step 3: Build parsed business intel structure
     const businessIntel = intel?.isJson ? {
       neighbourhood: intel.neighbourhood,
@@ -741,7 +777,7 @@ export async function POST(req: Request) {
       craft_identity: intel.craft_identity,
       description: intel.description,
       interior_layout: parseInteriorLayout(business.interior_layout),
-      storefront_architecture: business.storefront_architecture,
+      storefront_architecture: parseExteriorLayout(business.storefront_architecture),
       isInferred: intel.isInferred,
     } : undefined;
 
@@ -764,6 +800,8 @@ export async function POST(req: Request) {
       voice,
       postType: postType as PostType,
       recentHistory: recentHistory || undefined,
+      category: selectedCategory,
+      recentSummariesFormatted,
       varietyRules,
       currentTime,
       currentDay,
@@ -771,10 +809,10 @@ export async function POST(req: Request) {
       currentWeather: currentWeather || "Unknown",
       currentSeason,
       businessIntel: businessIntel,  // NEW: Pass structured data
+      event_type: eventType,
       event_or_shoutout: eventOrShoutout,
       // ✨ NEW: Promotion/Offer specific variables (MODE 4)
       offer_name: offerName,
-      offer_category: offerCategory,
       whats_included: whatsIncluded,
       available_timeframe: availableTimeframe,
       eligibility,
@@ -801,31 +839,39 @@ export async function POST(req: Request) {
     // THE SMART ROUTER LOGIC
     // ─────────────────────────────────────────────────────────────────────────────
     const engineMode = process.env.AI_ENGINE_MODE || "FALLBACK"; 
-    let rawResponse = "";
 
+    let rawResponse = "";
+    let tokensUsed = 0;
+    let providerUsed = "";
+    
     if (engineMode === "TOGGLE") {
-      // DEVELOPMENT MODE: Use exactly what the user toggled in the UI
       const providerToUse = requestedProvider || process.env.AI_PROVIDER || "gemini";
       console.log(`--- Shoreline MODE: TOGGLE [Using ${providerToUse}] ---`);
-      rawResponse = await callAIProvider(providerToUse, finalPrompt, currentTime, business);
+      const result = await callAIProvider(providerToUse, finalPrompt, currentTime, business);
+      rawResponse = result.content;
+      tokensUsed = result.tokensUsed;
+      providerUsed = result.provider;
       console.log("--- RAW RESPONSE ---");
       console.log(rawResponse);
       console.log("--- END RAW RESPONSE ---");
     } else {
-      // LAB/PRODUCTION MODE: Robust Fallback Chain
       console.log("--- Shoreline MODE: FALLBACK CHAIN ---");
       const fallbackChain = ["anthropic", "openrouter", "deepinfra"];
       let success = false;
-
+    
       for (const provider of fallbackChain) {
         try {
-          rawResponse = await callAIProvider(provider, finalPrompt, currentTime, business);
-          if (rawResponse) {
+          const result = await callAIProvider(provider, finalPrompt, currentTime, business);
+          if (result.content) {
+            rawResponse = result.content;
+            tokensUsed = result.tokensUsed;
+            providerUsed = result.provider;
             success = true;
-            break; // Stop the loop as soon as we get a successful response
+            console.log(`--- FALLBACK SUCCESS: ${providerUsed} (${tokensUsed} tokens) ---`);
+            break;
           }
-        } catch (e) {
-          console.warn(`Provider ${provider} failed. Moving to next in chain...`);
+        } catch (e: any) {
+          console.warn(`Provider ${provider} failed: ${e.message}. Moving to next in chain...`);
         }
       }
 
@@ -847,63 +893,54 @@ export async function POST(req: Request) {
     // ─────────────────────────────────────────────────────────────────────────────
     // LOGGING & CLEANUP
     // ─────────────────────────────────────────────────────────────────────────────
-    const localContextMatch = rawResponse.match(/\[LOCAL_CONTEXT:[\s\S]*?\]/);
-    if (localContextMatch) {
-      console.log("\x1b[32m%s\x1b[0m", "--- [Shoreline LOCAL CONTEXT] ---");
-      console.log(localContextMatch[0]);
-    }
-// 2. SMART CLEANUP (Handles the <research> tags for BOTH models)
-// 2. SMART CLEANUP (Handles the <research> tags for BOTH models)
+    const cleanedResponse = rawResponse
 
-let content = rawResponse;
-
-const signal = "<<<POST_BEGIN>>>";
-
-if (content.includes(signal)) {
-  // Find the last occurrence of the signal to skip all "thinking" versions
-  const lastSignalIndex = content.lastIndexOf(signal);
-  content = content.substring(lastSignalIndex + signal.length).trim();
-} else {
-  // FALLBACK: If the AI missed the signal, use the old split method
-  content = content.replace(/\[LOCAL_CONTEXT:[\s\S]*?\]/g, "").trim();
-}
-// Step B: Nuclear Scrub
-// This removes any stray tags, citations, or metadata
-content = content
-  .replace(/<[^>]*>/g, "")      // Removes any remaining <tag> markers
-  .replace(/\[\d+\]/g, "")      // Removes citations like [1], [2], [3]
-  .replace(/^>+\s*/gm, "")  // strips >> or >>> at the start of any line
-  .replace(/\s*>+$/gm, "")  // strips >> or >>> at the end of any line
-  .replace(/\*\*(.*?)\*\*/g, "$1")  // Remove **bold**
-  .replace(/\*(.*?)\*/g, "$1")      // Remove *italic*
-  .replace(/Word Count:\s*\d+/gi, "") // Removes "Word Count: 150"
-  .replace(/Keywords?:\s*[\s\S]*?(\n|$)/gi, "") // Removes "Keywords: ..."
-  .trim();
-
-// Step C: Formatting Polish
-content = content
-  .replace(/([.!?])\s+(?=[1-5]\.)/g, "$1\n\n") // Ensures a gap before numbered lists
-  .replace(/(\d\.)\s+/g, "$1 ")                // Ensures space after numbers (e.g., "1. Tip" vs "1.Tip")
-  .replace(/\n(?=[1-5]\.)/g, "\n")             // Keeps lists compact
-  .replace(/(#\w+)/g, "\n\n$1")                // Pushes hashtags to their own line
-  .replace(/(#\w+)\s+(?=#\w+)/g, "$1 ");       // Keeps hashtags together on one line
-
-// Step D: Final Cleanup of Triple Newlines
-content = content.replace(/\n{3,}/g, "\n\n").trim();
-
-// Final content validation
-if (!content || content.trim().length < 80) {
-  console.error("--- CLEANED CONTENT TOO SHORT — ABORTING ---");
-  console.error(`Cleaned content: "${content}"`);
-  return NextResponse.json(
-    { error: "Generation failed — post content was incomplete. Please try again." },
-    { status: 500 }
+    .replace(/<research>[\s\S]*?<\/research>/gi, "")
+    .replace(/--- RAW RESPONSE ---[\s\S]*?--- END STRIPPED ---/gi, "")
+    .replace(/\*Check.*?\*/gi, "")
+    .replace(/Total words:\s*\d+/gi, "")
+    .trim();
+  
+  // ── NEW: Parse the cleaned text into structured fields ───────────────
+  const parsed = parseGeneratedPost(cleanedResponse, postType as PostType);
+  
+  // ── NEW: Validate offerings, compute analytics ───────────────────────
+  const knownOfferings = intel?.products_services || [];
+  const validatedOfferings = validateOfferings(
+    parsed.offerings_referenced, 
+    knownOfferings
   );
-}
-
+  
+  const wordCount = parsed.content.split(/\s+/).filter(Boolean).length;
+  
+  console.log('[generate] parsed output:', {
+    has_category: !!parsed.content_category,
+    has_summary: !!parsed.content_summary,
+    offerings_count: validatedOfferings.length,
+    word_count: wordCount,
+  });
 console.log("--- GENERATION SUCCESSFUL ---");
-return NextResponse.json({ content, framework, currentWeather, cognitive_lens: lens });
 
+return NextResponse.json({
+  content: parsed.content,
+  hashtags: parsed.hashtags,
+  currentWeather,
+  
+  // NEW structured fields
+  post_type: postType,
+  content_category: parsed.content_category,
+  content_summary: parsed.content_summary,
+  offerings_referenced: validatedOfferings,
+  event_referenced: parsed.event_referenced || null,
+  hook_used: parsed.hook_used || null,
+  voice_used: voice,
+  ai_provider: providerUsed,
+  word_count: wordCount,
+  tokens_used: tokensUsed, // from your provider response
+  
+  // Legacy
+  cognitive_lens: lens,
+});
 
 } catch (error: any) {
 console.error("--- Shoreline ENGINE CRASH REPORT ---");
