@@ -191,25 +191,29 @@ export async function POST(req: Request) {
           fullAddressString
         );
 
-        if (visionData && visionData.visuals) {
+        if (visionData && (visionData.color_theme || visionData.zones)) {
           // Save vision results directly to Supabase
           const { error: updateError } = await supabase
             .from('businesses')
             .update({
-              color_theme: {
-                primary: visionData.visuals.primary_color || "neutral",
-                secondary: visionData.visuals.secondary_color || "neutral",
-                accent: visionData.visuals.accent_color || "neutral",
-                description: visionData.visuals.theme_description || "natural tones",
-              },
-              business_visuals: {
-                logoColors: visionData.visuals.logo_colors || "Not provided",
-                storefrontColors: visionData.visuals.storefront_colors || "Not provided",
-                interiorColors: visionData.visuals.interior_colors || "Not provided",
-              },
-              storefront_architecture: visionData.visuals.storefront_architecture || null,
-              interior_layout: visionData.visuals.interior_layout || "Not provided",
+              color_theme: visionData.color_theme
+                ? {
+                    primary:     visionData.color_theme.primary     || "neutral",
+                    secondary:   visionData.color_theme.secondary   || "neutral",
+                    accent:      visionData.color_theme.accent      || "neutral",
+                    description: visionData.color_theme.description || "natural tones",
+                  }
+                : {
+                    primary:     "neutral",
+                    secondary:   "neutral",
+                    accent:      "neutral",
+                    description: "natural tones",
+                  },
+
+              zones: visionData.zones || null,
+
               brand_source: "photos",
+
             })
             .eq('id',  business_id);
 
@@ -218,7 +222,7 @@ export async function POST(req: Request) {
             throw updateError;
           }
 
-          console.log(`✅ [Discovery API] PATH 2: Vision analysis complete and saved`);
+          console.log(`✅ [Discovery API] PATH 2: Vision analysis complete and saved (color_theme + zones)`);
         }
       } catch (visionError) {
         console.error(`❌ [Discovery API] PATH 2 failed:`, visionError);

@@ -39,6 +39,7 @@ export interface BusinessIdentity {
   business_visuals: BusinessVisuals | null;
   storefront_architecture: any | null;
   interior_layout: string | null;
+  zones: any | null;  
   brand_source: string | null; 
   business_description: string | null; 
   _stored_business_name?: string | null;

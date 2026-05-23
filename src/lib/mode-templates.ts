@@ -161,8 +161,6 @@ You're sharing one specific, useful piece of craft knowledge from your trade.
 [Offerings]
 {{products_services}}
 
-[Craft]
-{{craft_identity}}
 
 [DAILY CONTEXT]
 Date: {{current_date}} | Time: {{current_time}} | Season: {{current_season}}
@@ -274,9 +272,8 @@ something that happens in your business that customers rarely see.
 
 [Offerings]
 {{products_services}}
+{{practices_by_offering}}
 
-[Craft]
-{{craft_identity}}
 
 [DAILY CONTEXT]
 Date: {{current_date}} | Time: {{current_time}} | Season: {{current_season}}
@@ -316,12 +313,12 @@ physical detail. Stop inside the moment.
 
 [LOCATION USE]
 
-[INTERIOR LAYOUT]
-{{interior_counter_position}}
-{{interior_seating}}
-{{interior_space_plan}}
-{{interior_lighting}}
-{{interior_distinctive_feature}}
+[WORK SPACE — where the craft happens]
+Arrangement: {{work_space_arrangement}}
+Focal point: {{work_space_focal}}
+Materials & finishes: {{work_space_materials}}
+Lighting: {{work_space_lighting}}
+Activity: {{work_space_activity}}
 
 Reference the physical space (the bench, the oven, the cooler, the counter)
 as part of the work. Do not name the business, the neighborhood, or

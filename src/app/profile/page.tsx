@@ -9,6 +9,12 @@ import { getFramework, BUSINESS_ARCHETYPES } from "@/lib/frameworks";
 import { NICHE_DATA, CATEGORIES, VOICES } from "@/lib/constants";
 import { createClerksupabase } from '@/lib/supabase';
 import { UploadedPhoto } from "@/lib/brandDiscovery";
+import { 
+  extractOfferingNames, 
+  extractPracticesByOffering,
+  parseInteriorLayout,
+  parseExteriorLayout 
+} from '@/lib/parse-business-intel';
 import toast from "react-hot-toast";
 
 
@@ -93,12 +99,13 @@ function parseBusinessIntel(raw: any) {
 
     return {
       description: raw.description || "",
-      craft_identity: raw.craft_identity || "",
       neighbourhood: raw.neighbourhood || "",
       landmarks: Array.isArray(raw.landmarks) ? raw.landmarks : [],
       transit: Array.isArray(raw.transit) ? raw.transit : [],
       local_trends: Array.isArray(raw.local_trends) ? raw.local_trends : [],
-      products_services: Array.isArray(raw.products_services) ? raw.products_services : [],
+
+      products_services: extractOfferingNames(raw.products_services),
+      practices_by_offering: extractPracticesByOffering(raw.products_services),
       
       // ✨ NEW: Interior and storefront data for MODE 3
       interior_layout: raw.interior_layout ? parseInteriorLayout(raw.interior_layout) : undefined,
@@ -112,12 +119,13 @@ function parseBusinessIntel(raw: any) {
 
     return {
       description: parsed.description || "",
-      craft_identity: parsed.craft_identity || "",
       neighbourhood: parsed.neighbourhood || "",
       landmarks: Array.isArray(parsed.landmarks) ? parsed.landmarks : [],
       transit: Array.isArray(parsed.transit) ? parsed.transit : [],
       local_trends: Array.isArray(parsed.local_trends) ? parsed.local_trends : [],
-      products_services: Array.isArray(parsed.products_services) ? parsed.products_services : [],
+      
+      products_services: extractOfferingNames(parsed.products_services),
+      practices_by_offering: extractPracticesByOffering(parsed.products_services),
       
       // ✨ NEW: Interior and storefront data for MODE 3
       interior_layout: parsed.interior_layout ? parseInteriorLayout(parsed.interior_layout) : undefined,
@@ -132,62 +140,6 @@ function parseBusinessIntel(raw: any) {
       storefront_architecture: undefined,
     };
   }
-}
-
-/**
- * ✨ NEW: Helper function to parse interior_layout
- */
-function parseInteriorLayout(data: any): any {
-  if (!data) return undefined;
-  
-  // If it's already structured, return as-is
-  if (typeof data === 'object' && !Array.isArray(data)) {
-    return {
-      counter_position: data.counter_position,
-      seating_style_density: data.seating_style_density,
-      open_plan_or_divided_spaces: data.open_plan_or_divided_spaces,
-      lighting_mood: data.lighting_mood,
-      distinctive_design_feature: data.distinctive_design_feature,
-    };
-  }
-  
-  // If it's a string, return as distinctive_design_feature
-  if (typeof data === 'string') {
-    return {
-      distinctive_design_feature: data,
-    };
-  }
-  
-  return undefined;
-}
-
-function parseExteriorLayout(data: any): any {
-  if (!data) return undefined;
-  
-  // If it's already structured (from Gemini vision), return as-is
-  if (typeof data === 'object' && !Array.isArray(data)) {
-    return {
-
-      storefront_facade: data.storefront_facade,
-      storefront_door: data.storefront_door,
-      storefront_stories: data.storefront_stories,
-      storefront_material: data.storefront_material,
-      storefront_windows: data.storefront_windows,
-      storefront_patio: data.storefront_patio,
-      storefront_planters: data.storefront_planters,
-      storefront_corner: data.storefront_corner,
-      storefront_furniture: data.storefront_furniture,
-    };
-  }
-  
-  // If it's a string description from research, return it as storefront_furniture
-  if (typeof data === 'string') {
-    return {
-      storefront_furniture: data,
-    };
-  }
-  
-  return undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -237,9 +189,9 @@ export default function ProfilePage() {
   const [saveMode, setSaveMode] = useState<'update' | 'create'>('update');
 
   // ── Photo upload state (3 optional slots) ─────────────────────────────────
-  const [storefrontPhoto, setStorefrontPhoto] = useState<File | null>(null);
-  const [logoPhoto, setLogoPhoto] = useState<File | null>(null);
-  const [interiorPhoto, setInteriorPhoto] = useState<File | null>(null);
+  const [entrancePhoto,      setEntrancePhoto]      = useState<File | null>(null);
+  const [customerSpacePhoto, setCustomerSpacePhoto] = useState<File | null>(null);
+  const [workSpacePhoto,     setWorkSpacePhoto]     = useState<File | null>(null);
 
   // ── Brand source state — drives which UI the photo section shows ─────────
   // null        = first visit, discovery hasn't run yet
@@ -432,10 +384,10 @@ export default function ProfilePage() {
       setBusinessDescription(data.business_description?.description || "");
 
       // --- ADD THIS TO PREVENT LEAKING PHOTOS FROM OLD BUSINESS ---
-      setStorefrontPhoto(null);
-      setLogoPhoto(null);
-      setInteriorPhoto(null);
-      
+      setEntrancePhoto(null);
+      setCustomerSpacePhoto(null);
+      setWorkSpacePhoto(null);
+            
       toast.success(`Found existing data for "${data.business_name}"!`, { icon: '🔄' });
     }
   };
@@ -497,9 +449,9 @@ export default function ProfilePage() {
       // 2. Upload Photos
       const uploadedPhotoData: UploadedPhoto[] = [];
       const selectedFiles = [
-        { file: storefrontPhoto, label: "storefront" },
-        { file: logoPhoto,       label: "logo"       },
-        { file: interiorPhoto,   label: "interior"   },
+        { file: entrancePhoto,      label: "entrance"       },
+        { file: customerSpacePhoto, label: "customer_space" },
+        { file: workSpacePhoto,     label: "work_space"     },
       ].filter((p) => p.file !== null) as { file: File; label: string }[];
 
       if (selectedFiles.length > 0) {
@@ -994,7 +946,7 @@ export default function ProfilePage() {
                   <div>
                     <p className="text-sm font-semibold text-emerald-800">Brand identity captured from your photos</p>
                     <p className="text-[11px] text-emerald-700 mt-0.5">
-                      The AI has analyzed your storefront, logo, and hero product to extract your exact brand colors and style.
+                    The AI has analyzed your entrance, customer space, and work space to extract your exact brand colors and spatial identity.
                     </p>
                     <button
                       type="button"
@@ -1019,11 +971,11 @@ export default function ProfilePage() {
                     </div>
                   </div>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                    <PhotoSlot label="Storefront" sublabel="Exterior / signage" icon="🏪" file={storefrontPhoto} onChange={setStorefrontPhoto} />
-                    <PhotoSlot label="Logo" sublabel="Your brand mark" icon="✦" file={logoPhoto} onChange={setLogoPhoto} />
-                    <PhotoSlot label="Interior" sublabel="Main space / layout" icon="⭐" file={interiorPhoto} onChange={setInteriorPhoto} />
+                    <PhotoSlot label="Entrance"       sublabel="Storefront, patio, reception"     icon="🚪" file={entrancePhoto}      onChange={setEntrancePhoto} />
+                    <PhotoSlot label="Customer space" sublabel="Seating, waiting room, retail floor" icon="🪑" file={customerSpacePhoto} onChange={setCustomerSpacePhoto} />
+                    <PhotoSlot label="Work space"     sublabel="Kitchen, studio, treatment room"  icon="🔧" file={workSpacePhoto}     onChange={setWorkSpacePhoto} />
                   </div>
-                  {storefrontPhoto || logoPhoto || interiorPhoto ? (
+                  {entrancePhoto || customerSpacePhoto || workSpacePhoto ? (
                     <p className="text-[11px] text-cyan-700 bg-cyan-50 border border-cyan-100 rounded-xl px-3 py-2">
                       ✅ The AI will re-analyze your brand using these photos after saving.
                     </p>
@@ -1034,11 +986,11 @@ export default function ProfilePage() {
                 /* STATE 3: First visit — neutral upload slots, no pressure */
                 <>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                    <PhotoSlot label="Storefront" sublabel="Exterior / signage" icon="🏪" file={storefrontPhoto} onChange={setStorefrontPhoto} />
-                    <PhotoSlot label="Logo" sublabel="Your brand mark" icon="✦" file={logoPhoto} onChange={setLogoPhoto} />
-                    <PhotoSlot label="Interior" sublabel="Main space / layout" icon="🪑" file={interiorPhoto} onChange={setInteriorPhoto} />
+                    <PhotoSlot label="Entrance"       sublabel="Storefront, patio, reception"     icon="🚪" file={entrancePhoto}      onChange={setEntrancePhoto} />
+                    <PhotoSlot label="Customer space" sublabel="Seating, waiting room, retail floor" icon="🪑" file={customerSpacePhoto} onChange={setCustomerSpacePhoto} />
+                    <PhotoSlot label="Work space"     sublabel="Kitchen, studio, treatment room"  icon="🔧" file={workSpacePhoto}     onChange={setWorkSpacePhoto} />
                   </div>
-                  {storefrontPhoto || logoPhoto || interiorPhoto ? (
+                  {entrancePhoto || customerSpacePhoto || workSpacePhoto ? (
                     <p className="text-[11px] text-cyan-700 bg-cyan-50 border border-cyan-100 rounded-xl px-3 py-2">
                       ✅ The AI will analyze your photos to extract your exact brand colors and style after saving.
                     </p>

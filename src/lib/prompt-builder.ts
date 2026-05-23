@@ -26,13 +26,14 @@ const SUMMARY_PLACEHOLDER: Partial<Record<PostType, string>> = {
 };
 
 export interface ParsedBusinessIntel {
+  description?: string;
   neighbourhood?: string;
   landmarks?: string[];
   transit?: string[];
   local_trends?: string[];
   products_services?: string[];
-  craft_identity?: string;
-  description?: string;
+  practices_by_offering: Record<string, string[]>; 
+  zones?: any | null; 
   isInferred?: boolean;
 
   interior_layout?: {
@@ -49,8 +50,6 @@ export interface ParsedBusinessIntel {
       stories?: string;
       window_type?: string;
       door?: string;
-
-
     };
     features?: {
       patio?: string;
@@ -101,7 +100,6 @@ const MODE_DATA_REQUIREMENTS = {
   EDUCATION: {
     modes: ['Myth-busting', 'Tip of the Day'],
     needs: {
-      craft_identity: true,
       products_services: true,
       description: true,
       neighbourhood: true,
@@ -117,7 +115,6 @@ const MODE_DATA_REQUIREMENTS = {
   OBSERVATION: {
     modes: ['Behind the scenes', 'Promotion / offer'],
     needs: {
-      craft_identity: false,
       products_services: true,
       description: true,
       neighbourhood: true,
@@ -133,7 +130,6 @@ const MODE_DATA_REQUIREMENTS = {
   COMMUNITY: {
     modes: ['Local event / news', 'Community moment'],
     needs: {
-      craft_identity: true,
       products_services: false,
       description: true,
       neighbourhood: true,
@@ -157,7 +153,6 @@ function getDataRequirements(postType: string) {
   }
   // Default: include everything (safest fallback)
   return {
-    craft_identity: true,
     products_services: true,
     description: true,
     neighbourhood: true,
@@ -181,14 +176,9 @@ function buildBusinessIntelSection(
 
   const needs = getDataRequirements(postType);
   const parts: string[] = [];
-
-  // Core business info (almost always needed)
-  if (needs.craft_identity && intel.craft_identity) {
-    parts.push(`Craft: ${intel.craft_identity}`);
-  }
   
   if (intel.isInferred) {
-    parts.push("Note: Craft identity was inferred — use as background context only.");
+    parts.push("Note: business identity was inferred — use as background context only.");
   }
   
   if (needs.description && intel.description) {
@@ -292,6 +282,27 @@ function getCurrentSeason(): string {
 }
 
 /**
+ * Format practices_by_offering for template consumption
+ * Returns a formatted string that templates can use
+ */
+function formatPracticesByOffering(data?: Record<string, string[]>): string {
+  if (!data || Object.keys(data).length === 0) {
+    return "";
+  }
+  
+  const formatted = Object.entries(data)
+    .map(([offering, practices]) => {
+      if (!practices || practices.length === 0) return "";
+      const practicesList = practices.map(p => `  - ${p}`).join("\n");
+      return `${offering}:\n${practicesList}`;
+    })
+    .filter(Boolean)
+    .join("\n\n");
+  
+  return formatted;
+}
+
+/**
  * Build a complete prompt by selecting the MODE template and injecting variables
  */
 export function buildPrompt(config: PromptBuilderConfig): string {
@@ -326,7 +337,6 @@ export function buildPrompt(config: PromptBuilderConfig): string {
 
     // GRANULAR BUSINESS INTEL FIELDS - Use these anywhere in templates!
     // Core identity fields
-    craft_identity: intel?.craft_identity || "",
     business_description: intel?.description || "",
     
     // Location fields
@@ -337,6 +347,7 @@ export function buildPrompt(config: PromptBuilderConfig): string {
     
     // Offerings
     products_services: intel?.products_services?.join(", ") || "",
+    practices_by_offering: formatPracticesByOffering(intel?.practices_by_offering),
     
     // Interior layout fields
     interior_counter_position: intel?.interior_layout?.counter_position || "",
@@ -355,6 +366,28 @@ export function buildPrompt(config: PromptBuilderConfig): string {
     storefront_planters: intel?.storefront_architecture?.features?.planters || "",
     storefront_corner: intel?.storefront_architecture?.features?.corner_unit || "",
     storefront_furniture: intel?.storefront_architecture?.features?.street_furniture || "",
+
+    // ─── NEW: Zone-based spatial fields ───────────────────────────────
+    // Entrance — storefront, patio, reception, signage
+    entrance_arrangement:    intel?.zones?.entrance?.layout?.spatial_arrangement || "",
+    entrance_focal:          intel?.zones?.entrance?.layout?.focal_feature       || "",
+    entrance_materials:      intel?.zones?.entrance?.layout?.materials_finishes  || "",
+    entrance_lighting:       intel?.zones?.entrance?.layout?.lighting_mood       || "",
+    entrance_activity:       intel?.zones?.entrance?.layout?.activity_zone       || "",
+
+    // Customer space — dining, waiting, retail floor, reception
+    customer_space_arrangement: intel?.zones?.customer_space?.layout?.spatial_arrangement || "",
+    customer_space_focal:       intel?.zones?.customer_space?.layout?.focal_feature       || "",
+    customer_space_materials:   intel?.zones?.customer_space?.layout?.materials_finishes  || "",
+    customer_space_lighting:    intel?.zones?.customer_space?.layout?.lighting_mood       || "",
+    customer_space_activity:    intel?.zones?.customer_space?.layout?.activity_zone       || "",
+
+    // Work space — kitchen, treatment room, studio floor, workshop
+    work_space_arrangement: intel?.zones?.work_space?.layout?.spatial_arrangement || "",
+    work_space_focal:       intel?.zones?.work_space?.layout?.focal_feature       || "",
+    work_space_materials:   intel?.zones?.work_space?.layout?.materials_finishes  || "",
+    work_space_lighting:    intel?.zones?.work_space?.layout?.lighting_mood       || "",
+    work_space_activity:    intel?.zones?.work_space?.layout?.activity_zone       || "",
     
     // Other variables
     event_type: config.event_type || "",

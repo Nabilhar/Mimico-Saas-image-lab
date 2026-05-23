@@ -3,6 +3,13 @@
 import { createClient } from '@supabase/supabase-js';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { BusinessIdentity } from '@/lib/constants';
+import { 
+  extractOfferingNames, 
+  extractPracticesByOffering,
+  parseInteriorLayout,
+  parseExteriorLayout,
+  parseZones
+} from './parse-business-intel';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 const supabase = createClient(
@@ -73,6 +80,7 @@ export async function getBrandIdentity(businessId: string): Promise<BusinessIden
       business_visuals,
       storefront_architecture,
       interior_layout,
+      zones,
       brand_source,
       business_description,
       business_name,
@@ -92,6 +100,7 @@ export async function getBrandIdentity(businessId: string): Promise<BusinessIden
       business_visuals: null,
       storefront_architecture: null,
       interior_layout: null,
+      zones: null,
       brand_source: null,
       business_description: null
     };
@@ -102,6 +111,7 @@ export async function getBrandIdentity(businessId: string): Promise<BusinessIden
     business_visuals: data?.business_visuals || null,
     storefront_architecture: data?.storefront_architecture || null,
     interior_layout: data?.interior_layout || null,
+    zones: data?.zones || null, 
     brand_source: data?.brand_source || null,
     business_description: data?.business_description || null,
     _stored_business_name: data?.business_name || null,
@@ -112,6 +122,7 @@ export async function getBrandIdentity(businessId: string): Promise<BusinessIden
     last_analyzed_city: data?.last_analyzed_city || null,
   };
 }
+
 
 
 export function parseBusinessIntel(raw: any) {
@@ -125,18 +136,22 @@ export function parseBusinessIntel(raw: any) {
 
       return {
         description:       parsed.description       || "",
-        craft_identity:    parsed.craft_identity     || "",
         neighbourhood:     parsed.neighbourhood      || "",
         landmarks:         Array.isArray(parsed.landmarks)         ? parsed.landmarks         : [],
         transit:           Array.isArray(parsed.transit)           ? parsed.transit           : [],
         local_trends:      Array.isArray(parsed.local_trends)      ? parsed.local_trends      : [],
-        products_services: Array.isArray(parsed.products_services) ? parsed.products_services : [],
+
+        products_services: extractOfferingNames(parsed.products_services),
+        practices_by_offering: extractPracticesByOffering(parsed.products_services),
+  
 
         interior_layout: parsed.interior_layout ? parseInteriorLayout(parsed.interior_layout) : undefined,
         storefront_architecture: parsed.storefront_architecture ? parseExteriorLayout(parsed.storefront_architecture) : undefined,
 
+        zones: undefined, 
+
         isJson:            true,
-        isInferred:        (parsed.craft_identity || "").startsWith("INFERRED:"),
+        isInferred:        (parsed.description || "").startsWith("INFERRED:"),
       };
 
   } catch (e) {console.error("parseBusinessIntel failed:", e);}
@@ -146,94 +161,20 @@ export function parseBusinessIntel(raw: any) {
       typeof raw === "string"
           ? raw
           : raw?.description || "",
-    craft_identity:    "",
     neighbourhood:     null,
     landmarks:         [],
     transit:           [],
     local_trends:      [],
     products_services: [],
+    practices_by_offering: {}, 
     interior_layout:   undefined,
     storefront_architecture: undefined,
+    zones:             undefined,
     isJson:            false,
     isInferred:        false,
   };
 }
 
-/**
- * ✨ NEW: Helper function to parse interior_layout from vision output
- * Converts string description into structured fields
- */
-export function parseInteriorLayout(data: any): any {
-  if (!data) return undefined;
-  
-  // If it's already structured (from Gemini vision), return as-is
-  if (typeof data === 'object' && !Array.isArray(data)) {
-    return {
-      counter_position: data.counter_position,
-      seating_style_density: data.seating_style_density,
-      open_plan_or_divided_spaces: data.open_plan_or_divided_spaces,
-      lighting_mood: data.lighting_mood,
-      distinctive_design_feature: data.distinctive_design_feature,
-    };
-  }
-  
-  // If it's a string description from research, return it as distinctive_design_feature
-  if (typeof data === 'string') {
-    return {
-      distinctive_design_feature: data,
-    };
-  }
-  
-  return undefined;
-}
-
-/**
- * Helper function to parse storefront_architecture from vision output.
- * Returns the nested {building, features} structure the prompt-builder reads.
- * Handles both string descriptions and nested objects from the AI.
- */
-export function parseExteriorLayout(data: any): any {
-  if (!data) return undefined;
-
-  // String input — wrap as a facade description
-  if (typeof data === 'string') {
-    return {
-      building: { facade_style: data },
-      features: {},
-    };
-  }
-
-  // Object input (most common from Gemini Vision)
-  if (typeof data === 'object' && !Array.isArray(data)) {
-    // `building` can be a string OR a nested object — normalize both
-    const building = typeof data.building === 'string'
-      ? { facade_style: data.building }       // wrap whole string as facade
-      : (data.building || {});
-
-    // `features` can be a string OR a nested object — normalize both
-    const features = typeof data.features === 'string'
-      ? { patio: data.features }              // wrap whole string into patio field
-      : (data.features || {});
-
-    return {
-      building: {
-        material:     building.material,
-        facade_style: building.facade_style,
-        stories:      building.stories,
-        window_type:  building.window_type,
-        door:         building.door,
-      },
-      features: {
-        patio:            features.patio,
-        planters:         features.planters,
-        street_furniture: features.street_furniture,
-        corner_unit:      features.corner_unit,
-      },
-    };
-  }
-
-  return undefined;
-}
 // ---------------------------------------------------------------------------
 // PATH A: Gemini Vision Analysis
 // ---------------------------------------------------------------------------
@@ -247,182 +188,243 @@ export async function analyzePhotosWithGemini(
 
   // Vision only — no search tool
   const model = genAI.getGenerativeModel(
-    { model: "models/gemini-2.5-flash" },  // removed tools
+    { model: "models/gemini-2.5-flash",  // removed tools
+      generationConfig: {
+        responseMimeType: "application/json",
+      },
+    },
     { apiVersion: "v1beta" }
   );
- // FIX: Fetch images from URLs and convert to base64 INTERNALLY
-  const imageParts = await Promise.all(
-    photos.map(photo => urlToGenerativePart(photo.url, photo.mimeType))
-  );
+  // Map photos to zones via label, regardless of array order
+  const ZONE_ORDER = ["entrance", "customer_space", "work_space"] as const;
+  const photosByZone: Record<string, UploadedPhoto | null> = {
+    entrance: null,
+    customer_space: null,
+    work_space: null,
+  };
 
-  const photoContext = photos.length > 0
-  ? photos.map((p, i) => `Photo ${i + 1}: ${p.label}`).join(", ")
-  : "No photos provided";
-
-  const textPrompt = `
-  You are a professional brand photographer and visual analyst.
-  Your only job is to extract visual identity information 
-  from these photos with precision.
-  
-  [CONTEXT]:
-  Business: "${businessName}"
-  Address: "${fullAddress}"
-  Photos provided: ${photoContext}
-  
-  [YOUR TASK]:
-  Study each photo carefully and extract visual details 
-  with the precision of a professional art director.
-  
-  Do not search the web. Do not infer from business type.
-  Read only what is visible in the photos.
-  If something is not visible — say "Not visible in photos".
-  Never guess. Never invent. Only report what you see.
-  
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  COLORS — Read with precision
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Extract colors the way a paint professional would:
-  Not "blue" — "deep navy with slight grey undertone"
-  Not "brown" — "warm walnut, medium saturation"
-  Not "white" — "warm off-white, slightly cream"
-  
-  For each color identify:
-  - The exact hue and tone
-  - Whether it is warm, cool, or neutral
-  - Its role — dominant, supporting, or accent
-  
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  LOGO — If logo photo provided
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  - Primary color of the logo mark or wordmark
-  - Secondary color if present
-  - Background color
-  - Overall palette impression in one phrase
-  
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  STOREFRONT — If storefront photo provided
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Facade:
-  - Building material (brick, stucco, glass, wood, metal)
-  - Facade color — precise tone description
-  - Signage color and style
-  - Door color and material
-  - Window style (floor-to-ceiling, divided panes, frosted)
-  - Awning or canopy — color and material if present
-  
-  Street presence:
-  - Corner unit or mid-block
-  - Patio or outdoor seating visible
-  - Bike racks, planters, or street furniture
-  - Overall street-level impression in one sentence
-  
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  INTERIOR — If interior photo provided
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Surfaces and materials:
-  - Wall color and finish (painted, exposed brick, 
-    tile, wood panel, wallpaper)
-  - Floor material and color (hardwood tone, tile 
-    pattern, concrete, terrazzo)
-  - Ceiling — height impression, material, color
-  - Counter or bar material if visible 
-    (marble, wood, tile, concrete, laminate)
-  
-  Lighting:
-  - Warm or cool light temperature
-  - Natural light level — abundant, moderate, dim
-  - Pendant lights, track lighting, recessed, 
-    neon signs — describe what you see
-  - Overall lighting mood in one phrase
-  
-  Spatial arrangement:
-  - Counter or service bar position (front, back, side)
-  - Seating style (café chairs, banquettes, bar stools,
-    lounge seating) and approximate density
-  - Open plan or divided spaces
-  - Any distinctive design feature that defines the space
-    (exposed pipes, feature wall, open kitchen, etc.)
-  
-  Mood and atmosphere:
-  - One sentence capturing the overall feel of the space
-    as a customer would experience it on arrival
-  
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  BRAND PALETTE SYNTHESIS
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  After reading all photos:
-  - What is the dominant brand color?
-  - What is the supporting color?
-  - What is the accent or highlight color?
-  - Write one sentence describing the overall 
-    palette mood — warm/cool, minimal/rich, 
-    industrial/organic, bold/restrained
-  
-  [RULES]:
-  - Report only what is visible in the photos
-  - Use precise color language — not generic names
-  - If a photo type is missing — return 
-    "Not visible in photos" for those fields
-  - Never infer from business name or category
-  - Never search the web
-  
-  [OUTPUT]:
-  Return ONLY a valid JSON object.
-  No preamble. No markdown. No explanation.
-  Start with { and end with }
-  
-  {
-    "visuals": {
-      "primary_color": "precise color description 
-        — hue, tone, temperature",
-      "secondary_color": "precise color description 
-        or Not visible in photos",
-      "accent_color": "precise color description 
-        or Not visible in photos",
-      "theme_description": "one sentence — overall 
-        palette mood and atmosphere",
-      "logo_colors": "precise colors visible in logo 
-        or Not visible in photos",
-      "storefront_colors": "facade color, signage color, 
-        door color — precise descriptions 
-        or Not visible in photos",
-      "storefront_architecture": {
-        "building": {
-          "facade_style": "facade description or Not visible in photos",
-          "material": "material description or Not visible in photos",
-          "stories": "number of stories or Not visible in photos",
-          "window_type": "windows description or Not visible in photos",
-          "door": "doors description or Not visible in photos"
-        },
-        "features": {
-          "patio": "patio description or Not visible in photos",
-          "planters": "planters description or Not visible in photos",
-          "corner_unit": "position description or Not visible in photos",
-          "street_furniture": "street furniture description or Not visible in photos"
-        }
-      },
-      "interior_colors": "wall color, floor tone, 
-        ceiling, counter material — precise descriptions 
-        or Not visible in photos",
-      "interior_layout": {
-      "counter_position": "position description or Not visible in photos",
-      "seating_style_density": "seating description or Not visible in photos",
-      "open_plan_or_divided_spaces": "spatial description or Not visible in photos",
-      "lighting_mood": "lighting description or Not visible in photos",
-      "distinctive_design_feature": "design feature description or Not visible in photos"
-      }
+  for (const photo of photos) {
+    if (photo.label in photosByZone) {
+      photosByZone[photo.label] = photo;
     }
   }
-  `;
 
-  const result = await model.generateContent([...imageParts, { text: textPrompt }]);
+  // Interleave a zone header before each image so Gemini can't misread the order
+  const interleavedParts: any[] = [];
+  const photoContextLines: string[] = [];
+
+  for (const zone of ZONE_ORDER) {
+    const photo = photosByZone[zone];
+    const zoneUpper = zone.toUpperCase();
+    if (photo) {
+      interleavedParts.push({ text: `\n[PHOTO FOR ZONE: ${zoneUpper}]\n` });
+      interleavedParts.push(await urlToGenerativePart(photo.url, photo.mimeType));
+      photoContextLines.push(`${zoneUpper}: provided`);
+    } else {
+      photoContextLines.push(`${zoneUpper}: NOT provided`);
+    }
+  }
+
+  const photoContext = photoContextLines.join(", ");
+
+    const textPrompt = `
+    You are a professional brand photographer and visual analyst.
+    Your only job is to extract visual identity information from these
+    photos with the precision of an art director on a set walk.
+    
+    [CONTEXT]:
+    Business: "${businessName}"
+    Address: "${fullAddress}"
+    Photos provided: ${photoContext}
+    
+    Each image in this request is preceded by a header indicating its zone:
+      [PHOTO FOR ZONE: ENTRANCE]       — storefront, patio, reception, signage
+      [PHOTO FOR ZONE: CUSTOMER_SPACE] — where the customer experience happens
+      [PHOTO FOR ZONE: WORK_SPACE]     — where craft is performed
+
+    Match each image to the zone in its header. Some zones may have no
+    image — see "Photos provided" in [CONTEXT]. For zones without an
+    image, return "Not visible in photos" for every field. Never fill
+    gaps using other zones.
+    
+    [YOUR TASK]:
+    1. Analyze each visible zone independently using the same method.
+    2. Synthesize a global brand palette across all visible zones.
+    3. Read only what is visible. Never guess. Never invent.
+       Do not search the web.
+    
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    PER-ZONE METHOD — apply identically to all three zones
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    For each zone, extract two blocks: LAYOUT and COLORS.
+    
+    LAYOUT — describe the physical space:
+    
+      spatial_arrangement:
+        How the zone is organized. Position and relationship of major elements.
+        "Counter along left wall, 8 stools, seating area opposite"
+        "Open patio with 4 metal tables, recessed entrance from sidewalk"
+        "Linear prep line along back wall, two stations facing pass"
+    
+      focal_feature:
+        The single most distinctive element — the thing the eye lands on first.
+        "Exposed brick wall with framed black-and-white photos"
+        "Hand-lettered vintage signage above the door"
+        "Wood-fired oven dominating the back wall"
+    
+      materials_finishes:
+        What surfaces are made of. Specific to texture, not just material category.
+        "Reclaimed oak tables, leather banquettes, polished concrete floor"
+        "Smooth stucco facade, dark powder-coated metal door, terracotta planters"
+        "Stainless steel work surfaces, white subway tile splashback"
+    
+      lighting_mood:
+        Light quality, temperature, source, abundance.
+        "Warm pendant lights low over each table, dim ambient, intimate"
+        "Awning-shaded natural light, glare-reduced at counter"
+        "Bright fluorescent task lighting, no natural light visible"
+    
+      activity_zone:
+        What happens in this zone — observed from the photo only.
+        "Customer arrival, patio dining, foot traffic visible"
+        "Customer seating, conversation, table service"
+        "Active prep, line cooking, plating at pass"
+    
+    COLORS — describe the palette of this zone:
+    
+      Use precise color language — paint-professional, not generic.
+      Not "blue" — "deep navy with slight grey undertone, cool"
+      Not "brown" — "warm walnut, medium saturation, matte finish"
+      Not "white" — "warm off-white, slightly cream, neutral"
+    
+      dominant:
+        The color that fills the most surface area in this zone.
+    
+      supporting:
+        The second most present color — the one that backs up the dominant.
+    
+      accent:
+        The punch color. The highlight. May appear in small surface area
+        but draws the eye.
+    
+      materials_palette:
+        Texture-aware color descriptions of the key surfaces in this zone.
+        Each surface gets a precise color + finish description.
+        "Countertop: vibrant cherry red laminate, warm, glossy.
+         Counter base: rich walnut brown, matte.
+         Walls: warm off-white, matte.
+         Floor: warm beige ceramic tile with subtle variation."
+    
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    GLOBAL COLOR THEME — synthesize across all visible zones
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    After analyzing all zones, identify the brand palette that emerges
+    across them. This is the through-line that ties every image of this
+    business together — including detail shots that have no spatial context.
+    
+      primary:
+        The color that appears most consistently across visible zones.
+    
+      secondary:
+        The color that supports the primary across zones.
+    
+      accent:
+        The shared highlight or punch color that appears in multiple zones.
+    
+      description:
+        One sentence describing the palette mood —
+        warm/cool, minimal/rich, industrial/organic, bold/restrained.
+    
+    If only one zone has photos, synthesize from that zone alone.
+    If no zones have photos, return "Not visible in photos" for all fields.
+    
+    [RULES]:
+    - Read only what is visible in the photos.
+    - Use precise color language — not generic names.
+    - If a zone has no photo, return "Not visible in photos" for every
+      field in that zone. Never invent. Never borrow from other zones.
+    - Never infer from business name, category, or address.
+    - Never search the web.
+    
+    [OUTPUT]:
+    Return ONLY a valid JSON object. No preamble. No markdown. No explanation.
+    Start with { and end with }.
+    
+    {
+      "color_theme": {
+        "primary": "precise color description — hue, tone, temperature",
+        "secondary": "precise color description or Not visible in photos",
+        "accent": "precise color description or Not visible in photos",
+        "description": "one sentence — overall palette mood"
+      },
+      "zones": {
+        "entrance": {
+          "layout": {
+            "spatial_arrangement": "...",
+            "focal_feature": "...",
+            "materials_finishes": "...",
+            "lighting_mood": "...",
+            "activity_zone": "..."
+          },
+          "colors": {
+            "dominant": "...",
+            "supporting": "...",
+            "accent": "...",
+            "materials_palette": "..."
+          }
+        },
+        "customer_space": {
+          "layout": {
+            "spatial_arrangement": "...",
+            "focal_feature": "...",
+            "materials_finishes": "...",
+            "lighting_mood": "...",
+            "activity_zone": "..."
+          },
+          "colors": {
+            "dominant": "...",
+            "supporting": "...",
+            "accent": "...",
+            "materials_palette": "..."
+          }
+        },
+        "work_space": {
+          "layout": {
+            "spatial_arrangement": "...",
+            "focal_feature": "...",
+            "materials_finishes": "...",
+            "lighting_mood": "...",
+            "activity_zone": "..."
+          },
+          "colors": {
+            "dominant": "...",
+            "supporting": "...",
+            "accent": "...",
+            "materials_palette": "..."
+          }
+        }
+      }
+    }
+    `;
+
+  const result = await model.generateContent([...interleavedParts, { text: textPrompt }]);
   const responseText = result.response.text();
+
+  console.log("\n========== GEMINI RAW TEXT RESPONSE ==========");
+  console.log(responseText);
+  console.log("=============================================\n");
 
   const jsonMatch = responseText.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
     throw new Error(`[Gemini Text] No JSON in response. Raw: ${responseText.slice(0, 300)}`);
   }
   
+  console.log("\n========== GEMINI RAW EXTRACTED JSON ==========");
+  console.log(jsonMatch);
+  console.log("=============================================\n");
+
   let parsed: any;
   try {
     parsed = JSON.parse(jsonMatch[0]);
@@ -448,7 +450,7 @@ async function runResearchProvider(
   niche: string
 ): Promise<any> {
 
-  const provider = process.env.DISCOVERY_RESEARCH_PROVIDER || "haiku";
+  const provider = process.env.DISCOVERY_RESEARCH_PROVIDER || "gemma";
   console.log(`--- [DISCOVERY] Research provider: ${provider} ---`);
 
   if (provider === "haiku") {
@@ -534,12 +536,22 @@ async function researchWithHaiku(
     .map((block: any) => block.text)
     .join("");
 
+  // 🔍 LOG 1: See the raw text BEFORE JSON extraction
+  console.log("\n========== HAIKU RAW TEXT RESPONSE ==========");
+  console.log(textContent);
+  console.log("=============================================\n");
+
   const jsonMatch = textContent.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
     throw new Error(
       `[Haiku Research] No JSON found. Raw: ${textContent.slice(0, 300)}`
     );
   }
+
+  // 🔍 LOG 2: See the extracted JSON string BEFORE parsing
+  console.log("\n========== HAIKU EXTRACTED JSON ==========");
+  console.log(jsonMatch[0]);
+  console.log("==========================================\n");
 
   let parsed: any;
   try {
@@ -548,6 +560,11 @@ async function researchWithHaiku(
     console.error("[Haiku Research] JSON parse failed:", jsonMatch[0].slice(0, 500));
     throw new Error(`[Haiku Research] Invalid JSON: ${(parseErr as Error).message}`);
   }
+
+  // 🔍 LOG 3: See the parsed object structure
+  console.log("\n========== HAIKU PARSED RESULT ==========");
+  console.log(JSON.stringify(parsed, null, 2));
+  console.log("=========================================\n");
 
   return parsed;
 }
@@ -581,6 +598,11 @@ async function researchWithGemma(
   const result = await model.generateContent(researchPrompt);
   const responseText = result.response.text();
 
+  // 🔍 LOG 1: See the raw text BEFORE JSON extraction
+  console.log("\n========== GEMMA RAW TEXT RESPONSE ==========");
+  console.log(responseText);
+  console.log("=============================================\n");
+
   const groundingMeta = (result.response as any)
     .candidates?.[0]?.groundingMetadata?.webSearchQueries;
   if (groundingMeta) {
@@ -594,6 +616,11 @@ async function researchWithGemma(
     );
   }
 
+  // 🔍 LOG 2: See the extracted JSON string BEFORE parsing
+  console.log("\n========== GEMMA EXTRACTED JSON ==========");
+  console.log(jsonMatch[0]);
+  console.log("==========================================\n");
+
   let parsed: any;
   try {
     parsed = JSON.parse(jsonMatch[0]);
@@ -601,6 +628,11 @@ async function researchWithGemma(
     console.error("[Gemma Research] JSON parse failed:", jsonMatch[0].slice(0, 500));
     throw new Error(`[Gemma Research] Invalid JSON: ${(parseErr as Error).message}`);
   }
+
+  // 🔍 LOG 3: See the parsed object structure
+  console.log("\n========== GEMMA PARSED RESULT ==========");
+  console.log(JSON.stringify(parsed, null, 2));
+  console.log("=========================================\n");
 
   return parsed;
 }
@@ -633,10 +665,28 @@ ${niche ? `Niche: "${niche}"` : ""}
 [SEARCH INSTRUCTIONS]:
 You have exactly 5 web searches. Use them strategically:
 
-SEARCH 1 — IDENTITY:
-Search the official website for owner-written language about who they are and how they work.
-Focus on: "About", "Menu", "Services", "Our Story", "Our Process" pages.
-This is your primary source for craft identity.
+SEARCH 1 — WEBSITE: IDENTITY + OFFERINGS
+Search the official website thoroughly. This powers TASK 1 
+(identity_story) and TASK 2 (signature practices per offering).
+
+IMPORTANT — Many service businesses have SEPARATE pages for each 
+service or class type. Don't stop at the homepage or main services 
+page. Look for:
+  (a) About/Story pages for identity, history, character
+  (b) Individual service/class pages for format, duration, process
+  (c) Menu/catalog pages broken into categories
+
+For fitness studios: check individual class type pages (Yoga page, 
+Pilates page, etc.) — each typically has its own format details.
+
+For restaurants: menu pages usually group items into categories — 
+treat each category as a potential offering grouping.
+
+For professional services: service line pages (Wills page, Real 
+Estate page) describe their specific process for that area.
+
+Extract thoroughly. This single search must give you enough detail 
+to populate TASK 2's 3-6 offerings with practices each.
 
 SEARCH 2 — LISTINGS & VALIDATION:
 Search Google Business profile and Yelp listing together.
@@ -647,10 +697,10 @@ SEARCH 3 — PRESS & LOCAL COVERAGE:
 Search for: BlogTO, local press, neighbourhood blogs, opening announcements.
 These often describe the craft in detail the business doesn't publish themselves.
 
-SEARCH 4 — CONTACT & SOCIAL PRESENCE:
-Search Instagram, Facebook, LinkedIn public profiles.
-Extract: bio text, contact links, email addresses, handles.
-Find the most reliable contact channel.
+SEARCH 4 — SOCIAL: BIO + CONTACT
+Search Instagram, Facebook, LinkedIn for bio text describing the business
+in their own words, plus contact handles. Bio text often reveals character
+and positioning that the website doesn't articulate.
 
 SEARCH 5 — NEIGHBOURHOOD CONTEXT:
 Search Reddit local subreddits and community forums.
@@ -661,37 +711,213 @@ See TASK 4 for quality examples — avoid aesthetic labels, focus on timing and 
 [EXTRACTION TASKS]:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-TASK 1 — CRAFT IDENTITY
+TASK 1 — DESCRIPTION
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Extract HOW this business works — not just WHAT they sell.
+Extract WHO this business is — 2-3 sentences capturing identity, history, 
+and character. This sets the voice and tone for every post.
 
-A good craft_identity completes this sentence:
-"The quality of what we do lives in ___"
+WHAT TO CAPTURE:
+- Ownership: who runs it (family, solo, partnership, chain location)
+- History: how long they've been operating, key milestones if notable
+- Character: the overall style/vibe — pick from natural descriptors below
+- What makes them recognizable in their market (without quality claims)
 
-BAD: "They make great pizza using quality ingredients"
-GOOD: "72-hour cold fermented dough, 900°F stone-fire, 
-  60-second bake window determines crust char and chew"
+CHARACTER DESCRIPTORS (use whichever fit, never force):
+- Age/tradition: old-school, traditional, modern, contemporary, heritage
+- Price point: high-end, everyday, accessible, premium, budget-friendly
+- Approach: artisanal, commercial, boutique, industrial, bespoke
+- Atmosphere: bare-bones, polished, casual, formal, spa-like, clinical
+- Market position: neighbourhood institution, hidden gem, destination, 
+  workhorse, specialist, generalist
+- Style: minimalist, ornate, rustic, sleek, cozy, no-frills
 
-BAD: "Full-service hair salon with experienced stylists"
-GOOD: "Precision cutting built around bone structure 
-  analysis before scissors touch the hair — consultation 
-  determines the cut, not the other way around"
+WHAT MAKES A GOOD IDENTITY_STORY:
+- Specific (names, dates, real descriptors)
+- Honest (not marketing language)
+- Includes the recognizable character/positioning
+- 2-3 sentences, ~50-80 words
+- Does NOT include operational details (those go in signature_practices)
 
-If no website or press coverage exists:
-Infer from category and niche. Be specific to the trade.
-Prefix with "INFERRED: " to flag lower confidence.
+If you cannot identify a clear character from research, describe what IS 
+visible (history, ownership) without forcing a character label. Better to 
+have honest identity without character than invented vibe.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-TASK 2 — OFFERINGS
+TASK 2 — OFFERINGS — SIGNATURE PRACTICES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Extract 5 hero products or services with HOW detail.
 
-BAD: "Signature Men's Haircut"
-GOOD: "Signature Men's Haircut — dry cut technique,
-  scissor-over-comb finish, structured around 
-  natural growth pattern"
+Extract 3-6 distinct hero offerings, each with 2-5 signature practices.
 
-Prefix unfindable offerings with "INFERRED: "
+━━━ WHAT QUALIFIES AS AN OFFERING ━━━
+
+An offering is something a customer PAYS FOR or BOOKS — a specific 
+product, service, or program with its own price point or sign-up flow.
+
+✅ COUNTS as separate offerings:
+- A salon's "Cut," "Color," and "Treatment" services
+- A yoga studio's "Vinyasa," "Pilates," and "Barre" class types
+- A bakery's "Bread," "Pastries," "Cakes," and "Catering"
+- A law firm's "Wills," "Real Estate," and "Family Law" practice areas
+- A coffee shop's "Espresso Drinks," "Pour Over," "Pastries," "Beans"
+
+❌ DOES NOT count as an offering:
+- Operating hours, location, parking, contact info (metadata)
+- Amenities (coffee bar, mat rental, free wifi, restrooms)
+- Loyalty programs, memberships, packages (pricing models, not products)
+- Affiliated programs not part of the core business
+- General buckets like "Fitness Classes" or "Services" — break them down
+
+CRITICAL RULE: If a business has 5 distinct class types or service lines,
+return 5 offerings. Do NOT collapse them into one generic bucket like
+"Group Fitness Classes" or "Hair Services."
+
+━━━ WHAT MAKES A SIGNATURE PRACTICE ━━━
+
+A signature practice describes HOW the offering is delivered — the 
+specific, observable approach that defines this business's version.
+
+Each practice must be:
+- Specific (contains a number, duration, name, or named method)
+- Observable (a customer could verify it by visiting)
+- Concrete (not aspirational or marketing language)
+- 3-15 words long
+- Operational (about HOW the work happens, not WHY)
+
+CATEGORIES TO LOOK FOR:
+- Timing: when things happen, how long things take
+- Process: how things are made, sequence of steps
+- Material: what they use, where it's sourced from
+- Rule: customer-facing policies, constraints, requirements
+- Format: class size, session length, group vs private
+- Equipment: tools, stations, or systems that define the work
+
+BAD EXAMPLES (do not include any of these patterns):
+- "We use only the freshest ingredients" — vague, no specifics
+- "Quality is our top priority" — claim, not practice
+- "Family-owned business" — identity, wrong field
+- "Made with love and care" — emotional, not observable
+- "Coffee bar available before workouts" — amenity, not a practice
+- "Mat rental for members" — amenity, not a practice
+- "Multiple class times available" — schedule metadata, not a practice
+
+If a practice could appear in any business's marketing, it is NOT 
+a signature practice. Cut it.
+
+━━━ EXAMPLES BY BUSINESS TYPE ━━━
+
+FITNESS STUDIO (correctly broken into class types):
+{
+  "Vinyasa Yoga": [
+    "60-minute heated flow at 85-90°F",
+    "All-levels with modifications offered every pose",
+    "Max 25 mats per class on first-come basis"
+  ],
+  "Reformer Pilates": [
+    "8-person cap with individual spring-resistance equipment",
+    "Instructor adjustments throughout 50-minute session",
+    "Beginner-only Sunday morning slot"
+  ],
+  "Barre": [
+    "45-minute low-impact format",
+    "Ballet-inspired isometric holds at the barre",
+    "Light hand weights and resistance bands provided"
+  ],
+  "Strength Training": [
+    "Small-group 6-person cap",
+    "Kettlebell and dumbbell circuits programmed weekly",
+    "60-minute sessions with form-check checkpoints"
+  ]
+}
+
+RESTAURANT / FOOD:
+{
+  "Shawarma Wraps": [
+    "Marinated 24 hours before slow-roasting on vertical rotisserie",
+    "Served with house-made garlic sauce or pomegranate molasses",
+    "Available in chicken, beef, or mixed"
+  ],
+  "Shawarma Plates": [
+    "Choice of three sides from rice, potatoes, salads, hummus",
+    "All plates include garlic sauce and pickles standard",
+    "Grilled chicken breast and baked fish fillet variants offered"
+  ],
+  "Grilled Skewers": [
+    "Hand-shaped beef kabab with parsley and onions",
+    "Shish tawook chicken skewers grilled to order",
+    "Mix BBQ plate combines both with three sides"
+  ]
+}
+
+PROFESSIONAL SERVICES (law, accounting, consulting):
+{
+  "Wills & Estates": [
+    "Flat-fee pricing model published upfront",
+    "Video consultation available for first meeting",
+    "Two-meeting standard process from intake to signing"
+  ],
+  "Real Estate Transactions": [
+    "Same-day document turnaround",
+    "Title insurance handled in-house",
+    "Evening signing appointments available"
+  ]
+}
+
+RETAIL / PRODUCT:
+{
+  "Custom Framing": [
+    "48-hour standard turnaround time",
+    "Archival-grade materials used as standard",
+    "In-store design consultation included"
+  ],
+  "Ready-Made Frames": [
+    "Walk-in selection from 200+ styles",
+    "Fit-while-you-wait service for standard sizes"
+  ]
+}
+
+SALON / BEAUTY:
+{
+  "Precision Cuts": [
+    "Dry-cut technique on natural growth pattern",
+    "Bone-structure consultation before scissors touch hair",
+    "90-minute new-client appointment standard"
+  ],
+  "Color": [
+    "Hand-painted balayage as primary technique",
+    "Bond-building treatment included in service",
+    "Free toning refresh within two weeks"
+  ]
+}
+
+━━━ QUANTITY GUIDANCE ━━━
+
+Most local businesses have 3-6 hero offerings. Return that many.
+
+If you find fewer than 3 distinct offerings after searching the website
+and listings, search harder before settling. Many service businesses have
+separate pages for each service line — don't stop at the homepage or 
+main menu page.
+
+If only 1 offering with only 1 practice is showing up in your research,
+that is a signal to do another search, not to submit thin output.
+
+If after thorough research the business genuinely has only 2 offerings
+(e.g. a solo practitioner with 2 service areas), return 2. But the 
+default expectation is 3-6 offerings with 2-4 practices each.
+
+━━━ INFERENCE RULE ━━━
+
+If a practice is strongly implied by the offering but not explicitly 
+stated, you may include it with the "INFERRED: " prefix.
+
+Example: A yoga studio menu listing "Heated Vinyasa" → 
+"INFERRED: Studio heated for vinyasa sessions"
+
+Use sparingly. Only when the inference is obvious from the offering 
+category and would be observable by a customer on their first visit.
+
+This data feeds Tip of the Day and Behind the Scenes posts. Quality 
+here directly determines content quality.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 TASK 3 — LOCAL GROUND TRUTH
@@ -755,8 +981,44 @@ for citation tags. If found, remove them and keep only the text content.
 
 {
   "physical_details": {
-    "description": "2-3 sentences in owner voice if available",
-    "craft_identity": "HOW they work — specific process detail. INFERRED: prefix if no source found.",
+    "description": "2-3 sentences — WHO they are, including character/vibe",
+    "products_services": {
+      "Offering 1": [
+        "Signature Practice 1",
+        "Signature Practice 2",
+        "Signature Practice 3",
+        "Signature Practice 4",
+        "Signature Practice 5"
+       ],
+      "Offering 2": [
+        "Signature Practice 1",
+        "Signature Practice 2",
+        "Signature Practice 3",
+        "Signature Practice 4",
+        "Signature Practice 5"
+       ],
+      "Offering 3": [
+        "Signature Practice 1",
+        "Signature Practice 2",
+        "Signature Practice 3",
+        "Signature Practice 4",
+        "Signature Practice 5"
+       ],
+      "Offering 4": [
+        "Signature Practice 1",
+        "Signature Practice 2",
+        "Signature Practice 3",
+        "Signature Practice 4",
+        "Signature Practice 5"
+       ],
+      "Offering 5": [
+        "Signature Practice 1",
+        "Signature Practice 2",
+        "Signature Practice 3",
+        "Signature Practice 4",
+        "Signature Practice 5"
+       ]
+     },
     "neighbourhood": "exact neighbourhood name",
     "landmarks": [
       "Named landmark 1",
@@ -773,13 +1035,6 @@ for citation tags. If found, remove them and keep only the text content.
       "Behavioural pattern 1 — specific and local",
       "Behavioural pattern 2 — seasonal or time-based"
     ],
-    "products_services": [
-      "Offering 1 — technique or process detail",
-      "Offering 2 — technique or process detail",
-      "Offering 3 — technique or process detail",
-      "Offering 4 — technique or process detail",
-      "Offering 5 — technique or process detail"
-    ]
   },
   "contact": {
     "email": "email or null",
@@ -810,7 +1065,6 @@ function mergeDiscoveryData(
     physical_details: {
       // CITATION STRIPPING applied to all string fields
       description:       stripCitations(phys.description)       || "",
-      craft_identity:    stripCitations(phys.craft_identity)    || "",
       neighbourhood:     stripCitations(phys.neighbourhood)     || "",
       landmarks:         Array.isArray(phys.landmarks)
         ? phys.landmarks.map((l: string) => stripCitations(l)).filter(Boolean)
@@ -821,21 +1075,20 @@ function mergeDiscoveryData(
       local_trends:      Array.isArray(phys.local_trends)
         ? phys.local_trends.map((t: string) => stripCitations(t)).filter(Boolean)
         : [],
-      products_services: Array.isArray(phys.products_services)
-        ? phys.products_services.map((p: string) => stripCitations(p)).filter(Boolean)
-        : [],
+      products_services: phys.products_services || {},
     },
-    visuals: {
-      primary_color:     stripCitations(vis.primary_color)      || "neutral",
-      secondary_color:   stripCitations(vis.secondary_color)    || "neutral",
-      accent_color:      stripCitations(vis.accent_color)       || "neutral",
-      theme_description: stripCitations(vis.theme_description)  || "natural tones",
-      logo_colors:       stripCitations(vis.logo_colors)        || "Not provided",
-      storefront_colors: stripCitations(vis.storefront_colors)  || "Not provided",
-      storefront_architecture: vis.storefront_architecture || null,
-      interior_colors:   stripCitations(vis.interior_colors)    || "Not provided",
-      interior_layout: vis.interior_layout || null,
-    },
+    // NEW SHAPE — color_theme and zones at top level (no more `visuals` bag)
+    color_theme: visionData?.color_theme
+      ? {
+          primary:     stripCitations(visionData.color_theme.primary)     || "neutral",
+          secondary:   stripCitations(visionData.color_theme.secondary)   || "neutral",
+          accent:      stripCitations(visionData.color_theme.accent)      || "neutral",
+          description: stripCitations(visionData.color_theme.description) || "natural tones",
+        }
+      : null,
+
+    zones: parseZones(visionData?.zones),
+
     contact: researchData?.contact 
       ? {
           email:            stripCitations(researchData.contact.email),
@@ -870,18 +1123,25 @@ async function saveDiscoveryData(
   const vis  = merged.visuals;
 
   // Determine brand source
+  const ct   = merged.color_theme;
+  const zones = merged.zones;
+  
   const brandSource = (() => {
     if (!visionSucceeded) return "text_search";
-    const visualFields = [
-      vis.primary_color,
-      vis.logo_colors,
-      vis.storefront_colors,
-      vis.interior_colors,
-    ];
-    const blindCount = visualFields.filter(
-      (f) => !f || typeof f !== "string" || f.trim().toLowerCase().startsWith("not visible")
-    ).length;
-    return blindCount >= 2 ? "text_search" : "photos";
+  
+    const colorBlind = !ct?.primary
+      || typeof ct.primary !== "string"
+      || ct.primary.trim().toLowerCase().startsWith("not visible");
+  
+    const visibleZones = zones
+      ? Object.values(zones).filter((z: any) =>
+          z?.layout?.spatial_arrangement
+          && !String(z.layout.spatial_arrangement).toLowerCase().startsWith("not visible")
+        ).length
+      : 0;
+  
+    // Color blank AND fewer than 2 visible zones → fall back to research-only
+    return (colorBlind && visibleZones < 2) ? "text_search" : "photos";
   })();
 
   const updatePayload: any = {
@@ -892,19 +1152,15 @@ async function saveDiscoveryData(
     contact_info: merged.contact || null,
 
     // Visual fields — owned by vision (or research fallback)
-    color_theme: {
-      primary:     vis.primary_color     || "neutral",
-      secondary:   vis.secondary_color   || "neutral",
-      accent:      vis.accent_color      || "neutral",
-      description: vis.theme_description || "natural tones",
+    color_theme: merged.color_theme || {
+      primary:     "neutral",
+      secondary:   "neutral",
+      accent:      "neutral",
+      description: "natural tones",
     },
-    business_visuals: {
-      logoColors:       vis.logo_colors        || "Not provided",
-      storefrontColors: vis.storefront_colors  || "Not provided",
-      interiorColors:   vis.interior_colors    || "Not provided",
-    },
-    storefront_architecture: vis.storefront_architecture || null,
-    interior_layout:         vis.interior_layout         || null,
+  
+    // Zones — new column
+    zones: merged.zones || null,
 
     // Metadata
     brand_source:               brandSource,
@@ -977,7 +1233,7 @@ export async function discoverAndSaveBrandIdentity(
   }
   if (researchResult.status === "rejected") {
     console.error("[DISCOVERY] Research path failed:", researchResult.reason);
-    throw new Error("Research path failed — cannot continue without craft identity.");
+    throw new Error("Research path failed — cannot continue without business identity.");
   }
 
   // Merge and save

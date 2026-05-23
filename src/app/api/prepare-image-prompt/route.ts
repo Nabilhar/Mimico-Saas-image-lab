@@ -7,6 +7,8 @@ import { NextResponse } from "next/server";
 import { createClient } from '@supabase/supabase-js';
 import { FRAMEWORK_POST_TYPE_COMBINATIONS, getSeason, SEASONALITY_CONTEXT, SEASONAL_NICHE_CONTEXT } from "@/lib/frameworks";
 import { parseZones } from "@/lib/parse-business-intel";
+import { buildBrandVariables } from "@/lib/image-brand-variables";
+import { resolveZoneFocus, type ZoneKey } from "@/lib/post-type-zone-focus";
 import { auth } from "@clerk/nextjs/server";
 
 
@@ -290,84 +292,12 @@ function formatInteriorColors(colors: any): string {
   return parts.length > 0 ? parts.join(", ") : "N/A";
 }
 
-function formatZoneColors(colors: any): string {
-  if (!colors) return "N/A";
-  if (typeof colors === "string") return colors;
-
-  const parts: string[] = [];
-  if (colors.dominant) parts.push(`dominant: ${colors.dominant}`);
-  if (colors.supporting) parts.push(`supporting: ${colors.supporting}`);
-  if (colors.accent) parts.push(`accent: ${colors.accent}`);
-  if (colors.materials_palette) parts.push(`materials: ${colors.materials_palette}`);
-
-  return parts.length > 0 ? parts.join(", ") : "N/A";
-}
-
-function formatZoneLayout(layout: any): string {
-  if (!layout) return "N/A";
-  if (typeof layout === "string") return layout;
-
-  const parts: string[] = [];
-  if (layout.spatial_arrangement) parts.push(layout.spatial_arrangement);
-  if (layout.focal_feature) parts.push(`focal: ${layout.focal_feature}`);
-  if (layout.materials_finishes) parts.push(`materials: ${layout.materials_finishes}`);
-  if (layout.lighting_mood) parts.push(`lighting: ${layout.lighting_mood}`);
-  if (layout.activity_zone) parts.push(`activity: ${layout.activity_zone}`);
-
-  return parts.length > 0 ? parts.join("; ") : "N/A";
-}
-
-function formatZone(zone: any, label: string): string {
-  if (!zone) return `${label}: N/A`;
-
-  const layout = formatZoneLayout(zone.layout);
-  const colors = formatZoneColors(zone.colors);
-  if (layout === "N/A" && colors === "N/A") return `${label}: N/A`;
-
-  const lines = [label];
-  if (layout !== "N/A") lines.push(`  Layout: ${layout}`);
-  if (colors !== "N/A") lines.push(`  Colors: ${colors}`);
-  return lines.join("\n");
-}
-
-function formatZonesBlock(zones: any, postType: string): string {
-  if (!zones) {
-    return "No zone photos analyzed — infer from interior/storefront context.";
-  }
-
-  const zoneOrder =
-    postType === "Behind the scenes"
-      ? (["work_space", "entrance", "customer_space"] as const)
-      : (["entrance", "customer_space", "work_space"] as const);
-
-  const labels: Record<string, string> = {
-    entrance: "Entrance",
-    customer_space: "Customer area",
-    work_space: "Work area",
-  };
-
-  return zoneOrder.map((key) => formatZone(zones[key], labels[key])).join("\n");
-}
-
 /**
- * Build brand identity blocks based on what this post type needs
+ * Structure block only — storefront / interior (unchanged behavior)
  */
-function buildBrandBlocks(brandIdentity: any, postType: string) {
+function buildStructureBlock(brandIdentity: any, postType: string) {
   const needs = getVisualDataRequirements(postType);
-  
-  // COLOR & MOOD — always included (drives palette)
-  const colorBlock = `
-Mood:      ${brandIdentity.color_theme?.description || "Derive from niche and neighbourhood context"}
-Primary:   ${brandIdentity.color_theme?.primary || "N/A"}
-Secondary: ${brandIdentity.color_theme?.secondary || "N/A"}
-Accent:    ${brandIdentity.color_theme?.accent || "N/A"}${needs.logo_colors ? `
-Logo:      ${formatLogoColors(brandIdentity.business_visuals?.logoColors)}` : ''}
-  `.trim();
 
-  const zonesBlock = needs.zones
-    ? formatZonesBlock(brandIdentity.zones, postType)
-    : "";
-  
   // STRUCTURE & SPACE — conditional based on post type needs
   const structureParts: string[] = [];
   
@@ -398,11 +328,9 @@ Logo:      ${formatLogoColors(brandIdentity.business_visuals?.logoColors)}` : ''
     }
   }
   
-  const structureBlock = structureParts.length > 0 
-    ? structureParts.join("\n\n") 
+  return structureParts.length > 0
+    ? structureParts.join("\n\n")
     : "No spatial context needed — focus on subject detail.";
-  
-  return { colorBlock, structureBlock, zonesBlock };
 }
 
 // Extract and store composition type when saving the prompt
@@ -428,7 +356,15 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { postId: bodyPostId, currentMonth, generatedPost, postType, currentWeather, currentTime } = body;
+    const {
+      postId: bodyPostId,
+      currentMonth,
+      generatedPost,
+      postType,
+      currentWeather,
+      currentTime,
+      zoneFocus: zoneFocusOverride,
+    } = body;
     postId = bodyPostId;
 
     if (!postId) {
@@ -490,7 +426,13 @@ export async function POST(req: Request) {
     console.log("--- ARCHITECT DATA SELECTION ---");
     console.log("Post Type:", postType);
     const needs = getVisualDataRequirements(postType);
+    const zoneKeys = resolveZoneFocus(postType, zoneFocusOverride);
     console.log("Data Needs:", needs);
+    console.log(
+      "Zone focus:",
+      zoneKeys.join(", "),
+      zoneFocusOverride ? "(request override)" : "(POST_TYPE_ZONE_FOCUS config)"
+    );
     console.log("--------------------------------");
 
         /**
@@ -515,7 +457,11 @@ export async function POST(req: Request) {
     const imperfectionGuidance = getImperfectionGuidance(niche);
 
     // ✨ NEW: Build brand blocks based on what this post type needs
-    const { colorBlock, structureBlock, zonesBlock } = buildBrandBlocks(brandIdentity, postType);
+    const structureBlock = buildStructureBlock(brandIdentity, postType);
+    const b = buildBrandVariables(brandIdentity, postType, {
+      zoneFocusOverride,
+      includeLogoColors: needs.logo_colors,
+    });
 
     const voiceDescription = VOICE_VISUAL_MAP[POST_TYPE_TO_VOICE[postType]];
 
@@ -555,8 +501,9 @@ Weather: ${currentWeather || "N/A"} — one atmospheric touch only.
 Niche: ${seasonalNicheContext}
 
 [BRAND — COLOR & MOOD]:
-${colorBlock}
-Integrate colors into palette, props, lighting. No color commentary. Derive from niche/season if N/A.
+Mood: ${b.color_mood}
+Primary: ${b.color_primary} | Secondary: ${b.color_secondary} | Accent: ${b.color_accent}
+Integrate into palette, props, lighting. Derive from niche/season if empty.
 
 [BRAND — STRUCTURE & SPACE]:
 ${structureBlock}
@@ -637,7 +584,10 @@ Storefront/signage: secondary only, mid/background, slightly out of focus if ext
     [VOICE]: ${VOICE_VISUAL_MAP[voice]}
 
     [BRAND AUTHENTICITY]:
-    Colors: ${colorBlock}
+    Mood: ${b.color_mood}
+    Primary: ${b.color_primary} | Secondary: ${b.color_secondary} | Accent: ${b.color_accent}
+    Zone (${b.zone_label}): ${b.zone_arrangement}
+    Focal: ${b.zone_focal} | Materials: ${b.zone_materials}
     ${structureBlock}
 
     Layer the hero INTO this real business environment.
@@ -821,13 +771,18 @@ ${voiceDescription}
 First-person presence. You are in the scene, not observing from outside.
 
 [BRAND AUTHENTICITY]:
-Colors:
-${colorBlock}
+Mood: ${b.color_mood}
+Palette: ${b.color_primary} / ${b.color_secondary} / ${b.color_accent}
+
+Zone — ${b.zone_label} (from photos; use for setting and palette):
+  Space: ${b.zone_arrangement}
+  Focal: ${b.zone_focal}
+  Materials: ${b.zone_materials}
+  Lighting: ${b.zone_lighting}
+  Activity: ${b.zone_activity}
+  Colors: ${b.zone_color_dominant}, ${b.zone_color_supporting}, accent ${b.zone_color_accent}, ${b.zone_color_materials}
+
 ${structureBlock}
-${zonesBlock ? `
-[ZONES — from uploaded photos]
-${zonesBlock}
-` : ""}
 
 Layer the hero INTO this real business environment naturally.
 
