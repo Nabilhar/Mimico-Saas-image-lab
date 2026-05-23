@@ -10,9 +10,10 @@ import type { PostType } from './mode-templates';
 export async function getRecentPostHistory(
   supabase: SupabaseClient,
   business_id: string,
+  business_name: string,
   postType: PostType,
   options: {
-    summaryLimit?: number;    // How many summaries to fetch (default 10)
+    summaryLimit?: number;    // How many summaries to fetch (default 5)
     categoryLimit?: number;   // How many categories to track for rotation (default 3)
   } = {}
 ): Promise<{ categories: string[]; summaries: string[] }> {
@@ -22,6 +23,7 @@ export async function getRecentPostHistory(
     .from('community_posts')
     .select('content_category, content_summary, created_at')
     .eq('business_id', business_id)
+    .eq('business_name', business_name.trim())
     .eq('post_type', postType)
     .order('created_at', { ascending: false })
     .limit(summaryLimit);
@@ -45,25 +47,48 @@ export async function getRecentPostHistory(
 }
 
 /**
- * Fetch offerings referenced in recent posts (across all post types).
- * Used in varietyRules to prevent product clustering.
+ * Offerings from recent posts, most recent first (deduped, stable order).
+ * Used to rotate which offering is shown in the next prompt.
  */
-export async function getRecentOfferings(
+export async function getRecentOfferingsInOrder(
   supabase: SupabaseClient,
   business_id: string,
-  limit: number = 3
+  business_name: string,
+  postLimit: number = 5
 ): Promise<string[]> {
   const { data, error } = await supabase
     .from('community_posts')
     .select('offerings_referenced')
     .eq('business_id', business_id)
+    .eq('business_name', business_name.trim())
     .order('created_at', { ascending: false })
-    .limit(limit);
+    .limit(postLimit);
 
   if (error || !data) return [];
 
-  const all = data.flatMap(d => d.offerings_referenced || []);
-  return [...new Set(all)];  // dedupe
+  const ordered: string[] = [];
+  for (const row of data) {
+    for (const raw of row.offerings_referenced || []) {
+      const name = typeof raw === 'string' ? raw.trim() : '';
+      if (
+        name &&
+        !ordered.some((o) => o.toLowerCase() === name.toLowerCase())
+      ) {
+        ordered.push(name);
+      }
+    }
+  }
+  return ordered;
+}
+
+/** @deprecated Use getRecentOfferingsInOrder — kept for callers that only need a flat set */
+export async function getRecentOfferings(
+  supabase: SupabaseClient,
+  business_id: string,
+  business_name: string,
+  limit: number = 5
+): Promise<string[]> {
+  return getRecentOfferingsInOrder(supabase, business_id, business_name, limit);
 }
 
 /**
