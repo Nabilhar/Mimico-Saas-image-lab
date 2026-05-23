@@ -10,7 +10,8 @@ import Groq from "groq-sdk"; // <-- NEW
 import { createClient } from '@supabase/supabase-js';
 import { getFramework, Framework, FRAMEWORKS   } from "@/lib/frameworks";
 import { TIP_MODE, CTA_BY_POST_TYPE, SEASONAL_NICHE_NARRATIVE, getSeason, NARRATIVE_COMBINATIONS, NarrativeEntry, ANGLE_POOL} from "@/lib/frameworks";
-import { getBrandIdentity, discoverAndSaveBrandIdentity, parseBusinessIntel, parseInteriorLayout, parseExteriorLayout  } from "@/lib/brandDiscovery";
+import { getBrandIdentity, discoverAndSaveBrandIdentity, parseBusinessIntel} from "@/lib/brandDiscovery";
+import { parseInteriorLayout, parseExteriorLayout, parseZones } from '@/lib/parse-business-intel';
 import { ColorTheme, BusinessVisuals } from '@/lib/constants';
 import { auth } from "@clerk/nextjs/server"; 
 import { selectAngle } from "@/lib/angle-selector";
@@ -386,7 +387,6 @@ function buildLegacyPrompt(
   Transit: ${intel.transit.join(", ")}
   Vibe: ${intel.local_trends.join(", ")}
   Offerings: ${intel.products_services.join(", ")}
-  Craft: ${intel.craft_identity}
   ${intel.isInferred 
     ? "Note: Craft identity was inferred — use as background context only." 
     : ""}
@@ -483,8 +483,6 @@ function buildLegacyPrompt(
 
       These are facts. Do not embellish. Do not extend them.
 
-      [BUSINESS CRAFT]
-      ${intel?.craft_identity ? `Craft: ${intel.craft_identity}` : ''}
 
       [CATEGORY CONTEXT]:
      
@@ -626,7 +624,7 @@ export async function POST(req: Request) {
     
     const { data: business, error: businessError  } = await supabase
     .from('businesses')
-    .select(' id, business_name, street, city, province_state, country, postal_code, business_description, color_theme, business_visuals,storefront_architecture, interior_layout, timezone')
+    .select(' id, business_name, street, city, province_state, country, postal_code, business_description, color_theme, business_visuals,storefront_architecture, interior_layout, zones, timezone')
     .eq('user_id', userId)
     .eq('is_active', true)
     .single();
@@ -643,6 +641,10 @@ export async function POST(req: Request) {
 
     // Step 2: Parse business intelligence (you already do this above)
     const intel = parseBusinessIntel(business.business_description);
+
+    if (intel) {
+      intel.zones = business.zones || null;
+    }
 
     const recentHistory = postHistory?.length
     ? postHistory
@@ -774,10 +776,11 @@ const recentOfferings = await getRecentOfferings(supabase, userId);
       transit: intel.transit || [],
       local_trends: intel.local_trends || [],
       products_services: intel.products_services || [],
-      craft_identity: intel.craft_identity,
+      practices_by_offering: intel.practices_by_offering || {}, 
       description: intel.description,
       interior_layout: parseInteriorLayout(business.interior_layout),
       storefront_architecture: parseExteriorLayout(business.storefront_architecture),
+      zones: parseZones(business.zones),
       isInferred: intel.isInferred,
     } : undefined;
 

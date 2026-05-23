@@ -6,6 +6,7 @@ import Groq from "groq-sdk";
 import { NextResponse } from "next/server";
 import { createClient } from '@supabase/supabase-js';
 import { FRAMEWORK_POST_TYPE_COMBINATIONS, getSeason, SEASONALITY_CONTEXT, SEASONAL_NICHE_CONTEXT } from "@/lib/frameworks";
+import { parseZones } from "@/lib/parse-business-intel";
 import { auth } from "@clerk/nextjs/server";
 
 
@@ -87,6 +88,7 @@ const POST_TYPE_DATA_REQUIREMENTS = {
       storefront: false,        // Detail shots don't need building context
       interior_layout: true,   // Detail shots don't need room layout
       interior_colors: true,   // Detail shots don't need wall colors
+      zones: false,
     }
   },
   
@@ -99,6 +101,7 @@ const POST_TYPE_DATA_REQUIREMENTS = {
       storefront: true,          // Might shoot exterior
       interior_layout: true,     // ⭐ Show the workspace
       interior_colors: true,     // Accurate color rendering
+      zones: true,
     }
   },
   
@@ -111,6 +114,7 @@ const POST_TYPE_DATA_REQUIREMENTS = {
       storefront: true,          // ⭐ Street-level exterior shots
       interior_layout: true,    // Outdoor/street scenes
       interior_colors: true,    // Outdoor/street scenes
+      zones: true,
     }
   },
 };
@@ -131,6 +135,7 @@ function getVisualDataRequirements(postType: string) {
     storefront: true,
     interior_layout: true,
     interior_colors: true,
+    zones: true,
   };
 }
 
@@ -285,6 +290,65 @@ function formatInteriorColors(colors: any): string {
   return parts.length > 0 ? parts.join(", ") : "N/A";
 }
 
+function formatZoneColors(colors: any): string {
+  if (!colors) return "N/A";
+  if (typeof colors === "string") return colors;
+
+  const parts: string[] = [];
+  if (colors.dominant) parts.push(`dominant: ${colors.dominant}`);
+  if (colors.supporting) parts.push(`supporting: ${colors.supporting}`);
+  if (colors.accent) parts.push(`accent: ${colors.accent}`);
+  if (colors.materials_palette) parts.push(`materials: ${colors.materials_palette}`);
+
+  return parts.length > 0 ? parts.join(", ") : "N/A";
+}
+
+function formatZoneLayout(layout: any): string {
+  if (!layout) return "N/A";
+  if (typeof layout === "string") return layout;
+
+  const parts: string[] = [];
+  if (layout.spatial_arrangement) parts.push(layout.spatial_arrangement);
+  if (layout.focal_feature) parts.push(`focal: ${layout.focal_feature}`);
+  if (layout.materials_finishes) parts.push(`materials: ${layout.materials_finishes}`);
+  if (layout.lighting_mood) parts.push(`lighting: ${layout.lighting_mood}`);
+  if (layout.activity_zone) parts.push(`activity: ${layout.activity_zone}`);
+
+  return parts.length > 0 ? parts.join("; ") : "N/A";
+}
+
+function formatZone(zone: any, label: string): string {
+  if (!zone) return `${label}: N/A`;
+
+  const layout = formatZoneLayout(zone.layout);
+  const colors = formatZoneColors(zone.colors);
+  if (layout === "N/A" && colors === "N/A") return `${label}: N/A`;
+
+  const lines = [label];
+  if (layout !== "N/A") lines.push(`  Layout: ${layout}`);
+  if (colors !== "N/A") lines.push(`  Colors: ${colors}`);
+  return lines.join("\n");
+}
+
+function formatZonesBlock(zones: any, postType: string): string {
+  if (!zones) {
+    return "No zone photos analyzed — infer from interior/storefront context.";
+  }
+
+  const zoneOrder =
+    postType === "Behind the scenes"
+      ? (["work_space", "entrance", "customer_space"] as const)
+      : (["entrance", "customer_space", "work_space"] as const);
+
+  const labels: Record<string, string> = {
+    entrance: "Entrance",
+    customer_space: "Customer area",
+    work_space: "Work area",
+  };
+
+  return zoneOrder.map((key) => formatZone(zones[key], labels[key])).join("\n");
+}
+
 /**
  * Build brand identity blocks based on what this post type needs
  */
@@ -299,6 +363,10 @@ Secondary: ${brandIdentity.color_theme?.secondary || "N/A"}
 Accent:    ${brandIdentity.color_theme?.accent || "N/A"}${needs.logo_colors ? `
 Logo:      ${formatLogoColors(brandIdentity.business_visuals?.logoColors)}` : ''}
   `.trim();
+
+  const zonesBlock = needs.zones
+    ? formatZonesBlock(brandIdentity.zones, postType)
+    : "";
   
   // STRUCTURE & SPACE — conditional based on post type needs
   const structureParts: string[] = [];
@@ -334,7 +402,7 @@ Logo:      ${formatLogoColors(brandIdentity.business_visuals?.logoColors)}` : ''
     ? structureParts.join("\n\n") 
     : "No spatial context needed — focus on subject detail.";
   
-  return { colorBlock, structureBlock };
+  return { colorBlock, structureBlock, zonesBlock };
 }
 
 // Extract and store composition type when saving the prompt
@@ -373,7 +441,7 @@ export async function POST(req: Request) {
       .select(`
         business_name, street, city, province_state, country, postal_code,
         niche, voice, business_description, color_theme, business_visuals, 
-        storefront_architecture, interior_layout, timezone
+        storefront_architecture, interior_layout, zones, timezone
       `)
       .eq('user_id', userId)
       .eq('is_active', true)
@@ -385,7 +453,10 @@ export async function POST(req: Request) {
 
     const fullAddress = `${business.street}, ${business.city}, ${business.province_state}, ${business.country} ${business.postal_code}`;
     const business_name = business.business_name;
-    const brandIdentity = business;
+    const brandIdentity = {
+      ...business,
+      zones: parseZones(business.zones),
+    };
     const niche = business.niche;
     const voice = business.voice;
 
@@ -444,7 +515,7 @@ export async function POST(req: Request) {
     const imperfectionGuidance = getImperfectionGuidance(niche);
 
     // ✨ NEW: Build brand blocks based on what this post type needs
-    const { colorBlock, structureBlock } = buildBrandBlocks(brandIdentity, postType);
+    const { colorBlock, structureBlock, zonesBlock } = buildBrandBlocks(brandIdentity, postType);
 
     const voiceDescription = VOICE_VISUAL_MAP[POST_TYPE_TO_VOICE[postType]];
 
@@ -631,175 +702,180 @@ Storefront/signage: secondary only, mid/background, slightly out of focus if ext
 
     // New the architect short prompt
     const architectPrompt = `
-    [SYSTEM]: Image prompt engineer for FLUX-2-pro. Commercial/lifestyle photography.
+[SYSTEM]: Image prompt engineer for FLUX-2-pro. Commercial/lifestyle photography.
 
-    [TASK]:
-    
-    Post: ${postType}
-    
-    "${generatedPost}"
-    
-    Business: ${business_name} (${niche})
+[TASK]:
 
-    Primary Job: This image captures the moment described in the post.
+Post: ${postType}
 
-    Visual Intent: ${visualIntent}
+"${generatedPost}"
 
-    Approach: Start with the moment. Layer in the mode-specific intent.
-    
-    [MOMENT EXTRACTION]:
-    Read the post carefully and identify:
+Business: ${business_name} (${niche})
 
-    1. **The Moment**: What specific moment is happening?
-      - Time of day mentioned or implied
-      - Location/setting (kitchen, counter, prep area, etc.)
-      - What phase of work (prep, service, cleanup, observation)
+Primary Job: This image captures the moment described in the post.
 
-    2. **The Action**: What is the person doing?
-      - Active work (pulling, cutting, adjusting, assembling)
-      - Checking/monitoring (watching, measuring, testing)
-      - Observing (noticing a pattern, seeing a detail)
-      - Even "standing and watching" is an action
+Visual Intent: ${visualIntent}
 
-    3. **Point of Attention**: What are they looking at or focused on?
-      - A material/ingredient in a specific state
-      - A tool in use
-      - A change happening (steam rising, color shifting, texture forming)
-      - A measurement or indicator
+Approach: Start with the moment. Layer in the mode-specific intent.
 
-    4. **Sensory Anchor**: What makes this moment specific and grounded?
-      - Temperature (heat, cold, steam, condensation)
-      - Light quality (morning, afternoon, evening, overhead, natural)
-      - Sound implied (simmering, chopping, quiet)
-      - Texture visible (worn surfaces, condensation, flour dust)
+[MOMENT EXTRACTION]:
+Read the post carefully and identify:
 
-    The image captures THIS MOMENT, not a proof point for the claim.
+1. **The Moment**: What specific moment is happening?
+  - Time of day mentioned or implied
+  - Location/setting (kitchen, counter, prep area, etc.)
+  - What phase of work (prep, service, cleanup, observation)
 
-    [HERO]:
-    The hero is the main visual element that anchors the moment.
+2. **The Action**: What is the person doing?
+  - Active work (pulling, cutting, adjusting, assembling)
+  - Checking/monitoring (watching, measuring, testing)
+  - Observing (noticing a pattern, seeing a detail)
+  - Even "standing and watching" is an action
 
-    **For observational posts (BTS, Community Moment, Local Event):**
-    Determine the hero based on what's happening in the moment (see action-based logic below).
+3. **Point of Attention**: What are they looking at or focused on?
+  - A material/ingredient in a specific state
+  - A tool in use
+  - A change happening (steam rising, color shifting, texture forming)
+  - A measurement or indicator
 
-    **For instructional posts (Tip of the Day, Myth-busting):**
-    The hero must show BOTH the moment AND the technique/correction being taught.
-    - Tip: Show the action at the key step where the tip applies
-    - Myth: Show the correct technique that disproves the myth
+4. **Sensory Anchor**: What makes this moment specific and grounded?
+  - Temperature (heat, cold, steam, condensation)
+  - Light quality (morning, afternoon, evening, overhead, natural)
+  - Sound implied (simmering, chopping, quiet)
+  - Texture visible (worn surfaces, condensation, flour dust)
 
-    The moment grounds it. The technique must be visible.
+The image captures THIS MOMENT, not a proof point for the claim.
 
-    Determine the hero based on what's happening:
+[HERO]:
+The hero is the main visual element that anchors the moment.
 
-    **If the person is checking/watching/monitoring:**
-    Hero = what they're looking at + evidence of the checking action
-    Examples:
-    - Hands near dough, fingers testing texture
-    - Thermometer in frame with the thing being measured
-    - Looking into pot/oven (view of what they see)
+**For observational posts (BTS, Community Moment, Local Event):**
+Determine the hero based on what's happening in the moment (see action-based logic below).
 
-    **If the person is mid-process:**
-    Hero = the materials + hands in action
-    Examples:
-    - Knife mid-cut through ingredient
-    - Hands pulling noodles from water
-    - Spoon stirring/tasting
+**For instructional posts (Tip of the Day, Myth-busting):**
+The hero must show BOTH the moment AND the technique/correction being taught.
+- Tip: Show the action at the key step where the tip applies
+- Myth: Show the correct technique that disproves the myth
 
-    **If the person is observing a pattern:**
-    Hero = what they're noticing
-    Examples:
-    - Steam rising (if noticing condensation)
-    - Color change in cooking material
-    - Gap/space/timing they're watching
+The moment grounds it. The technique must be visible.
 
-    **If the person is standing/waiting/pausing:**
-    Hero = what occupies the space during the pause
-    Examples:
-    - The thing simmering/resting/holding
-    - The workspace in that moment
-    - The environmental detail they're noticing
+Determine the hero based on what's happening:
 
-    The hero creates presence: "I am here, looking at this, in this moment."
+**If the person is checking/watching/monitoring:**
+Hero = what they're looking at + evidence of the checking action
+Examples:
+- Hands near dough, fingers testing texture
+- Thermometer in frame with the thing being measured
+- Looking into pot/oven (view of what they see)
 
-    [COMPOSITION LOGIC]:
-    Choose composition based on how to best capture the moment's perspective:
+**If the person is mid-process:**
+Hero = the materials + hands in action
+Examples:
+- Knife mid-cut through ingredient
+- Hands pulling noodles from water
+- Spoon stirring/tasting
 
-    **Detail (close-up):**
-    Use when: The moment is about noticing something small or specific
-    Shows: What they're focused on, intimate view
-    Feel: Over-the-shoulder, "looking closely at..."
-    Example: Checking texture, measuring precisely, watching a small change
+**If the person is observing a pattern:**
+Hero = what they're noticing
+Examples:
+- Steam rising (if noticing condensation)
+- Color change in cooking material
+- Gap/space/timing they're watching
 
-    **Medium (mid-shot):**
-    Use when: The moment involves an action with materials
-    Shows: Hands + materials + immediate context
-    Feel: Mid-work, "doing this right now"
-    Example: Assembling, adjusting, mid-process steps
+**If the person is standing/waiting/pausing:**
+Hero = what occupies the space during the pause
+Examples:
+- The thing simmering/resting/holding
+- The workspace in that moment
+- The environmental detail they're noticing
 
-    **Wide (environmental):**
-    Use when: The moment is about the space/atmosphere or positioning
-    Shows: Where this happens, spatial context
-    Feel: "This is where I'm standing"
-    Example: Observing the whole kitchen, waiting during a long process
+The hero creates presence: "I am here, looking at this, in this moment."
 
-    Not asking: "What proves the claim?"
-    Asking: "What does being there look like?"
+[COMPOSITION LOGIC]:
+Choose composition based on how to best capture the moment's perspective:
 
-    [VOICE]:
-    ${voiceDescription}
+**Detail (close-up):**
+Use when: The moment is about noticing something small or specific
+Shows: What they're focused on, intimate view
+Feel: Over-the-shoulder, "looking closely at..."
+Example: Checking texture, measuring precisely, watching a small change
 
-    First-person presence. You are in the scene, not observing from outside.
+**Medium (mid-shot):**
+Use when: The moment involves an action with materials
+Shows: Hands + materials + immediate context
+Feel: Mid-work, "doing this right now"
+Example: Assembling, adjusting, mid-process steps
 
-    [BRAND AUTHENTICITY]:
-    Colors: ${colorBlock}
-    ${structureBlock}
+**Wide (environmental):**
+Use when: The moment is about the space/atmosphere or positioning
+Shows: Where this happens, spatial context
+Feel: "This is where I'm standing"
+Example: Observing the whole kitchen, waiting during a long process
 
-    Layer the hero INTO this real business environment naturally.
+Not asking: "What proves the claim?"
+Asking: "What does being there look like?"
 
-    [LIGHTING & CONTEXT]
-    Time: ${currentTime}, ${currentMonth}
-    Weather: ${currentWeather}
+[VOICE]:
+${voiceDescription}
 
-    [AVOID]:
-    - Generic "prep area" shots without specific moment
-    - Perfectly styled food photography (this is mid-work, not final presentation)  
-    - Static product shots (show process, not result)
-    - Proof-of-concept visuals (focus on moment, not demonstration)
-    - Hands that look staged (they should be working, not posing)
-    
-    [MOMENT-TO-VISUAL TRANSLATION]:
-    
-    Step 1: Identify the moment's core action
-    Step 2: Determine POV (whose perspective/where are they)
-    Step 3: Choose hero (what they're focused on)
-    Step 4: Select composition (how close/how much context)
-    Step 5: Add sensory details (light, texture, temperature cues)
-    
-    [OUTPUT]:
-    60-70 word FLUX-2-pro prompt with visual hierarchy capturing the moment:
-    
-    Format:
-    [Composition]: [Hero action/state in the moment]. Shallow focus on [hero]. [Hands/perspective element if relevant]. [Decoration/context] softly blurred [position]. [Background environment] out of focus. [Light source and time]. [Imperfection/authenticity detail]. Shot on Sony A7, f/1.8, 1:1 crop, no text.
-    
-    Example (Moment-First):
-    "Medium shot: Hands pulling fresh ramen noodles from boiling water, strands lifting with steam. Shallow focus on noodles mid-lift. Stainless steel pot edge and kitchen counter softly blurred below. Dark grey ceiling and pendant lights out of focus. Evening service light, 6:30 PM. Water droplets on counter. Shot on Sony A7, f/1.8, 1:1 crop, no text."
-    
-    Example (Moment-First):
-    "Detail close-up: Fingertips pressing into proofed pizza dough surface, slight indent visible. Shallow focus on hand-dough contact point. Flour-dusted stainless steel tray edge softly blurred. Wood prep table and kitchen background out of focus. Morning prep light, 9 AM. Flour fingerprint on tray edge. Shot on Sony A7, f/1.8, 1:1 crop, no text."
-    
-    Rules:
-    - Hero sharp, context blurred, background minimal
-    - Hands visible when they're part of the moment's action
-    - Perspective should feel present (not observational)
-    - Actions should be physically visible, not conceptual ("checking heat" not "observing thermal distribution")
-    - Authenticity details should be broad textures FLUX can render ("flour dust" not "fine grain flour residue")
-    - Human elements (hands, arms, silhouette) when moment involves checking/doing
-    - No brand names in prompt
-    - No clutter or staged styling
-    - No legible faces (people are hands/bodies in action)
-    - Storefront/signage: background only if visible
-    - Include one authenticity detail (wear, smudge, condensation, flour dust)
-    
-    <<<PROMPT_BEGIN>>>
+First-person presence. You are in the scene, not observing from outside.
+
+[BRAND AUTHENTICITY]:
+Colors:
+${colorBlock}
+${structureBlock}
+${zonesBlock ? `
+[ZONES — from uploaded photos]
+${zonesBlock}
+` : ""}
+
+Layer the hero INTO this real business environment naturally.
+
+[LIGHTING & CONTEXT]
+Time: ${currentTime}, ${currentMonth}
+Weather: ${currentWeather}
+
+[AVOID]:
+- Generic "prep area" shots without specific moment
+- Perfectly styled food photography (this is mid-work, not final presentation)  
+- Static product shots (show process, not result)
+- Proof-of-concept visuals (focus on moment, not demonstration)
+- Hands that look staged (they should be working, not posing)
+
+[MOMENT-TO-VISUAL TRANSLATION]:
+
+Step 1: Identify the moment's core action
+Step 2: Determine POV (whose perspective/where are they)
+Step 3: Choose hero (what they're focused on)
+Step 4: Select composition (how close/how much context)
+Step 5: Add sensory details (light, texture, temperature cues)
+
+[OUTPUT]:
+60-70 word FLUX-2-pro prompt with visual hierarchy capturing the moment:
+
+Format:
+[Composition]: [Hero action/state in the moment]. Shallow focus on [hero]. [Hands/perspective element if relevant]. [Decoration/context] softly blurred [position]. [Background environment] out of focus. [Light source and time]. [Imperfection/authenticity detail]. Shot on Sony A7, f/1.8, 1:1 crop, no text.
+
+Example (Moment-First):
+"Medium shot: Hands pulling fresh ramen noodles from boiling water, strands lifting with steam. Shallow focus on noodles mid-lift. Stainless steel pot edge and kitchen counter softly blurred below. Dark grey ceiling and pendant lights out of focus. Evening service light, 6:30 PM. Water droplets on counter. Shot on Sony A7, f/1.8, 1:1 crop, no text."
+
+Example (Moment-First):
+"Detail close-up: Fingertips pressing into proofed pizza dough surface, slight indent visible. Shallow focus on hand-dough contact point. Flour-dusted stainless steel tray edge softly blurred. Wood prep table and kitchen background out of focus. Morning prep light, 9 AM. Flour fingerprint on tray edge. Shot on Sony A7, f/1.8, 1:1 crop, no text."
+
+Rules:
+- Hero sharp, context blurred, background minimal
+- Hands visible when they're part of the moment's action
+- Perspective should feel present (not observational)
+- Actions should be physically visible, not conceptual ("checking heat" not "observing thermal distribution")
+- Authenticity details should be broad textures FLUX can render ("flour dust" not "fine grain flour residue")
+- Human elements (hands, arms, silhouette) when moment involves checking/doing
+- No brand names in prompt
+- No clutter or staged styling
+- No legible faces (people are hands/bodies in action)
+- Storefront/signage: background only if visible
+- Include one authenticity detail (wear, smudge, condensation, flour dust)
+
+<<<PROMPT_BEGIN>>>
         `;
 
 
