@@ -97,32 +97,41 @@ export async function POST(req: Request) {
     const businessName = business.business_name;
  
     const { data: post, error: dbError } = await supabase
-        .from('community_posts')
-        .select('image_prompt')
-        .eq('id', postId)
-        .eq('business_id', userId)
-        .single();
-      
-        if (dbError || !post) {
-          console.error(`❌ Supabase Error: Could not find post with ID ${postId}`);
-          return NextResponse.json({ status: 'WAITING' }, { status: 202 });
-        }
-
-        // 2. EVALUATE THE STATUS OF THE PROMPT
-        const postPrompt = post.image_prompt;
-
-        // Status: Still processing
-        if (!postPrompt) {
-          return NextResponse.json({ status: 'WAITING' }, { status: 202 });
-        }
-
-        // Status: Architect failed
-    if (postPrompt.startsWith("ERROR:")) {
-      return NextResponse.json({ 
-        status: 'ERROR', 
-        message: "Architect failed to build prompt" 
-      }, { status: 500 });
-    }
+    .from('community_posts')
+    .select('image_prompt, image_url')
+    .eq('id', postId)
+    .eq('business_id', userId)
+    .single();
+  
+  if (dbError || !post) {
+    return NextResponse.json({ status: 'WAITING' }, { status: 202 });
+  }
+  
+  // CASE: Multimodal path — image already generated and saved directly
+  if (post.image_url) {
+    console.log("✅ [GEMINI_MULTIMODAL] image_url already set — returning directly");
+    return NextResponse.json({
+      url: post.image_url,
+      debugPrompt: post.image_prompt || 'GEMINI_MULTIMODAL',
+      providerUsed: 'GEMINI_MULTIMODAL',
+      hosted: true,
+    });
+  }
+  
+  // CASE: Architect path — prompt not ready yet
+  const postPrompt = post.image_prompt;
+  
+  if (!postPrompt) {
+    return NextResponse.json({ status: 'WAITING' }, { status: 202 });
+  }
+  
+  // CASE: Architect failed
+  if (postPrompt.startsWith("ERROR:")) {
+    return NextResponse.json({
+      status: 'ERROR',
+      message: "Architect failed to build prompt"
+    }, { status: 500 });
+  }
 
 
     const finalDescription = postPrompt 

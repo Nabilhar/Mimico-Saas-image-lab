@@ -5,11 +5,14 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import Groq from "groq-sdk";
 import { NextResponse } from "next/server";
 import { createClient } from '@supabase/supabase-js';
-import { FRAMEWORK_POST_TYPE_COMBINATIONS, getSeason, SEASONALITY_CONTEXT, SEASONAL_NICHE_CONTEXT } from "@/lib/frameworks";
+import { FRAMEWORK_POST_TYPE_COMBINATIONS, getFramework, getSeason, SEASONALITY_CONTEXT, SEASONAL_NICHE_CONTEXT } from "@/lib/frameworks";
 import { parseZones } from "@/lib/parse-business-intel";
 import { buildBrandVariables } from "@/lib/image-brand-variables";
 import { resolveZoneFocus, type ZoneKey } from "@/lib/post-type-zone-focus";
 import { auth } from "@clerk/nextjs/server";
+import { getImageModeTemplate } from '@/lib/image-mode-templates';
+import { selectZonePhoto } from "@/lib/select-zone-photo";
+import { fetchWeatherForCity } from "@/lib/weather";
 
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
@@ -60,21 +63,6 @@ const POST_TYPE_TO_VOICE: Record<string, string> = {
   "Community moment": "Warm & Conversational",
 };
 
-const POST_TYPE_VISUAL_INTENT: Partial<Record<string, string>> = {
-  "Promotion / offer": 
-    "This image supports a promotional offer. The visual job is 'reason to visit' — warm, inviting, specific to the offer. For product offers: abundance and welcome. For service offers: show the specific benefit or result. The hero should make viewers feel they'd be missing out by not going.",
-  "Local event / news":
-    "This image supports a local event or news post. The visual job is 'community energy' — the neighbourhood is alive, something is happening. If the truth is visible at street-level (signage, patio, storefront activity), show it. If it's a detail (new menu item, specific offering), reveal that. The business is part of the neighbourhood, not separate from it.",
-  "Behind the scenes":
-    "This image reveals process. The visual job is 'earned trust' — show one specific step that customers never see but immediately recognise as real craft. Raw materials, mid-process moments, tools in use. Not a finished product shot.",
-  "Myth-busting":
-    "This image supports a myth correction. The visual job is 'truth revealed' — the hero should be the real thing, not the assumed thing. Precise and authoritative. No warmth padding. The image should make the viewer feel they're seeing something they got wrong.",
-  "Tip of the Day":
-    "This image supports educational content. The visual job is 'craft knowledge made visible' — one specific detail that embodies the tip. Not generic. Specific enough that it could only illustrate this post.",
-  "Community moment":
-    "This image supports a community moment post. The visual job is 'belonging' — if people are present, they are the hero in genuine scenes of enjoyment or connection. If the moment is atmospheric without people, capture the sensory environment that creates the feeling of presence. Product or space provides context. The viewer should feel they are part of something worth being part of.",
-};
-
 // ============================================================================
 // POST-TYPE-SPECIFIC DATA REQUIREMENTS
 // ============================================================================
@@ -88,9 +76,9 @@ const POST_TYPE_DATA_REQUIREMENTS = {
       color_theme: true,
       logo_colors: false,
       storefront: false,        // Detail shots don't need building context
-      interior_layout: true,   // Detail shots don't need room layout
-      interior_colors: true,   // Detail shots don't need wall colors
-      zones: false,
+      interior_layout: false,   // Detail shots don't need room layout
+      interior_colors: false,   // Detail shots don't need wall colors
+      zones: true,
     }
   },
   
@@ -358,11 +346,9 @@ export async function POST(req: Request) {
     const body = await req.json();
     const {
       postId: bodyPostId,
-      currentMonth,
-      generatedPost,
-      postType,
-      currentWeather,
-      currentTime,
+      currentMonth: bodyCurrentMonth,
+      currentWeather: bodyCurrentWeather,
+      currentTime: bodyCurrentTime,
       zoneFocus: zoneFocusOverride,
     } = body;
     postId = bodyPostId;
@@ -371,11 +357,30 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing Post ID" }, { status: 400 });
     }
 
-    // Fetch brand data
+    // Post record is source of truth for copy + mode (not live dashboard state).
+    const { data: post, error: postError } = await supabase
+      .from("community_posts")
+      .select("id, content, post_type, business_name, location_snapshot, voice_used")
+      .eq("id", postId)
+      .eq("business_id", userId)
+      .single();
+
+    if (postError || !post) {
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    }
+
+    const generatedPost = (post.content || "").trim();
+    if (!generatedPost) {
+      return NextResponse.json({ error: "Post has no content" }, { status: 400 });
+    }
+
+    const postType = (post.post_type || "Behind the scenes").trim();
+
+    // Fetch brand data (zones, colors, niche — current profile for visuals)
     const { data: business, error: businessError } = await supabase
       .from('businesses')
       .select(`
-        business_name, street, city, province_state, country, postal_code,
+        business_name, street, city, province_state, country, postal_code, category,
         niche, voice, business_description, color_theme, business_visuals, 
         storefront_architecture, interior_layout, zones, timezone
       `)
@@ -387,18 +392,75 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
 
-    const fullAddress = `${business.street}, ${business.city}, ${business.province_state}, ${business.country} ${business.postal_code}`;
-    const business_name = business.business_name;
+    // Some clients don't send time/month/weather; compute safe fallbacks server-side.
+    const now = new Date();
+    const businessTimeZone: string | undefined =
+      typeof business.timezone === "string" && business.timezone.trim().length > 0
+        ? business.timezone.trim()
+        : undefined;
+
+    const safeFormat = (options: Intl.DateTimeFormatOptions, fallback: () => string) => {
+      try {
+        return new Intl.DateTimeFormat("en-US", {
+          ...(businessTimeZone ? { timeZone: businessTimeZone } : {}),
+          ...options,
+        }).format(now);
+      } catch {
+        return fallback();
+      }
+    };
+
+    const currentTime =
+      typeof bodyCurrentTime === "string" && bodyCurrentTime.trim().length > 0
+        ? bodyCurrentTime.trim()
+        : safeFormat(
+            { hour: "numeric", minute: "2-digit" },
+            () => now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
+          );
+
+    const currentMonth =
+      typeof bodyCurrentMonth === "string" && bodyCurrentMonth.trim().length > 0
+        ? bodyCurrentMonth.trim()
+        : safeFormat({ month: "long" }, () => now.toLocaleString("en-US", { month: "long" }));
+
+    let currentWeather =
+      typeof bodyCurrentWeather === "string" && bodyCurrentWeather.trim().length > 0
+        ? bodyCurrentWeather.trim()
+        : "";
+
+    if (!currentWeather && business.city) {
+      currentWeather = await fetchWeatherForCity(business.city);
+      if (currentWeather) {
+        console.log(`--- WEATHER (prepare-image-prompt): ${currentWeather} ---`);
+      }
+    }
+
+    if (!currentWeather) {
+      currentWeather = "Unknown";
+    }
+
+    const fullAddress =
+      (typeof post.location_snapshot === "string" && post.location_snapshot.trim()) ||
+      `${business.street}, ${business.city}, ${business.province_state}, ${business.country} ${business.postal_code}`;
+    const business_name =
+      (typeof post.business_name === "string" && post.business_name.trim()) ||
+      business.business_name;
     const brandIdentity = {
       ...business,
       zones: parseZones(business.zones),
     };
     const niche = business.niche;
-    const voice = business.voice;
+    const voice =
+      (typeof post.voice_used === "string" && post.voice_used.trim()) || business.voice;
 
     // Calculate strategy & season
     const season = getSeason(currentMonth);
-    const combinationKey = `${body.framework}_${body.postType}`;
+    const framework = getFramework(
+      business.category || "Food & Beverage",
+      postType,
+      voice,
+    );
+    const combinationKey = `${framework}_${postType}`;
     const visualStrategy = (FRAMEWORK_POST_TYPE_COMBINATIONS as any)[combinationKey] || "Create a compelling visual for this post type.";
     const seasonInfo = SEASONALITY_CONTEXT[season as keyof typeof SEASONALITY_CONTEXT];
     const seasonalNicheContext = SEASONAL_NICHE_CONTEXT[season]?.[niche] || 
@@ -465,7 +527,281 @@ export async function POST(req: Request) {
 
     const voiceDescription = VOICE_VISUAL_MAP[POST_TYPE_TO_VOICE[postType]];
 
-    const visualIntent = POST_TYPE_VISUAL_INTENT[postType]
+    // ============================================================================
+// GEMINI MULTIMODAL PATH
+// Controlled by IMAGE_GENERATION_MODE=GEMINI_MULTIMODAL in .env
+// Falls back to architect path automatically if no zone photo or on error
+// ============================================================================
+const IMAGE_GEN_MODE = process.env.IMAGE_GENERATION_MODE || "ARCHITECT";
+
+if (IMAGE_GEN_MODE === "GEMINI_MULTIMODAL") {
+  console.log("🎨 [GEMINI_MULTIMODAL] Starting multimodal path...");
+
+  try {
+    // 1. Select the right zone photo for this post type
+    const { photoUrl, zoneKey, zoneLabel, fallbackReason } = await selectZonePhoto(
+      supabase, userId, postType, zoneFocusOverride
+    );
+
+    if (!photoUrl) {
+      console.warn(`[GEMINI_MULTIMODAL] No zone photo (${fallbackReason}) — falling back to architect.`);
+      // Falls through to architect path below
+
+    } else {
+      console.log(`[GEMINI_MULTIMODAL] ✅ Using ${zoneLabel} photo for "${postType}"`);
+
+      // 2. Build multimodal prompt
+      const imageModeLogicMulti = getImageModeTemplate(postType as any);
+
+      const multimodalPrompt = `
+REFERENCE IMAGE: The attached photo shows the actual ${zoneLabel} of ${business_name}.
+Use this space as the setting. Match its lighting, materials, colors, and spatial character exactly.
+
+[POST]:
+Type: ${postType}
+"${generatedPost}"
+
+[MODE LOGIC — THIS DRIVES WHAT TO GENERATE]:
+${imageModeLogicMulti}
+
+[VOICE]:
+${voiceDescription}
+
+[BRAND CONTEXT]:
+Business: ${business_name} (${niche})
+Color Mood: ${b.color_mood}
+Palette: ${b.color_primary} / ${b.color_secondary} / ${b.color_accent}
+
+[SPACE — FROM REFERENCE IMAGE]:
+You can see the actual ${zoneLabel}. Use it.
+Match the exact lighting quality, shadow direction, and color temperature from the photo.
+Place the hero naturally within this space — do not invent a different room.
+
+[TIMING]:
+${currentMonth}, ${currentTime}
+Weather: ${currentWeather}
+
+[TECHNICAL]:
+- Hero: sharp focus
+- Space: softly blurred background
+- Depth of field: shallow (f/1.8 equivalent)
+- One subtle imperfection: ${imperfectionGuidance}
+- Never add imperfections to: people, products, clinical equipment
+- No legible faces — people are hands/bodies/silhouettes only
+- No text overlays, no watermarks
+- Square crop (1:1)
+- Professional commercial photography quality
+
+Before generating, write one sentence describing exactly what the image shows: 
+the hero, its placement in the space, and the lighting mood. Then generate the image.
+`.trim();
+
+      console.log("\n=== GEMINI MULTIMODAL PROMPT ===");
+      console.log(multimodalPrompt);
+      console.log("=== END PROMPT ===\n");
+
+      // 3. Fetch zone photo and convert to base64
+      const photoResponse = await fetch(photoUrl);
+      if (!photoResponse.ok) throw new Error(`Failed to fetch zone photo: ${photoResponse.status}`);
+      const photoArrayBuffer = await photoResponse.arrayBuffer();
+      const photoBase64 = Buffer.from(photoArrayBuffer).toString('base64');
+      const photoMimeType = photoResponse.headers.get('content-type') || 'image/jpeg';
+
+      // 4. Call Gemini — toggle between Google API and OpenRouter
+      const IMAGE_GEN_PROVIDER: "GOOGLE_API" | "OPENROUTER" =
+      (process.env.IMAGE_GEN_PROVIDER as any) || "GOOGLE_API";
+
+      let generatedImageBase64: string | null = null;
+      let generatedMimeType = 'image/png';
+      let geminiTextPrompt = '';
+
+      if (IMAGE_GEN_PROVIDER === "GOOGLE_API") {
+      console.log("[GEMINI_MULTIMODAL] Provider: Google API");
+
+      const geminiImageModel = genAI.getGenerativeModel({
+        model: "gemini-2.5-flash-image",
+        generationConfig: {
+          responseModalities: ["IMAGE", "TEXT"],
+        } as any,
+      }, { apiVersion: 'v1beta' });
+
+      const imageResult = await geminiImageModel.generateContent([
+        {
+          inlineData: {
+            data: photoBase64,
+            mimeType: photoMimeType,
+          },
+        },
+        { text: multimodalPrompt },
+      ]);
+
+      const parts = imageResult.response.candidates?.[0]?.content?.parts || [];
+
+      for (const part of parts) {
+        if ((part as any).inlineData?.data) {
+          generatedImageBase64 = (part as any).inlineData.data;
+          generatedMimeType   = (part as any).inlineData.mimeType || 'image/png';
+        }
+        if ((part as any).text?.trim()) {
+          geminiTextPrompt = (part as any).text.trim();
+        }
+      }
+
+      } else if (IMAGE_GEN_PROVIDER === "OPENROUTER") {
+      console.log("[GEMINI_MULTIMODAL] Provider: OpenRouter");
+
+      const orResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          "HTTP-Referer": "https://shorlinestudio.ca",
+          "X-OpenRouter-Title": "Shoreline Multimodal",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3.1-flash-image-preview",
+          modalities: ["image", "text"],
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: multimodalPrompt,
+                },
+                {
+                  type: "image_url",
+                  image_url: {
+                    url: photoUrl, // ← direct Supabase URL, no base64 needed
+                  },
+                },
+              ],
+            },
+          ],
+        }),
+      });
+      
+      // Log raw response to understand what OpenRouter actually returns
+      console.log("[OPENROUTER] Response status:", orResponse.status);
+      
+      const orRaw = await orResponse.text();
+
+      if (orRaw.startsWith("<!DOCTYPE") || orRaw.startsWith("<html")) {
+        throw new Error("OpenRouter returned HTML error page — check model ID or API key");
+      }
+
+      const orData = JSON.parse(orRaw);
+
+      if (orData.error) {
+        throw new Error(`OpenRouter error: ${orData.error.message}`);
+      }
+
+      // Extract text and image from OpenRouter response content array
+      const message = orData.choices?.[0]?.message;
+
+      // Text comes from message.content
+      if (typeof message?.content === "string" && message.content.trim()) {
+        geminiTextPrompt = message.content.trim();
+      }
+
+      // Image comes from message.images[] (not message.content)
+      const images = message?.images;
+      if (Array.isArray(images) && images.length > 0) {
+        const dataUri = images[0]?.image_url?.url;
+        if (dataUri) {
+          const matches = dataUri.match(/^data:([^;]+);base64,(.+)$/);
+          if (matches) {
+            generatedMimeType    = matches[1];
+            generatedImageBase64 = matches[2];
+          }
+        }
+      }
+
+      console.log("[OPENROUTER] Text received:", geminiTextPrompt.slice(0, 80));
+      console.log("[OPENROUTER] Image received:", generatedImageBase64 ? "yes" : "no");
+      }
+
+      // 5. Validate we got an image
+      if (!generatedImageBase64) {
+      throw new Error(`${IMAGE_GEN_PROVIDER} returned no image data — check model supports image output`);
+      }
+
+      console.log(`[GEMINI_MULTIMODAL] Text extracted (${IMAGE_GEN_PROVIDER}): "${geminiTextPrompt.slice(0, 80)}..."`);
+
+      // 6. Upload generated image to Supabase post-images bucket
+      const imageBuffer = Buffer.from(generatedImageBase64, 'base64');
+      const blob = new Blob([imageBuffer], { type: generatedMimeType });
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.png`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('post-images')
+        .upload(fileName, blob, { contentType: generatedMimeType, upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('post-images')
+        .getPublicUrl(fileName);
+
+      const imageUrl = urlData.publicUrl;
+
+      // 7. Save Gemini's text to image_prompt (for history + debugging)
+      const { error: promptError } = await supabase.rpc('update_post_image_prompt', {
+        post_id: postId,
+        new_prompt: geminiTextPrompt || `Gemini multimodal — ${zoneLabel}`,
+      });
+      if (promptError) throw promptError;
+
+      // 8. Save image URL directly to community_posts.image_url
+      // generate-image/route will detect this and return it without running FLUX
+      const { error: imageUrlError } = await supabase
+        .from('community_posts')
+        .update({ image_url: imageUrl })
+        .eq('id', postId);
+
+      if (imageUrlError) throw imageUrlError;
+
+      console.log(`✅ [GEMINI_MULTIMODAL] Prompt + image saved for Post ${postId}`);
+      return NextResponse.json({
+        success: true,
+        imageUrl,
+        method: 'GEMINI_MULTIMODAL',
+        zoneUsed: zoneKey,
+      });
+    }
+
+//---------------------delete to go back to fallback after testing
+
+  } catch (multimodalError: any) {
+    console.error("[GEMINI_MULTIMODAL] Failed:", multimodalError.message);
+
+    // ⚠️ TESTING MODE: return error directly instead of falling back
+    // Re-enable fallback after testing by removing this return
+    await supabase.rpc('update_post_image_prompt', {
+      post_id: postId,
+      new_prompt: `ERROR: ${multimodalError.message}`,
+    });
+    return NextResponse.json(
+      { error: multimodalError.message },
+      { status: 500 }
+    );
+
+    // TODO: Re-enable fallback after testing:
+    // Falls through to architect path below
+  }
+}
+//---------------------------------------reactivate fallback after testing
+//  } catch (multimodalError: any) {
+//    console.error("[GEMINI_MULTIMODAL] Failed:", multimodalError.message, "— falling back to architect.");
+//    // Falls through to architect path below
+//  }
+//}
+//-------------------------------------------------------------------------
+
+
+// ============================================================================
+// ARCHITECT PATH (existing code — unchanged below)
+// ============================================================================
 
 
     // Legacy the architect prompt
@@ -490,8 +826,7 @@ Visual Strategy: ${visualStrategy}
 [VOICE]:
 "${voice}" — ${VOICE_VISUAL_MAP[voice] || "Clean and intentional. Every element earns its place."}
 
-[POST TYPE — VISUAL JOB]:
-${postType}: ${POST_TYPE_VISUAL_INTENT[postType] || "Create a compelling visual that supports the post content."}
+
 
 [SEASONAL_CONTEXT]:
 ${season} | ${currentMonth} | ${currentTime}
@@ -544,7 +879,7 @@ Storefront/signage: secondary only, mid/background, slightly out of focus if ext
     [TASK]:
     Post: "${generatedPost}"
     Business: ${business_name} (${niche})
-    Job: ${POST_TYPE_VISUAL_INTENT[postType]}
+
 
  
     [HERO — VISUAL TRUTH EXTRACTION]:
@@ -650,6 +985,9 @@ Storefront/signage: secondary only, mid/background, slightly out of focus if ext
     <<<PROMPT_BEGIN>>> Write your hierarchical, hero-focused FLUX-2-pro prompt now:
     `;
 
+    
+    const imageModeLogic = getImageModeTemplate(postType as any);
+
     // New the architect short prompt
     const architectPrompt = `
 [SYSTEM]: Image prompt engineer for FLUX-2-pro. Commercial/lifestyle photography.
@@ -662,108 +1000,8 @@ Post: ${postType}
 
 Business: ${business_name} (${niche})
 
-Primary Job: This image captures the moment described in the post.
-
-Visual Intent: ${visualIntent}
-
-Approach: Start with the moment. Layer in the mode-specific intent.
-
-[MOMENT EXTRACTION]:
-Read the post carefully and identify:
-
-1. **The Moment**: What specific moment is happening?
-  - Time of day mentioned or implied
-  - Location/setting (kitchen, counter, prep area, etc.)
-  - What phase of work (prep, service, cleanup, observation)
-
-2. **The Action**: What is the person doing?
-  - Active work (pulling, cutting, adjusting, assembling)
-  - Checking/monitoring (watching, measuring, testing)
-  - Observing (noticing a pattern, seeing a detail)
-  - Even "standing and watching" is an action
-
-3. **Point of Attention**: What are they looking at or focused on?
-  - A material/ingredient in a specific state
-  - A tool in use
-  - A change happening (steam rising, color shifting, texture forming)
-  - A measurement or indicator
-
-4. **Sensory Anchor**: What makes this moment specific and grounded?
-  - Temperature (heat, cold, steam, condensation)
-  - Light quality (morning, afternoon, evening, overhead, natural)
-  - Sound implied (simmering, chopping, quiet)
-  - Texture visible (worn surfaces, condensation, flour dust)
-
-The image captures THIS MOMENT, not a proof point for the claim.
-
-[HERO]:
-The hero is the main visual element that anchors the moment.
-
-**For observational posts (BTS, Community Moment, Local Event):**
-Determine the hero based on what's happening in the moment (see action-based logic below).
-
-**For instructional posts (Tip of the Day, Myth-busting):**
-The hero must show BOTH the moment AND the technique/correction being taught.
-- Tip: Show the action at the key step where the tip applies
-- Myth: Show the correct technique that disproves the myth
-
-The moment grounds it. The technique must be visible.
-
-Determine the hero based on what's happening:
-
-**If the person is checking/watching/monitoring:**
-Hero = what they're looking at + evidence of the checking action
-Examples:
-- Hands near dough, fingers testing texture
-- Thermometer in frame with the thing being measured
-- Looking into pot/oven (view of what they see)
-
-**If the person is mid-process:**
-Hero = the materials + hands in action
-Examples:
-- Knife mid-cut through ingredient
-- Hands pulling noodles from water
-- Spoon stirring/tasting
-
-**If the person is observing a pattern:**
-Hero = what they're noticing
-Examples:
-- Steam rising (if noticing condensation)
-- Color change in cooking material
-- Gap/space/timing they're watching
-
-**If the person is standing/waiting/pausing:**
-Hero = what occupies the space during the pause
-Examples:
-- The thing simmering/resting/holding
-- The workspace in that moment
-- The environmental detail they're noticing
-
-The hero creates presence: "I am here, looking at this, in this moment."
-
-[COMPOSITION LOGIC]:
-Choose composition based on how to best capture the moment's perspective:
-
-**Detail (close-up):**
-Use when: The moment is about noticing something small or specific
-Shows: What they're focused on, intimate view
-Feel: Over-the-shoulder, "looking closely at..."
-Example: Checking texture, measuring precisely, watching a small change
-
-**Medium (mid-shot):**
-Use when: The moment involves an action with materials
-Shows: Hands + materials + immediate context
-Feel: Mid-work, "doing this right now"
-Example: Assembling, adjusting, mid-process steps
-
-**Wide (environmental):**
-Use when: The moment is about the space/atmosphere or positioning
-Shows: Where this happens, spatial context
-Feel: "This is where I'm standing"
-Example: Observing the whole kitchen, waiting during a long process
-
-Not asking: "What proves the claim?"
-Asking: "What does being there look like?"
+[MODE LOGIC — THIS DRIVES THE IMAGE]:
+${imageModeLogic}
 
 [VOICE]:
 ${voiceDescription}
@@ -782,56 +1020,45 @@ Zone — ${b.zone_label} (from photos; use for setting and palette):
   Activity: ${b.zone_activity}
   Colors: ${b.zone_color_dominant}, ${b.zone_color_supporting}, accent ${b.zone_color_accent}, ${b.zone_color_materials}
 
-${structureBlock}
+
 
 Layer the hero INTO this real business environment naturally.
+Brand details are ground truth — not suggestions. If "Infer", construct
+from business type and niche.
 
 [LIGHTING & CONTEXT]
 Time: ${currentTime}, ${currentMonth}
 Weather: ${currentWeather}
 
-[AVOID]:
-- Generic "prep area" shots without specific moment
-- Perfectly styled food photography (this is mid-work, not final presentation)  
-- Static product shots (show process, not result)
-- Proof-of-concept visuals (focus on moment, not demonstration)
-- Hands that look staged (they should be working, not posing)
-
-[MOMENT-TO-VISUAL TRANSLATION]:
-
-Step 1: Identify the moment's core action
-Step 2: Determine POV (whose perspective/where are they)
-Step 3: Choose hero (what they're focused on)
-Step 4: Select composition (how close/how much context)
-Step 5: Add sensory details (light, texture, temperature cues)
-
-[OUTPUT]:
-60-70 word FLUX-2-pro prompt with visual hierarchy capturing the moment:
-
-Format:
-[Composition]: [Hero action/state in the moment]. Shallow focus on [hero]. [Hands/perspective element if relevant]. [Decoration/context] softly blurred [position]. [Background environment] out of focus. [Light source and time]. [Imperfection/authenticity detail]. Shot on Sony A7, f/1.8, 1:1 crop, no text.
-
-Example (Moment-First):
-"Medium shot: Hands pulling fresh ramen noodles from boiling water, strands lifting with steam. Shallow focus on noodles mid-lift. Stainless steel pot edge and kitchen counter softly blurred below. Dark grey ceiling and pendant lights out of focus. Evening service light, 6:30 PM. Water droplets on counter. Shot on Sony A7, f/1.8, 1:1 crop, no text."
-
-Example (Moment-First):
-"Detail close-up: Fingertips pressing into proofed pizza dough surface, slight indent visible. Shallow focus on hand-dough contact point. Flour-dusted stainless steel tray edge softly blurred. Wood prep table and kitchen background out of focus. Morning prep light, 9 AM. Flour fingerprint on tray edge. Shot on Sony A7, f/1.8, 1:1 crop, no text."
-
-Rules:
+[SHARED RULES]:
 - Hero sharp, context blurred, background minimal
-- Hands visible when they're part of the moment's action
-- Perspective should feel present (not observational)
-- Actions should be physically visible, not conceptual ("checking heat" not "observing thermal distribution")
-- Authenticity details should be broad textures FLUX can render ("flour dust" not "fine grain flour residue")
-- Human elements (hands, arms, silhouette) when moment involves checking/doing
+- Authenticity details should be broad textures FLUX can render
+  ("flour dust" not "fine grain flour residue")
 - No brand names in prompt
 - No clutter or staged styling
-- No legible faces (people are hands/bodies in action)
+- No legible faces — people are hands/bodies/silhouettes
 - Storefront/signage: background only if visible
 - Include one authenticity detail (wear, smudge, condensation, flour dust)
-
+- One subtle imperfection: ${imperfectionGuidance}
+- Never add imperfections to: people, products, clinical equipment
+ 
+[OUTPUT]:
+60-70 word FLUX-2-pro prompt with visual hierarchy.
+ 
+Format:
+[Composition]: [Hero from mode logic]. Shallow focus on [hero]. [Secondary elements] softly blurred [position]. [Background environment] out of focus. [Light source and time]. [Imperfection/authenticity detail]. Shot on Sony A7, f/1.8, 1:1 crop, no text.
+ 
+Rules:
+- Start with composition type (Detail close-up / Medium shot / Wide shot)
+- Hero with specific visible detail — not conceptual
+- "Shallow focus on [hero]" immediately after hero description
+- Decorative elements de-emphasized: "softly blurred", "out of focus"
+- Lighting: ONE dominant source, simple
+- Actions physically visible, not conceptual
+- End with: "Shot on Sony A7, f/1.8, 1:1 crop, no text"
+ 
 <<<PROMPT_BEGIN>>>
-        `;
+`;
 
 
     let visualDescription = "";

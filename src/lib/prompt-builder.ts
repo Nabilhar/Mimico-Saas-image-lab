@@ -3,6 +3,7 @@
 
 import { getModeTemplate, PostType } from './mode-templates';
 import { VOICE_PROMPTS, VOICE_EMOJI_GUIDANCE } from "@/lib/VOICE_PROMPTS";
+import { formatOfferingWithPractices } from "@/lib/offering-rotation";
 
 /**
  * Maps post type to the placeholder name used in that mode's template.
@@ -87,8 +88,12 @@ export interface PromptBuilderConfig {
   eligibility?: string;
   offer_hook?: string;
   value_framing?: string;
+  show_price?: boolean;
+  price_details?: string;
   category?: string | null;    
   recentSummariesFormatted?: string;
+  /** One offering chosen by rotation — only its practices are injected */
+  selectedOffering?: string;
 }
 
 /**
@@ -281,26 +286,6 @@ function getCurrentSeason(): string {
   return "Winter";
 }
 
-/**
- * Format practices_by_offering for template consumption
- * Returns a formatted string that templates can use
- */
-function formatPracticesByOffering(data?: Record<string, string[]>): string {
-  if (!data || Object.keys(data).length === 0) {
-    return "";
-  }
-  
-  const formatted = Object.entries(data)
-    .map(([offering, practices]) => {
-      if (!practices || practices.length === 0) return "";
-      const practicesList = practices.map(p => `  - ${p}`).join("\n");
-      return `${offering}:\n${practicesList}`;
-    })
-    .filter(Boolean)
-    .join("\n\n");
-  
-  return formatted;
-}
 
 /**
  * Build a complete prompt by selecting the MODE template and injecting variables
@@ -345,9 +330,15 @@ export function buildPrompt(config: PromptBuilderConfig): string {
     transit: intel?.transit?.join(", ") || "",
     local_trends: intel?.local_trends?.join(", ") || "",
     
-    // Offerings
+    // Offerings — one rotated focus per post; full list kept for OFFERINGS_REFERENCED labels
     products_services: intel?.products_services?.join(", ") || "",
-    practices_by_offering: formatPracticesByOffering(intel?.practices_by_offering),
+    selected_offering: config.selectedOffering || "",
+    practices_by_offering: config.selectedOffering
+      ? formatOfferingWithPractices(
+          config.selectedOffering,
+          intel?.practices_by_offering
+        )
+      : "",
     
     // Interior layout fields
     interior_counter_position: intel?.interior_layout?.counter_position || "",
@@ -399,6 +390,8 @@ export function buildPrompt(config: PromptBuilderConfig): string {
     eligibility: config.eligibility || "",
     offer_hook: config.offer_hook || "",
     value_framing: config.value_framing || "",
+    show_price: config.show_price ? "true" : "false",
+    price_details: config.price_details || "",
   };
 
   if (config.category) {

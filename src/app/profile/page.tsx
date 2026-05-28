@@ -26,12 +26,16 @@ interface PhotoSlotProps {
   sublabel: string;
   icon: string;
   file: File | null;
+  existingUrl?: string | null;
   onChange: (file: File | null) => void;
 }
 
-function PhotoSlot({ label, sublabel, icon, file, onChange }: PhotoSlotProps) {
+function PhotoSlot({ label, sublabel, icon, file, existingUrl, onChange }: PhotoSlotProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const previewUrl = file ? URL.createObjectURL(file) : null;
+  
+  // New file takes priority over existing URL
+  const previewUrl = file ? URL.createObjectURL(file) : existingUrl ?? null;
+  const isExisting = !file && !!existingUrl;
 
   return (
     <div className="flex flex-col gap-2">
@@ -43,31 +47,36 @@ function PhotoSlot({ label, sublabel, icon, file, onChange }: PhotoSlotProps) {
         className={`relative flex items-center justify-center rounded-2xl border-2 border-dashed cursor-pointer transition overflow-hidden h-32
           ${file
             ? "border-cyan-400 bg-cyan-50"
-            : "border-slate-200 bg-slate-50 hover:border-cyan-300 hover:bg-cyan-50/50"
+            : existingUrl
+              ? "border-emerald-400 bg-emerald-50"
+              : "border-slate-200 bg-slate-50 hover:border-cyan-300 hover:bg-cyan-50/50"
           }`}
       >
         {previewUrl ? (
-          // Show thumbnail preview once a file is selected
           <>
             <img
               src={previewUrl}
               alt={label}
               className="absolute inset-0 w-full h-full object-cover rounded-2xl"
             />
-            {/* Overlay with change/remove controls */}
             <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center gap-1 opacity-0 hover:opacity-100 transition rounded-2xl">
-              <span className="text-white text-xs font-semibold">Change photo</span>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onChange(null);
-                  if (inputRef.current) inputRef.current.value = "";
-                }}
-                className="text-red-300 text-[10px] hover:text-red-100 underline"
-              >
-                Remove
-              </button>
+              <span className="text-white text-xs font-semibold">
+                {isExisting ? "Replace photo" : "Change photo"}
+              </span>
+              {/* Only show Remove for newly selected files, not existing URLs */}
+              {!isExisting && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onChange(null);
+                    if (inputRef.current) inputRef.current.value = "";
+                  }}
+                  className="text-red-300 text-[10px] hover:text-red-100 underline"
+                >
+                  Remove
+                </button>
+              )}
             </div>
           </>
         ) : (
@@ -78,6 +87,13 @@ function PhotoSlot({ label, sublabel, icon, file, onChange }: PhotoSlotProps) {
           </div>
         )}
       </div>
+      {/* Status label below slot */}
+      {isExisting && (
+        <span className="text-[10px] text-emerald-600 ml-1">✓ Saved</span>
+      )}
+      {file && (
+        <span className="text-[10px] text-cyan-600 ml-1">↑ New — will upload on save</span>
+      )}
       <input
         ref={inputRef}
         type="file"
@@ -193,6 +209,11 @@ export default function ProfilePage() {
   const [customerSpacePhoto, setCustomerSpacePhoto] = useState<File | null>(null);
   const [workSpacePhoto,     setWorkSpacePhoto]     = useState<File | null>(null);
 
+  // ── Existing photo URLs from database ─────────────────────────────────────
+const [existingEntranceUrl,      setExistingEntranceUrl]      = useState<string | null>(null);
+const [existingCustomerSpaceUrl, setExistingCustomerSpaceUrl] = useState<string | null>(null);
+const [existingWorkSpaceUrl,     setExistingWorkSpaceUrl]     = useState<string | null>(null);
+
   // ── Brand source state — drives which UI the photo section shows ─────────
   // null        = first visit, discovery hasn't run yet
   // 'photos'    = real colors captured from owner photos ✅
@@ -225,6 +246,9 @@ export default function ProfilePage() {
           voice: string;
           brand_source: string;
           business_description: any; // 'any' works here because we parse it next
+          entrance_photo_url?: string | null;
+          customer_space_photo_url?: string | null;
+          work_space_photo_url?: string | null;
         };
 
         const { data, error } = await supabase
@@ -263,6 +287,10 @@ export default function ProfilePage() {
         setNiche(data.niche || "");
         setBrandSource(data.brand_source || null);
         setBusinessDescription(intel?.description || "");
+        // Load existing photo URLs
+        setExistingEntranceUrl(data.entrance_photo_url || null);
+        setExistingCustomerSpaceUrl(data.customer_space_photo_url || null);
+        setExistingWorkSpaceUrl(data.work_space_photo_url || null);
    
         // Store original values for change detection
         setOriginalBusinessName(data.business_name || "");
@@ -446,23 +474,57 @@ export default function ProfilePage() {
       });
       if (rpcError) throw rpcError;
 
-      // 2. Upload Photos
+      // 2. Upload Photos & Save URLs to Database
+      const photoUpdates: Record<string, string> = {};
       const uploadedPhotoData: UploadedPhoto[] = [];
-      const selectedFiles = [
-        { file: entrancePhoto,      label: "entrance"       },
-        { file: customerSpacePhoto, label: "customer_space" },
-        { file: workSpacePhoto,     label: "work_space"     },
-      ].filter((p) => p.file !== null) as { file: File; label: string }[];
 
-      if (selectedFiles.length > 0) {
-        for (const { file, label } of selectedFiles) {
+      const photoSlots = [
+        { file: entrancePhoto,      label: "entrance",       existingUrl: existingEntranceUrl },
+        { file: customerSpacePhoto, label: "customer_space", existingUrl: existingCustomerSpaceUrl },
+        { file: workSpacePhoto,     label: "work_space",     existingUrl: existingWorkSpaceUrl },
+      ];
+
+      // Upload any new files and collect all URLs for vision analysis
+      for (const { file, label, existingUrl } of photoSlots) {
+        if (file !== null) {
+          // New photo — upload to storage
           const filePath = `${user.id}/${businessId}/${label}-${Date.now()}.${file.name.split('.').pop()}`;
           const { error } = await supabase.storage.from('brand_assets').upload(filePath, file);
+          
           if (!error) {
-            const { data: { publicUrl } } = supabase.storage.from('brand_assets').getPublicUrl(filePath);
+            const { data: { publicUrl } } = supabase.storage
+              .from('brand_assets')
+              .getPublicUrl(filePath);
+            
+            photoUpdates[`${label}_photo_url`] = publicUrl;
             uploadedPhotoData.push({ url: publicUrl, mimeType: file.type, label });
           }
+        } else if (existingUrl) {
+          // No new file — use existing URL for vision analysis
+          uploadedPhotoData.push({ url: existingUrl, mimeType: 'image/jpeg', label });
         }
+      }
+
+      // Save new photo URLs to database columns
+      if (Object.keys(photoUpdates).length > 0) {
+        const { error: photoError } = await supabase
+          .from('businesses')
+          .update(photoUpdates)
+          .eq('id', businessId);
+        
+        if (photoError) console.error("Failed to save photo URLs:", photoError);
+      }
+
+      // Warn if photos are incomplete (some but not all 3)
+      const hasAnyPhoto = uploadedPhotoData.length > 0;
+      const hasAllPhotos = uploadedPhotoData.length === 3;
+      if (hasAnyPhoto && !hasAllPhotos) {
+        const missing = photoSlots
+          .filter(s => !s.file && !s.existingUrl)
+          .map(s => s.label.replace('_', ' '));
+        toast(`⚠️ Missing photos: ${missing.join(', ')}. All 3 zones give best results.`, {
+          duration: 5000,
+        });
       }
 
         // 3. Trigger Discovery API
@@ -971,9 +1033,9 @@ export default function ProfilePage() {
                     </div>
                   </div>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                    <PhotoSlot label="Entrance"       sublabel="Storefront, patio, reception"     icon="🚪" file={entrancePhoto}      onChange={setEntrancePhoto} />
-                    <PhotoSlot label="Customer space" sublabel="Seating, waiting room, retail floor" icon="🪑" file={customerSpacePhoto} onChange={setCustomerSpacePhoto} />
-                    <PhotoSlot label="Work space"     sublabel="Kitchen, studio, treatment room"  icon="🔧" file={workSpacePhoto}     onChange={setWorkSpacePhoto} />
+                    <PhotoSlot label="Entrance"       sublabel="Storefront, patio, reception"        icon="🚪" file={entrancePhoto}      existingUrl={existingEntranceUrl}      onChange={setEntrancePhoto} />
+                    <PhotoSlot label="Customer space" sublabel="Seating, waiting room, retail floor"  icon="🪑" file={customerSpacePhoto} existingUrl={existingCustomerSpaceUrl} onChange={setCustomerSpacePhoto} />
+                    <PhotoSlot label="Work space"     sublabel="Kitchen, studio, treatment room"      icon="🔧" file={workSpacePhoto}     existingUrl={existingWorkSpaceUrl}     onChange={setWorkSpacePhoto} />
                   </div>
                   {entrancePhoto || customerSpacePhoto || workSpacePhoto ? (
                     <p className="text-[11px] text-cyan-700 bg-cyan-50 border border-cyan-100 rounded-xl px-3 py-2">
@@ -986,9 +1048,9 @@ export default function ProfilePage() {
                 /* STATE 3: First visit — neutral upload slots, no pressure */
                 <>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                    <PhotoSlot label="Entrance"       sublabel="Storefront, patio, reception"     icon="🚪" file={entrancePhoto}      onChange={setEntrancePhoto} />
-                    <PhotoSlot label="Customer space" sublabel="Seating, waiting room, retail floor" icon="🪑" file={customerSpacePhoto} onChange={setCustomerSpacePhoto} />
-                    <PhotoSlot label="Work space"     sublabel="Kitchen, studio, treatment room"  icon="🔧" file={workSpacePhoto}     onChange={setWorkSpacePhoto} />
+                    <PhotoSlot label="Entrance"       sublabel="Storefront, patio, reception"        icon="🚪" file={entrancePhoto}      existingUrl={existingEntranceUrl}      onChange={setEntrancePhoto} />
+                    <PhotoSlot label="Customer space" sublabel="Seating, waiting room, retail floor"  icon="🪑" file={customerSpacePhoto} existingUrl={existingCustomerSpaceUrl} onChange={setCustomerSpacePhoto} />
+                    <PhotoSlot label="Work space"     sublabel="Kitchen, studio, treatment room"      icon="🔧" file={workSpacePhoto}     existingUrl={existingWorkSpaceUrl}     onChange={setWorkSpacePhoto} />
                   </div>
                   {entrancePhoto || customerSpacePhoto || workSpacePhoto ? (
                     <p className="text-[11px] text-cyan-700 bg-cyan-50 border border-cyan-100 rounded-xl px-3 py-2">

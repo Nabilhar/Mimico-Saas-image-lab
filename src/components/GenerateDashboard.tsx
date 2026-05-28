@@ -99,15 +99,18 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
       setCategory(businessData.category || "Food & Beverage");
       setNiche(businessData.niche || "");
     }
+  }, [businessData]); 
 
-    // 2. Pull the Last Generated Post (Still needed as this is post-specific, not profile-specific)
+  // Effect 2: load the last post ONCE on mount only
+useEffect(() => {
+
     const fetchLastPost = async () => {
       if (!user?.id) return;
 
       console.log("Fetching last post for UI preview...");
       const { data: lastPost } = await supabase
         .from('community_posts')
-        .select('id, content, image_url')
+        .select('id, content, image_url, post_type')
         .eq('business_id', user.id)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -117,11 +120,12 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
         setContent(lastPost.content);
         setLastPostId(lastPost.id);
         setCurrentImage(lastPost.image_url || null);
+        if (lastPost.post_type) setPostType(lastPost.post_type);
       }
     };
 
     fetchLastPost();
-  }, [user?.id, supabase, businessData]);
+  }, [user?.id, supabase]);
 
   // Loading Interval
   useEffect(() => {
@@ -308,31 +312,12 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
           });          
 
           if (generatedUuid) {
-            setLastPostId(generatedUuid); // Now we have the auto-generated Supabase ID!
+            setLastPostId(generatedUuid);
+            const savedPostType = data.post_type || postType;
+            setPostType(savedPostType);
 
             console.log("✅ Post recorded in Supabase. ID:", generatedUuid);
 
-            // while the user is reading the text.
-          fetch("/api/prepare-image-prompt", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ 
-              postId: generatedUuid,
-              generatedPost: cleanPost,
-              currentWeather: weather, 
-              business_name,
-              business_id: user?.id,
-              street,
-              city,
-              province_state,
-              country,
-              postal_code: postalCode,
-              niche,
-              voice,          // Added
-              postType,
-              currentMonth: new Date().toLocaleString("en", { month: "long" }),
-            }),
-          }).catch(err => console.error("Background Architect failed:", err));
         } else {
           console.error("❌ Failed to get UUID. Image generation will fail.");
         }
@@ -365,11 +350,24 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
       return;
     }
   
-    setIsGeneratingImage(true);
-  
     const pollInterval = 3000; // 3 seconds
     let attempts = 0;
     const maxAttempts = 20; // 60 seconds total wait
+    
+    setIsGeneratingImage(true);
+  
+    // NEW: Trigger prepare-image-prompt on button click (fire & forget)
+    // For architect path: writes text prompt → polling picks it up → FLUX generates
+    // For multimodal path: generates image directly → polling detects image_url
+    // Server loads post content + post_type from DB by postId (avoids stale dashboard state).
+    fetch("/api/prepare-image-prompt", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        postId: lastPostId,
+        currentWeather,
+      }),
+    }).catch(err => console.error("prepare-image-prompt failed:", err));
   
     const pollForImage = async () => {
       try {
@@ -430,47 +428,58 @@ export function GenerateDashboard({ onGenerateSuccess, onShare, canGenerate, use
           if (onImageUpdated) await onImageUpdated();
         } 
         
-        // CASE 3: Architect Error (Gemma/Gemini failed)
-        // we don't just stop. We call the Architect to FIX it.
-        else if (data.status === 'ERROR' || res.status >= 400) {
-          console.log("🚨 Error detected in prompt. Triggering Architect repair...");
+        // // CASE 3: Architect Error (Gemma/Gemini failed)
+        // // we don't just stop. We call the Architect to FIX it.
+        // else if (data.status === 'ERROR' || res.status >= 400) {
+        //   console.log("🚨 Error detected in prompt. Triggering Architect repair...");
           
-          // Show a loading toast so the user knows we are "fixing" it rather than "failing"
-          toast.loading("Prompt error detected. Repairing...", { id: 'repair' });
+        //   // Show a loading toast so the user knows we are "fixing" it rather than "failing"
+        //   toast.loading("Prompt error detected. Repairing...", { id: 'repair' });
 
-          try {
-            // MANUALLY TRIGGER THE ARCHITECT TO OVERWRITE THE ERROR
-            await fetch("/api/prepare-image-prompt", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ 
-                postId: lastPostId,
-                generatedPost: content,
-                business_name,
-                business_id: user?.id,
-                street,
-                city,
-                province_state,
-                country,
-                postal_code: postalCode,
-                voice,
-                framework: getFramework(category, postType, voice),
-                postType,
-                currentMonth: new Date().toLocaleString("en", { month: "long" }),
-              }),
-            });
+        //   try {
+        //     // MANUALLY TRIGGER THE ARCHITECT TO OVERWRITE THE ERROR
+        //     await fetch("/api/prepare-image-prompt", {
+        //       method: "POST",
+        //       headers: { "Content-Type": "application/json" },
+        //       body: JSON.stringify({ 
+        //         postId: lastPostId,
+        //         generatedPost: content,
+        //         business_name,
+        //         business_id: user?.id,
+        //         niche,
+        //         street,
+        //         city,
+        //         province_state,
+        //         country,
+        //         postal_code: postalCode,
+        //         voice,
+        //         postType,
+        //         currentMonth: new Date().toLocaleString("en", { month: "long" }),
+        //         currentWeather,
+        //       }),
+        //     });
 
-            toast.success("Prompt repaired! Resuming generation...", { id: 'repair' });
+        //     toast.success("Prompt repaired! Resuming generation...", { id: 'repair' });
 
-            // IMPORTANT: Now that the database is fixed, we restart the polling loop!
-            // This will make the next attempt hit CASE 2 (Success)
-            pollForImage();
+        //     // IMPORTANT: Now that the database is fixed, we restart the polling loop!
+        //     // This will make the next attempt hit CASE 2 (Success)
+        //     pollForImage();
 
-          } catch (repairErr) {
-            console.error("Repair attempt failed:", repairErr);
-            toast.error("Failed to repair prompt. Please try manual generation.", { id: 'repair' });
-            setIsGeneratingImage(false);
-          }
+        //   } catch (repairErr) {
+        //     console.error("Repair attempt failed:", repairErr);
+        //     toast.error("Failed to repair prompt. Please try manual generation.", { id: 'repair' });
+        //     setIsGeneratingImage(false);
+        //   }
+        // }
+        //------------------------------------------------------------
+
+        // CASE 3: Generation failed
+        // ⚠️ TESTING MODE: stop immediately, no repair
+        // To re-enable repair: swap this block back after testing
+        else if (data.status === 'ERROR' || res.status >= 400) {
+          console.error("🚨 Generation failed:", data.error || data.message || "Unknown error");
+          toast.error(`Image generation failed: ${data.error || "check server logs"}`, { id: 'repair' });
+          setIsGeneratingImage(false);
         }
   
       } catch (err) {

@@ -24,6 +24,7 @@ import { HeroSection } from "@/components/HeroSection";
 import { GallerySection } from "@/components/GallerySection";
 import "flag-icons/css/flag-icons.min.css";
 import { MythbustingFeature } from "@/components/MythbustingFeature";
+import { TipofthedayFeature} from "@/components/TipofthedayFeature";
 import { PostTypesGrid } from "@/components/PostTypesGrid";
 import PostTypesGridLanding from '@/components/PostTypesGridLanding';
 
@@ -112,7 +113,7 @@ export default function Home() {
         <PostTypesGridLanding />
 
         {/* Myth busting section */}
-        <MythbustingFeature />
+        <TipofthedayFeature />
 
         {/* Post Types Grid section */}
         <PostTypesGrid />

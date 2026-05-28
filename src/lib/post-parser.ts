@@ -53,6 +53,10 @@ function parseOfferings(raw: string | null): string[] {
  *
  * Designed for soft failures — missing fields return null/empty rather
  * than throwing. The caller decides whether to log warnings or fail.
+ *
+ * Note: Rotated content_category and offerings_referenced are chosen
+ * server-side in the generate route; this parser is used for summaries,
+ * post body, and mode-specific fields (event, hook, etc.).
  */
 export function parseGeneratedPost(
   rawResponse: string,

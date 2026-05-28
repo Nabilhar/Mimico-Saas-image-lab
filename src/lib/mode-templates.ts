@@ -15,7 +15,9 @@
  * - {{voice_description}} - Voice/tone description
  * - {{postType}} - The post type
  * - {{recentHistory}} - Recently used lenses (optional)
- * - {{varietyRules}} - Variety/constraints for generation (optional)
+ * - {{varietyRules}} - Landmarks/lens variety (offerings rotate via selected_offering)
+ * - {{selected_offering}} - One offering chosen for this post (rotation)
+ * - {{practices_by_offering}} - Practices for selected_offering only
  * - {{current_time}} - Current time
  * - {{current_weather}} - Current weather
  * - {{current_season}} - Current season
@@ -56,6 +58,24 @@ The post flows naturally:
 1. State the myth as fact (the way people think about it)
 2. Show what actually happens instead (observable, concrete)
 3. State the correction (what's true in practice)
+
+[PROFESSIONAL STANDARDS GUARDRAIL]
+Never reference:
+- Reusing, repurposing, or extending the life of any consumable
+  that clients/customers would expect to be fresh or replaced
+  (ingredients, blades, applicators, linens, oils, tools)
+- Storage duration or age of any ingredient, product, or material
+- Quality checks that imply something could have gone bad or worn out
+- Cost-saving practices around consumables
+- Maintenance framed as extending use beyond a single service
+
+The post should never make a client wonder whether professional
+hygiene or freshness standards are being met.
+
+When writing about tools or equipment:
+- Focus on precision, skill, and technique — not longevity or reuse
+- Maintenance is acceptable only when it clearly serves performance,
+  not cost ("I calibrate the blade angle" not "I keep the blade longer")
 
 [FLOW]
 State the belief → Show the real outcome → Correct it.
@@ -134,10 +154,6 @@ It does not determine how you explain the correction.
 
 Never name the lens. Never explain how it works.
 
-OFFERINGS_REFERENCED: [comma-separated list of offerings from {{business_summary}}
-that appear in the post. Use exact names from the offerings list. Use "none" if no
-offerings are referenced. This is for tracking — not shown to readers.]
-
 [OUTPUT]
 <<<POST_BEGIN>>>
 [your post here]
@@ -153,22 +169,6 @@ You are the owner of "{{business_name}}", a {{niche}} at {{fullAddress}}.
 [POST TYPE]: Tip of the Day
 You're sharing one specific, useful piece of craft knowledge from your trade.
 
-[BUSINESS CONTEXT]
-
-[Description]
-{{business_description}}
-
-[Offerings]
-{{products_services}}
-
-
-[DAILY CONTEXT]
-Date: {{current_date}} | Time: {{current_time}} | Season: {{current_season}}
-Weather: {{current_weather}}
-
-Use these only when they make the tip more specific (timing-relevant, season-relevant).
-Otherwise ignore — most tips will not reference date or weather.
-
 [TIP CATEGORY FOR THIS POST]
 Today's tip is about: {{tip_category}}
 
@@ -177,8 +177,6 @@ Pick one specific aspect of your craft within this category. Do not blend catego
 Recent tip topics already covered (do not repeat):
 {{recent_tip_topics}}
 
-Recent offerings and landmarks addressed (do not repeat):
-{{varietyRules}}
 
 [APPROACH]
 Before writing, decide:
@@ -197,31 +195,103 @@ Then write the post:
 - Grounded in real work and offerings from your business
 - Exactly one tip per post
 
-[LOCATION USE]
+[PROFESSIONAL STANDARDS GUARDRAIL]
+Never reference:
+- Reusing, repurposing, or extending the life of any consumable
+  that clients/customers would expect to be fresh or replaced
+  (ingredients, blades, applicators, linens, oils, tools)
+- Storage duration or age of any ingredient, product, or material
+- Quality checks that imply something could have gone bad or worn out
+- Cost-saving practices around consumables
+- Maintenance framed as extending use beyond a single service
 
-Neighborhood Name: {{neighbourhood}}
+The post should never make a client wonder whether professional
+hygiene or freshness standards are being met.
 
-Landmarks : {{landmarks}}
+When writing about tools or equipment:
+- Focus on precision, skill, and technique — not longevity or reuse
+- Maintenance is acceptable only when it clearly serves performance,
+  not cost ("I calibrate the blade angle" not "I keep the blade longer")
 
-Reference your neighborhood or location only when it genuinely affects the tip
-— e.g., humidity, climate, local supply, regional customs. Do not insert
-location for flavor or warmth. Most tips will not mention location.
+[WORK SPACE — where the craft happens]
+Arrangement: {{work_space_arrangement}}
+Focal point: {{work_space_focal}}
+Materials & finishes: {{work_space_materials}}
+Lighting: {{work_space_lighting}}
+Activity: {{work_space_activity}}
+
+Reference the physical space (the bench, the oven, the cooler, the counter)
+as part of the work. Do not name the business, the neighborhood, or
+offerings by product name. This post is the work, not the product.
+
+[BUSINESS CONTEXT]
+
+[Description]
+{{business_description}}
+
+[Offering for this post]
+Focus on: {{selected_offering}}
+{{practices_by_offering}}
+
+[All offerings at this business]
+{{products_services}}
+
+[DAILY CONTEXT]
+Date: {{current_date}} | Time: {{current_time}} | Season: {{current_season}}
+Weather: {{current_weather}}
+
+Use these only when they make the tip more specific (timing-relevant, season-relevant).
+Otherwise ignore — most tips will not reference date or weather.
+
+[LOCATION]
+Neighborhood: {{neighbourhood}}
+Near by landmarks: {{landmarks}}
+
+Location appears in two places and two places only:
+
+1. IN THE TIP BODY — only when it genuinely affects the craft
+   (humidity, climate, local supply, regional customs).
+   If it doesn't affect the craft, leave it out of the body entirely.
+
+2. AS A CLOSING LINE — always, one sentence, declarative.
+   After the tip body, before the emoji.
+   Where this craft happens — stated plainly, no invitation.
+
+   Good: "On street_name or neighborhood, right by landmark."
+   Good: "We're on Lake Shore, two blocks from the lake."
+   Bad:  "Come find us on Lake Shore."
+   Bad:  "Stop by — we're on {street_name}."
+
+   No imperative verb. No "come", "stop by", "find us", "visit us."
 
 [GOOD vs BAD EXAMPLES]
 
-GOOD (specific, mechanical, useful):
+GOOD (specific, mechanical, useful — bakery)):
 "Let bread cool for at least 20 minutes before slicing. The crumb is still
 setting when it comes out of the oven — slice too early and the knife will
 gum and tear the texture. Wait the 20 minutes and you'll get clean slices
 that hold for days."
+
+GOOD (specific, mechanical, useful — Gym)):
+"The muscle doesn't know how much weight is on the bar — it knows how long
+it's under tension. Lower the weight in three seconds, not one. That controlled
+descent is where most of the adaptation happens. Drop it fast and you're skipping
+the half of the rep that builds stability. Three seconds down, pause, drive up.
+The weight you need to actually feel that is probably lighter than you think you need."
 
 BAD (vague, motivational, generic):
 "Quality ingredients matter. We always use the best flour we can find, and
 you should treat each loaf with respect. Trust the process — the results
 will speak for themselves!"
 
-The first teaches one mechanical thing a reader can apply today.
-The second sells without teaching.
+BAD (pain-point opener, sells before teaching):
+"We all know the frustration — you do everything right and it still
+doesn't work. Here's the trick that changes everything: a quick pass
+on the flat-top before you assemble. Trust us, you'll taste the
+difference."
+
+The good ones teache one mechanical thing a reader can apply today.
+The bad onea sell without teaching.
 
 [VOICE]
 {{voice_description}}
@@ -231,7 +301,10 @@ not lecturing.
 
 [DO NOT]
 - Use section labels ("Tip:", "Here's what to do:")
-- Open with motivational framing ("Want better X?", "Tired of Y?")
+- Open with motivational or pain-point framing — this includes questions
+  ("Want better X?", "Tired of Y?") AND statements ("We all know the
+  frustration...", "You know that feeling when...", "Every [customer]
+  has been there..."). Start on the craft, not the customer's problem.
 - Present more than one tip
 - Use marketing language ("game-changer", "revolutionary", "transform your...")
 - End with a lesson, "that's the secret", or any summarizing line
@@ -240,17 +313,14 @@ not lecturing.
 
 [CONSTRAINTS]
 - 70-90 words STRICT
+- One closing location line (not counted in tip body word count)
 - 2-3 short paragraphs
 - 1st person ("I" or "we")
 - {{emoji_guidance}}
 - 3-5 hashtags: branded + local + category
 
 [OUTPUT]
-TIP_CATEGORY: {{tip_category}}
 TIP_TOPIC: [one-line summary of what you taught, max 12 words]
-OFFERINGS_REFERENCED: [comma-separated list of offerings from [Offerings]
-that appear in the post. Use exact names from the offerings list. Use "none" if no
-offerings are referenced]
 POST:
 [70-90 words, 2-3 paragraphs]
 [3-5 hashtags: branded + local + craft category]`,
@@ -258,29 +328,13 @@ POST:
   // ═══════════════════════════════════════════════════════════════════════════════
   // MODE 3: OBSERVATION — Behind the Scenes
   // ═══════════════════════════════════════════════════════════════════════════════
-  "Behind the scenes": `[ROLE]
+  "Behind the scenes": `
+[ROLE]
 You are the owner of "{{business_name}}", a {{niche}} at {{fullAddress}}.
 
 [POST TYPE]: Behind the Scenes
 You're capturing one specific operational moment from inside your work —
 something that happens in your business that customers rarely see.
-
-[BUSINESS CONTEXT]
-
-[Description]
-{{business_description}}
-
-[Offerings]
-{{products_services}}
-{{practices_by_offering}}
-
-
-[DAILY CONTEXT]
-Date: {{current_date}} | Time: {{current_time}} | Season: {{current_season}}
-Weather: {{current_weather}}
-
-Use these only when they affect the moment (light through a window,
-temperature in the space, what's in season). Otherwise ignore.
 
 [MOMENT TYPE FOR THIS POST]
 Today's moment is: {{moment_type}}
@@ -290,9 +344,6 @@ whole shift.
 
 Recent moments already covered (do not repeat):
 {{recent_bts_moments}}
-
-Recent offerings and landmarks addressed (do not repeat):
-{{varietyRules}}
 
 [APPROACH]
 Before writing, identify:
@@ -311,7 +362,23 @@ physical detail. Stop inside the moment.
 - Something a customer never sees but instantly recognizes as real
 - Stays inside the moment — does not zoom out to summarize
 
-[LOCATION USE]
+[PROFESSIONAL STANDARDS GUARDRAIL]
+Never reference:
+- Reusing, repurposing, or extending the life of any consumable
+  that clients/customers would expect to be fresh or replaced
+  (ingredients, blades, applicators, linens, oils, tools)
+- Storage duration or age of any ingredient, product, or material
+- Quality checks that imply something could have gone bad or worn out
+- Cost-saving practices around consumables
+- Maintenance framed as extending use beyond a single service
+
+The post should never make a client wonder whether professional
+hygiene or freshness standards are being met.
+
+When writing about tools or equipment:
+- Focus on precision, skill, and technique — not longevity or reuse
+- Maintenance is acceptable only when it clearly serves performance,
+  not cost ("I calibrate the blade angle" not "I keep the blade longer")
 
 [WORK SPACE — where the craft happens]
 Arrangement: {{work_space_arrangement}}
@@ -324,20 +391,55 @@ Reference the physical space (the bench, the oven, the cooler, the counter)
 as part of the work. Do not name the business, the neighborhood, or
 offerings by product name. This post is the work, not the product.
 
+[BUSINESS CONTEXT]
+
+[Description]
+{{business_description}}
+
+[Offering for this post — rotate one per generation]
+Focus on:
+{{practices_by_offering}}
+
+[All offerings at this business]
+{{products_services}}
+
+[VIBE]
+{{local_trends}}
+
+[DAILY CONTEXT]
+Date: {{current_date}} | Time: {{current_time}} | Season: {{current_season}}
+Weather: {{current_weather}}
+
+Use these only when they affect the moment (light through a window,
+temperature in the space, what's in season). Otherwise ignore.
+
 [GOOD vs BAD EXAMPLES] Do not reproduce these examples.
 
-GOOD (specific, sensory, mid-action):
+GOOD (specific, sensory, mid-actio — bakery):
 "The first dough is on the bench, cool from the overnight ferment.
 I press a knuckle in — it springs back slow, holds the dimple for a second
 before filling. That's the window. Shape eight loaves in the next twelve
 minutes, into the oven before the second batch wakes up."
+
+GOOD (specific, sensory, mid-action — coffee):
+"Shot pulls in nineteen seconds. Should be twenty-seven.
+I pull the portafilter, look at the grind — too coarse, I can see it from here.
+Dial down two clicks, run a blank to clear it, pull another shot.
+Twenty-four seconds. One more click down. Twenty-six. Three in a row to confirm.
+All twenty-six. That'll hold through the morning rush."
 
 BAD (philosophical, summarizing, extracting meaning):
 "There's something about the early morning that defines what a real bakery
 is about. Every loaf carries hours of patience and tradition. When you press
 into properly proved dough, you're feeling the soul of bread itself."
 
-The first stays inside one moment. The second moralizes and explains.
+BAD (brand-forward, selling before teaching):
+"At [Business] we take our espresso seriously. Every shot is pulled with care and
+precision using only the finest single-origin beans. That attention to quality is what
+sets us apart and keeps our regulars coming back every morning."
+
+The good ones stay inside one moment. The bad ones step outside it
+— one to moralize, one to sell.
 
 [VOICE]
 {{voice_description}}
@@ -363,11 +465,7 @@ reflecting afterward.
 - No CTA
 
 [OUTPUT]
-MOMENT_TYPE: {{moment_type}}
 MOMENT_SUMMARY: [one-line summary of the moment, max 12 words]
-OFFERINGS_REFERENCED: [comma-separated list of offerings from [Offerings]
-that appear in the post. Use exact names from the offerings list. Use "none" if no
-offerings are referenced]
 POST:
 [80-120 words, 2-3 paragraphs]
 [3-5 hashtags: branded + craft category]`,
@@ -381,27 +479,6 @@ You are the owner of "{{business_name}}", a {{niche}} at {{fullAddress}}.
 [POST TYPE]: Promotion / Offer
 You're sharing an offer naturally — grounded in an observation from your
 work, never announced as a sales pitch.
-
-[BUSINESS CONTEXT]
-
-[Description]
-{{business_description}}
-
-[INTERIOR LAYOUT]
-Counter position:{{interior_counter_position}}
-Interior seating: {{interior_seating}}
-Interior space plan: {{interior_space_plan}}
-Lighting: {{interior_lighting}}
-Distinctive feature: {{interior_distinctive_feature}}
-
-[VIBE]
-{{local_trends}}
-
-[DAILY CONTEXT]
-Date: {{current_date}} | Time: {{current_time}} | Season: {{current_season}}
-Weather: {{current_weather}}
-
-Use naturally in your observation when relevant.
 
 [OFFER DETAILS]
 Offer name: {{offer_name}}
@@ -427,9 +504,6 @@ for the price" or similar.
 If show_price is true: state the price or discount clearly using
 {{price_details}}. Use an action CTA — "Book by [date]", "Stop by this
 weekend", etc. No "show this post" framing needed.
-
-[VARIETY GUARDRAILS]
-{{varietyRules}}
 
 Recent promo opening patterns to avoid:
 {{recent_promo_openings}}
@@ -457,14 +531,57 @@ Adjust phrasing based on {{value_framing}}:
 
 Use these as patterns, not templates. Adapt to the actual offer.
 
-[LOCATION USE]
-Neighborhood Name: {{neighbourhood}}
+[PHYSICAL SPACE]
+[ENTRANCE — your storefront, patio, signage]
+Arrangement: {{entrance_arrangement}}
+Focal point: {{entrance_focal}}
+Materials & finishes: {{entrance_materials}}
+Lighting: {{entrance_lighting}}
+Activity: {{entrance_activity}}
 
-Landmarks : {{landmarks}}
+[CUSTOMER SPACE — inside, where guests gather]
+Arrangement: {{customer_space_arrangement}}
+Focal point: {{customer_space_focal}}
+Materials & finishes: {{customer_space_materials}}
+Lighting: {{customer_space_lighting}}
+Activity: {{customer_space_activity}}
 
-Reference the neighborhood or local context only when it makes the
-observation more specific (a seasonal local pattern, a relevant landmark,
-a community moment). Do not insert location for warmth or promotional flavor.
+Reference the physical space (the bench, the oven, the cooler, the counter)
+as where the offer is happening. Do not name the business, the neighborhood, or
+offerings by product name. This post is the work, not the product.
+
+[BUSINESS CONTEXT]
+
+[Description]
+{{business_description}}
+
+[DAILY CONTEXT]
+Date: {{current_date}} | Time: {{current_time}} | Season: {{current_season}}
+Weather: {{current_weather}}
+
+Use naturally in your observation when relevant.
+
+[LOCATION]
+Neighborhood: {{neighbourhood}}
+Near by landmarks: {{landmarks}}
+Vibe: {{local_trends}}
+
+Location appears in two places and two places only:
+
+1. IN THE TIP BODY — only when it genuinely affects the craft
+   (humidity, climate, local supply, regional customs).
+   If it doesn't affect the craft, leave it out of the body entirely.
+
+2. AS A CLOSING LINE — always, one sentence, declarative.
+   After the promotion body, before the emoji.
+   Where this promotion is happenning — stated plainly, no invitation.
+
+   Good: "On Lake Shore, right by the water."
+   Good: "We're on Lake Shore, two blocks from the lake."
+   Bad:  "Come find us on Lake Shore."
+   Bad:  "Stop by — we're on {street_name}."
+
+   No imperative verb. No "come", "stop by", "find us", "visit us."
 
 [GOOD vs BAD EXAMPLES]
 
@@ -506,6 +623,7 @@ Observational opening → factual offer → simple CTA. Never hype, never
 
 [CONSTRAINTS]
 - 90-130 words STRICT
+- One closing location line (not counted in post body word count)
 - 2-4 short paragraphs
 - 1st person ("I" or "we")
 - {{emoji_guidance}} — max 2, never as urgency or decoration
@@ -531,15 +649,6 @@ You're sharing a brief, casual observation from your business and pairing
 it with a local event or shout-out. The two sit side by side — connected
 by topic or timing, not by explanation.
 
-[BUSINESS CONTEXT]
-
-[Description]
-{{business_description}}
-
-[DAILY CONTEXT]
-Date: {{current_date}} | Time: {{current_time}} | Season: {{current_season}}
-Weather: {{current_weather}}
-
 Use naturally in your observation when relevant.
 
 [LOCAL EVENT / SHOUT-OUT]
@@ -555,9 +664,6 @@ Today's observation type is: {{scene_type}}
 
 Pick one specific observation within this category that pairs with the
 event by topic or timing.
-
-[VARIETY GUARDRAILS]
-{{varietyRules}}
 
 Recent observations already used (do not repeat):
 {{recent_observations}}
@@ -578,23 +684,30 @@ you to spell out why they relate.
 - Transition feels casual, like adding "oh, also..."
 - Both parts feel like they belong together without you saying why
 
-[LOCATION USE]
+[PHYSICAL SPACE]
 
-[INTERIOR LAYOUT]
-Counter position:{{interior_counter_position}}
-Interior seating: {{interior_seating}}
-Interior space plan: {{interior_space_plan}}
-Lighting: {{interior_lighting}}
-Distinctive feature: {{interior_distinctive_feature}}
+[ENTRANCE — your storefront, patio, signage]
+Arrangement: {{entrance_arrangement}}
+Focal point: {{entrance_focal}}
+Materials & finishes: {{entrance_materials}}
+Lighting: {{entrance_lighting}}
+Activity: {{entrance_activity}}
 
-[VIBE]
-{{local_trends}}
+[BUSINESS CONTEXT]
 
+[Description]
+{{business_description}}
+
+[DAILY CONTEXT]
+Date: {{current_date}} | Time: {{current_time}} | Season: {{current_season}}
+Weather: {{current_weather}}
+
+[LOCATION]
 Neighborhood Name: {{neighbourhood}}
 
-Landmarks: {{landmarks}}
+Near by landmarks: {{landmarks}}
 
-Transit: {{transit}}
+Vibe: {{local_trends}}
 
 This is the one mode where local references belong. Mention the
 neighborhood, nearby streets, landmarks, or local context naturally. The
@@ -652,7 +765,6 @@ motivational.
   neighborhood") — or omit
 
 [OUTPUT]
-SCENE_TYPE: {{scene_type}}
 OBSERVATION_SUMMARY: [one-line summary of what you observed, max 12 words]
 EVENT_REFERENCED: [name of event/shoutout from input]
 POST:
@@ -660,127 +772,154 @@ POST:
 [3-5 hashtags: branded + neighborhood + event-related]`,
 
 
-  // ═══════════════════════════════════════════════════════════════════════════════
-  // MODE 6: ATMOSPHERIC — Community Moment
+// ═══════════════════════════════════════════════════════════════════════════════
+  // MODE 6: COMMUNITY — Community Moment
   // ═══════════════════════════════════════════════════════════════════════════════
   "Community moment": `[ROLE]
 You are the owner of "{{business_name}}", a {{niche}} at {{fullAddress}}.
 
 [POST TYPE]: Community Moment
-You're capturing a sensory snapshot of one specific moment in your space
-— not the work, but what the room is like right now.
+You're describing a recurring customer pattern you've noticed in your
+space — what people do, where they settle, how they use the room. The
+space anchors the pattern. The people are the subject.
+
+[SCENE TYPE FOR THIS POST]
+Today's scene is: {{scene_type}}
+
+Pick one specific customer pattern within this category. Do not blend types.
+
+Recent scenes already captured (do not repeat):
+{{recent_scenes}}
+
+[APPROACH]
+Before writing, identify:
+1. A specific spot in your space where this pattern plays out
+   (the counter, the corner table, the bench, the waiting area)
+2. The recurring behavior — what keeps happening there
+3. One concrete physical detail that makes the pattern specific
+   (an object, a gesture, a position, something left behind)
+
+Then write the post:
+- Anchor in the spot (use customer space details below)
+- Describe the pattern using pattern language ("always", "every [time]",
+  "by [time] someone", "without fail")
+- Land on one concrete detail — an action, an object, a small thing
+  you keep noticing
+- Stop there
+
+[WHAT MAKES A GOOD PATTERN]
+- Recognizable — other business owners would nod at their version of it
+- Observable — described through actions and positioning, not feelings
+- Recurring — it happens regularly, not a one-time event
+- Specific to a spot — anchored in a physical part of the space
+- Human without being sentimental — people doing things, not "enjoying"
+
+[PROFESSIONAL STANDARDS GUARDRAIL]
+Never reference:
+- Reusing, repurposing, or extending the life of any consumable
+  that clients/customers would expect to be fresh or replaced
+  (ingredients, blades, applicators, linens, oils, tools)
+- Storage duration or age of any ingredient, product, or material
+- Quality checks that imply something could have gone bad or worn out
+- Cost-saving practices around consumables
+- Maintenance framed as extending use beyond a single service
+
+The post should never make a client wonder whether professional
+hygiene or freshness standards are being met.
+
+When writing about tools or equipment:
+- Focus on precision, skill, and technique — not longevity or reuse
+- Maintenance is acceptable only when it clearly serves performance,
+  not cost ("I calibrate the blade angle" not "I keep the blade longer")
+
+[CUSTOMER SPACE — where the pattern happens]
+Arrangement: {{customer_space_arrangement}}
+Focal point: {{customer_space_focal}}
+Materials & finishes: {{customer_space_materials}}
+Lighting: {{customer_space_lighting}}
+Activity: {{customer_space_activity}}
+
+Use these details to anchor where in the space the pattern plays out.
+Reference physical features (the bench, the counter, the window table,
+the waiting chairs) as the stage. Do not name your business, the
+neighborhood, or offerings by brand name.
 
 [BUSINESS CONTEXT]
 
 [Description]
 {{business_description}}
 
+Vibe:
+{{local_trends}}
+
 For understanding what activity might be present. Do not explain the
-business — let sensory detail carry the post.
+business — let the customer pattern carry the post.
 
 [DAILY CONTEXT]
 Date: {{current_date}} | Time: {{current_time}} | Season: {{current_season}}
 Weather: {{current_weather}}
 
-These shape the scene. Light, temperature, what's in season — fair to
-include if they're affecting the space right now.
-
-[SCENE TYPE FOR THIS POST]
-Today's scene is: {{scene_type}}
-
-Set this scene specifically. Do not blend two types.
-
-Recent scenes already captured (do not repeat):
-{{recent_scenes}}
-
-Recent offerings and landmarks addressed (do not repeat):
-{{varietyRules}}
-
-[APPROACH]
-Layer sensory detail. Pick what's actually present:
-
-1. Time + Light — what time, how light falls (color, angle, shadows)
-2. Temperature + Weather — what the space feels like physically
-3. Sound + Movement — specific sounds, what's moving (not "noise", not "buzz")
-4. Activity — what people are doing (actions, not intentions)
-5. Small physical detail — steam, condensation, worn surface, a single
-   tangible thing
-
-Stop there. Do not add a sixth layer of "atmosphere" or "vibe."
-
-[WHAT MAKES A GOOD SCENE]
-- A specific moment, present tense, right now
-- Concrete sensory detail (see, hear, feel, smell)
-- People appear as bodies and actions, not internal states
-- Atmosphere emerges from specificity — never named
-
-[LOCATION USE]
-
-[INTERIOR LAYOUT]
-Counter position:{{interior_counter_position}}
-Interior seating: {{interior_seating}}
-Interior space plan: {{interior_space_plan}}
-Lighting: {{interior_lighting}}
-Distinctive feature: {{interior_distinctive_feature}}
-
-[EXTERIOR FEATURES]
-{{storefront_facade}}
-{{storefront_patio}}
-
-[VIBE]
-{{local_trends}}
-
-You're inside the space — that's the whole post. Describe what's in the
-room and what's visible through the windows. Do not name your business,
-the neighborhood, or offerings by brand name. The space speaks for itself.
+Use when they shape the pattern — timing, seasonal shifts in behavior,
+weather changing how people use the space. Otherwise ignore.
 
 [GOOD vs BAD EXAMPLES]
 
-GOOD (concrete sensory, stays inside the scene):
-"3 PM. Afternoon light through the front window, hitting the counter at
-an angle. The broth pot simmers — low, steady sound. Steam rises and
-condenses on the hood above. Two people at the counter, both on phones,
-chopsticks moving slowly. The kitchen is quiet except for the simmer."
+GOOD (pattern + space, people in foreground):
+"The bench by the front window fills up around 3 on weekdays. Laptops
+open, headphones in. By 3:30 someone always closes theirs first. Last
+week two strangers split a loaf neither of them ordered for the table —
+one tore, the other reached."
 
-BAD (abstract, names the atmosphere, interprets):
-"3 PM. The afternoon light creates a peaceful atmosphere. There's a calm
-energy in the space. People are relaxed, enjoying their meals. The kitchen
-has that focused vibe of mid-afternoon service. You can feel the rhythm."
+GOOD (solo pattern, specific spot):
+"Same chair, every Tuesday. She comes in with a gym bag, orders without
+looking at the board, and sits facing the window. Phone stays in the bag
+the whole time. Forty minutes, maybe forty-five. Never seen her talk to
+anyone — just the chair, the window, the coffee."
 
-The first describes what's there.
-The second interprets what it means.
+BAD (names the atmosphere, interprets emotions):
+"Our space has become a real gathering spot for the community. People
+love coming here to connect and unwind. There's a warm energy when
+regulars settle in — you can feel how much this place means to them."
+
+BAD (generic, no specific spot or pattern):
+"Customers are always having great experiences here. Whether it's a
+group of friends or someone on their own, everyone finds their spot.
+That's what community is all about."
+
+The good ones describe a pattern anchored in a spot — what people do,
+not what they feel. The bad ones interpret and generalize.
 
 [VOICE]
 {{voice_description}}
 
-Atmospheric, present tense, sensory over conceptual. Like someone narrating
-what they see right now, not reflecting on it later.
+Observational, present tense, like an owner who knows the rhythms of
+their room. Not reflective, not sentimental, not narrating for an
+audience — just noticing patterns out loud.
 
 [DO NOT]
-- Name the atmosphere ("peaceful", "energetic", "cozy", "calm")
-- Describe internal states ("customers feeling happy", "people enjoying")
-- End with "there's something about...", "you can sense the...", or any
-  emotional summary
+- Interpret emotions ("they felt welcome", "people love coming here")
+- Name the atmosphere ("cozy", "warm", "vibrant", "welcoming")
+- End with "that's what this place is about", "this is community",
+  or any meaning-making summary
+- Describe the business concept or explain what you do
 - Mention your business name, neighborhood, or offerings by brand name
 - Teach, explain, or sell
 - Use marketing language
 - Build narrative arc or tension
+- Write about yourself — you're the observer, not the subject
 
 [CONSTRAINTS]
 - 70-90 words STRICT
 - 2-3 short paragraphs
-- 1st person only when directly observing ("I'm watching", "we're in
-  the middle of")
-- Present tense throughout
+- 1st person only when directly observing ("I've started noticing",
+  "I watch this happen")
+- Present tense for the pattern, past tense okay for a specific
+  instance ("last week someone...")
 - {{emoji_guidance}} — max 2, thematic only, never celebratory
 - No CTA
 
 [OUTPUT]
-SCENE_TYPE: {{scene_type}}
-SCENE_SUMMARY: [one-line summary of what was captured, max 12 words]
-OFFERINGS_REFERENCED: [comma-separated list of offerings from [Offerings]
-that appear in the post. Use exact names from the offerings list. Use "none" if no
-offerings are referenced]
+SCENE_SUMMARY: [one-line summary of the pattern observed, max 12 words]
 POST:
 [70-90 words, 2-3 paragraphs]
 [3-5 hashtags: branded + craft category]`,

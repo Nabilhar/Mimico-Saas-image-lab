@@ -22,11 +22,16 @@ import { getBusinessTime, getTimezoneForCity } from "@/lib/timezone";
 import { selectCategory } from '@/lib/category-selector';
 import { 
   getRecentPostHistory, 
-  getRecentOfferings, 
+  getRecentOfferingsInOrder, 
   formatRecentSummaries 
 } from '@/lib/post-history';
+import {
+  getOfferingCatalog,
+  selectNextOffering,
+} from '@/lib/offering-rotation';
 import { parseGeneratedPost, validateOfferings } from '@/lib/post-parser';
 import type { PostType } from '@/lib/mode-templates';
+import { fetchWeatherForCity } from "@/lib/weather";
 
 interface AIProviderResponse {
   content: string;
@@ -57,41 +62,6 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY! // Use the SECRET key, not the ANON key
 );
-
-// ─────────────────────────────────────────────
-// WEATHER FETCHER
-// ─────────────────────────────────────────────
-const WMO_CODES: Record<number, string> = {
-  0: "clear skies",
-  1: "mostly clear", 2: "partly cloudy", 3: "overcast",
-  45: "foggy", 48: "icy fog",
-  51: "light drizzle", 53: "drizzle", 55: "heavy drizzle",
-  61: "light rain", 63: "rain", 65: "heavy rain",
-  71: "light snow", 73: "snow", 75: "heavy snow", 77: "snow grains",
-  80: "rain showers", 81: "heavy rain showers", 82: "violent rain showers",
-  85: "snow showers", 86: "heavy snow showers",
-  95: "thunderstorm", 96: "thunderstorm with hail", 99: "thunderstorm with heavy hail",
-};
-
-async function fetchWeather(lat: number, lng: number, city: string): Promise<string> {
-  try {
-    const res = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,apparent_temperature,weather_code&temperature_unit=celsius`
-    );
-    const data = await res.json();
-    const current = data.current;
-    const description = WMO_CODES[current.weather_code] ?? "variable conditions";
-    const temp = Math.round(current.temperature_2m);
-    const feelsLike = Math.round(current.apparent_temperature);
-    
-    // Only show "feels like" if it's different
-    const feelsLikeText = temp !== feelsLike ? `, feels like ${feelsLike}°C` : '';
-    
-    return `${temp}°C${feelsLikeText}, ${description} in ${city}`;
-  } catch {
-    return "";
-  }
-}
 
 // ─────────────────────────────────────────────
 // 3. VOICE DEFINITIONS
@@ -588,7 +558,9 @@ export async function POST(req: Request) {
       availableTimeframe = "",
       eligibility = "anyone",
       offerHook = "",
-      valueFraming = "discount"
+      valueFraming = "discount",
+      showPrice = false,
+      priceDetails = "",
     } = body;
 
       // --- ADD THIS DEBUG BLOCK ---
@@ -711,20 +683,31 @@ export async function POST(req: Request) {
 
     const uniqueUsedLandmarks = [...new Set(usedLandmarks)] as string[];
 
-    // NEW — offerings from structured column, not substring matching
-const recentOfferings = await getRecentOfferings(supabase, userId);
+    const recentOfferingsReferenced = await getRecentOfferingsInOrder(
+      supabase,
+      userId,
+      business.business_name,
+    );
+
+    const offeringCatalog = getOfferingCatalog(
+      intel?.practices_by_offering,
+      intel?.products_services
+    );
+    const selectedOffering = selectNextOffering(
+      offeringCatalog,
+      recentOfferingsReferenced
+    );
+
+    console.log(`[generate] offering catalog: ${JSON.stringify(offeringCatalog)}`);
+    console.log(
+      `[generate] recent offerings_referenced: ${JSON.stringify(recentOfferingsReferenced)}`
+    );
+    console.log(`[generate] selected offering: ${selectedOffering || "(none)"}`);
 
     const varietyRules = [
-      recentOfferings.length
-      ? `- Products/offerings recently covered: ${recentOfferings.join(", ")}`
-      : "- No recent product patterns to avoid.",
-      // Landmarks still string-matched for now — fine until we add landmarks_referenced
       uniqueUsedLandmarks.length
-      ? `- Landmarks recently mentioned: ${uniqueUsedLandmarks.join(", ")}`
-      : "- No recent landmark patterns to avoid.",
-      recentLenses.length
-        ? `  - Cognitive lenses recently used: ${recentLenses.join(", ")} — select a completely different lens.`
-        : "  - No recent lens patterns to avoid."
+        ? `- Landmarks recently mentioned: ${uniqueUsedLandmarks.join(", ")}`
+        : "- No recent landmark patterns to avoid.",
     ].join("\n");
 
     // Auto-select framework — user never has to choose
@@ -734,16 +717,10 @@ const recentOfferings = await getRecentOfferings(supabase, userId);
     // Inject current month for seasonality
     const month = new Date().toLocaleString("en", { month: "long" });
 
-    // Fetch weather for the business location
     let currentWeather = "";
     try {
-      const geoRes = await fetch(
-        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(business.city)}&count=1&language=en&format=json`
-      );
-      const geoData = await geoRes.json();
-      const loc = geoData.results?.[0];
-      if (loc) {
-        currentWeather = await fetchWeather(loc.latitude, loc.longitude, business.city);
+      currentWeather = await fetchWeatherForCity(business.city);
+      if (currentWeather) {
         console.log(`--- WEATHER: ${currentWeather} ---`);
       }
     } catch {
@@ -759,7 +736,7 @@ const recentOfferings = await getRecentOfferings(supabase, userId);
 
     // NEW — fetch mode-specific history directly from Supabase
     const { categories: recentCategories, summaries: recentSummaries } = 
-    await getRecentPostHistory(supabase, userId, postType as PostType);
+    await getRecentPostHistory(supabase, userId, business.business_name, postType as PostType);
 
     const selectedCategory = selectCategory(postType as PostType, recentCategories);
     const recentSummariesFormatted = formatRecentSummaries(recentSummaries);
@@ -821,6 +798,9 @@ const recentOfferings = await getRecentOfferings(supabase, userId);
       eligibility,
       offer_hook: offerHook,
       value_framing: valueFraming,
+      show_price: Boolean(showPrice),
+      price_details: priceDetails,
+      selectedOffering: selectedOffering || undefined,
     });
 
     // Extract lens for later use
@@ -904,22 +884,30 @@ const recentOfferings = await getRecentOfferings(supabase, userId);
     .replace(/Total words:\s*\d+/gi, "")
     .trim();
   
-  // ── NEW: Parse the cleaned text into structured fields ───────────────
+  // ── Parse model output (summary + post body; mode-specific extras) ─────
   const parsed = parseGeneratedPost(cleanedResponse, postType as PostType);
-  
-  // ── NEW: Validate offerings, compute analytics ───────────────────────
+
   const knownOfferings = intel?.products_services || [];
-  const validatedOfferings = validateOfferings(
-    parsed.offerings_referenced, 
+  const parsedOfferings = validateOfferings(
+    parsed.offerings_referenced,
     knownOfferings
   );
-  
+
+  // Category & offering are rotated server-side — save those, not model echoes
+  const contentCategory =
+    selectedCategory ?? parsed.content_category;
+  const offeringsReferenced = selectedOffering
+    ? validateOfferings([selectedOffering], knownOfferings)
+    : parsedOfferings;
+
   const wordCount = parsed.content.split(/\s+/).filter(Boolean).length;
-  
-  console.log('[generate] parsed output:', {
-    has_category: !!parsed.content_category,
-    has_summary: !!parsed.content_summary,
-    offerings_count: validatedOfferings.length,
+
+  console.log('[generate] saved metadata:', {
+    content_category: contentCategory,
+    content_summary: parsed.content_summary,
+    offerings_referenced: offeringsReferenced,
+    rotated_category: selectedCategory,
+    rotated_offering: selectedOffering || null,
     word_count: wordCount,
   });
 console.log("--- GENERATION SUCCESSFUL ---");
@@ -931,9 +919,9 @@ return NextResponse.json({
   
   // NEW structured fields
   post_type: postType,
-  content_category: parsed.content_category,
+  content_category: contentCategory,
   content_summary: parsed.content_summary,
-  offerings_referenced: validatedOfferings,
+  offerings_referenced: offeringsReferenced,
   event_referenced: parsed.event_referenced || null,
   hook_used: parsed.hook_used || null,
   voice_used: voice,

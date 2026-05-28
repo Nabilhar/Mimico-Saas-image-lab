@@ -47,14 +47,17 @@ export default function PostTypesPage() {
         <nav className="sticky top-[64px] z-30 bg-white border-b border-slate-200 shadow-sm backdrop-blur-sm bg-white/95">
           <div className="mx-auto max-w-6xl px-6 sm:px-6">
             <div className="flex gap-2 overflow-x-auto py-4 scrollbar-hide">
-              <a href="#myth-busting" className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-cyan-800 hover:bg-slate-50 rounded-md whitespace-nowrap transition-colors">
+              {/* <a href="#myth-busting" className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-cyan-800 hover:bg-slate-50 rounded-md whitespace-nowrap transition-colors">
                 Myth-busting
+              </a> */}
+              <a href="#tip-of-the-day" className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-cyan-800 hover:bg-slate-50 rounded-md whitespace-nowrap transition-colors">
+                Today's Tip
               </a>
               <a href="#behind-the-scenes" className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-cyan-800 hover:bg-slate-50 rounded-md whitespace-nowrap transition-colors">
-                Behind the Scenes
+                Behind the Curtain
               </a>
-              <a href="#tip-of-the-day" className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-cyan-800 hover:bg-slate-50 rounded-md whitespace-nowrap transition-colors">
-                Tip of the Day
+              <a href="#community-moment" className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-cyan-800 hover:bg-slate-50 rounded-md whitespace-nowrap transition-colors">
+                Community Moment
               </a>
               <a href="#promotion" className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-cyan-800 hover:bg-slate-50 rounded-md whitespace-nowrap transition-colors">
                 Promotion
@@ -62,20 +65,18 @@ export default function PostTypesPage() {
               <a href="#local-event" className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-cyan-800 hover:bg-slate-50 rounded-md whitespace-nowrap transition-colors">
                 Local Event
               </a>
-              <a href="#community-moment" className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-cyan-800 hover:bg-slate-50 rounded-md whitespace-nowrap transition-colors">
-                Community Moment
-              </a>
             </div>
           </div>
         </nav>
 
+                
         {/* ===================================== */}
         {/* MYTH-BUSTING SECTION (Full Detail)   */}
-        {/* ===================================== */}
+        {/* ===================================== 
         <section id="myth-busting" className="bg-slate-50 py-16 md:py-24 border-b scroll-mt-16">
-          <div className="mx-auto max-w-6xl px-6 sm:px-6">
-            {/* Header */}
-            <div className="mb-12 max-w-3xl">
+          <div className="mx-auto max-w-6xl px-6 sm:px-6">*/}
+            {/* Header 
+              <div className="mb-12 max-w-3xl">
               <div className="inline-block px-3 py-1 bg-cyan-100 text-cyan-800 text-sm font-semibold rounded-full mb-4">
                 Post Type #1
               </div>
@@ -85,11 +86,11 @@ export default function PostTypesPage() {
               <p className="text-lg text-slate-600 leading-relaxed">
                 Education builds trust faster than promotion. Myth-busting posts correct common beliefs in your field—and customers share them because they learned something.
               </p>
-            </div>
+            </div> */}
 
-            {/* Two-column layout: Explanation + Example */}
-            <div className="grid lg:grid-cols-2 gap-12 mb-16">
-              {/* Left Column: Explanation */}
+            {/* Two-column layout: Explanation + Example 
+            <div className="grid lg:grid-cols-2 gap-12 mb-16"> */}
+              {/* Left Column: Explanation 
               <div className="space-y-6">
                 <div>
                   <h3 className="text-xl font-semibold text-slate-900 mb-4">
@@ -106,9 +107,9 @@ export default function PostTypesPage() {
                       Instead of generic tips, you get posts that teach something counterintuitive—grounded in your neighborhood, using your craft knowledge.
                     </p>
                   </div>
-                </div>
+                </div> */}
 
-                {/* Why This Works */}
+                {/* Why This Works 
                 <div className="bg-white rounded-lg border border-slate-200 p-6">
                   <h4 className="font-semibold text-slate-900 mb-4">Why this works:</h4>
                   <div className="space-y-3">
@@ -143,9 +144,9 @@ export default function PostTypesPage() {
                       </span>
                     </div>
                   </div>
-                </div>
+                </div> */}
 
-                {/* Voice Recommendation */}
+                {/* Voice Recommendation 
                 <div className="bg-white rounded-lg border border-slate-200 p-6">
                   <h4 className="font-semibold text-slate-900 mb-4">Voice Recommendation:</h4>
                   <div className="space-y-3">
@@ -168,15 +169,15 @@ export default function PostTypesPage() {
                     </div>
                   </div>
                 </div>
-              </div>
+              </div> */}
 
-              {/* Right Column: Example Post */}
+              {/* Right Column: Example Post 
               <div>
                 <div className="mb-3">
                   <span className="text-sm font-medium text-slate-500">Example: The Village Bakery</span>
-                </div>
+                </div> */}
                 
-                {/* Example Post Card */}
+                {/* Example Post Card 
                 <Card className="border-slate-200 shadow-sm overflow-hidden">
                   <div className="p-4 flex items-center gap-3 bg-white">
                     <div className="w-10 h-10 rounded-full bg-cyan-800 flex items-center justify-center text-white font-bold text-lg shrink-0">
@@ -219,9 +220,9 @@ Cold butter is harder to handle, but it's not about ease—it's about structure 
                   </div>
                 </Card>
               </div>
-            </div>
+            </div> */}
 
-            {/* Not Just Bakeries */}
+            {/* Not Just Bakeries 
             <div className="mb-12">
               <h3 className="text-2xl font-bold mb-6 text-slate-900">Not Just Bakeries</h3>
               <p className="text-slate-600 mb-8 max-w-3xl">
@@ -256,15 +257,264 @@ Cold butter is harder to handle, but it's not about ease—it's about structure 
                   </CardContent>
                 </Card>
               </div>
-            </div>
+            </div> */}
 
-            {/* When to Use */}
+            {/* When to Use 
             <div className="bg-white rounded-lg border border-slate-200 p-8">
               <h3 className="text-xl font-semibold text-slate-900 mb-4">When to Use Myth-busting</h3>
               <p className="text-slate-700 leading-relaxed">
                 Use Myth-busting when you notice customers making decisions based on incorrect assumptions about your craft. 
                 Perfect for correcting widespread beliefs about techniques, timing, materials, or process. 
                 Best for businesses where expertise isn't immediately visible to customers—where the "why" behind your work matters as much as the "what."
+              </p>
+            </div>
+          </div>
+        </section> */}
+
+        {/* ===================================== */}
+        {/* TIP OF THE DAY SECTION (Full Detail) */}
+        {/* ===================================== */}
+        <section id="tip-of-the-day" className="bg-slate-50 py-16 md:py-24 border-b scroll-mt-16">
+          <div className="mx-auto max-w-6xl px-6 sm:px-6">
+            {/* Header */}
+            <div className="mb-12 max-w-3xl">
+              <div className="inline-block px-3 py-1 bg-cyan-100 text-cyan-800 text-sm font-semibold rounded-full mb-4">
+                Post Type #1
+              </div>
+              <h2 className="text-3xl font-bold mb-4 text-slate-900">
+                Today's Tip: Teaching Without Selling
+              </h2>
+              <p className="text-lg text-slate-600 leading-relaxed">
+                Share one specific, actionable technique your customers can use immediately. Not vague advice—practical instruction grounded in your craft.
+              </p>
+            </div>
+
+            {/* Two-column layout: Explanation + Example */}
+            <div className="grid lg:grid-cols-2 gap-12 mb-16">
+              {/* Left Column: Explanation */}
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-xl font-semibold text-slate-900 mb-4">
+                    What Makes Tips Work
+                  </h3>
+                  <div className="text-slate-700 space-y-4">
+                    <p>
+                      Most social media tips are generic platitudes. "Stay hydrated!" "Listen to your body!" Everyone says the same thing.
+                    </p>
+                    <p>
+                      Shoreline Today's Tip mode teaches <strong>specific techniques from your actual practice</strong>—the micro-adjustments, timing windows, and observable cues that separate good results from great ones.
+                    </p>
+                    <p>
+                      Each tip follows a tight structure: state the action → show what happens → done. No motivation, no life coaching. Just the technique.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Why This Works */}
+                <div className="bg-white rounded-lg border border-slate-200 p-6">
+                  <h4 className="font-semibold text-slate-900 mb-4">Why this works:</h4>
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
+                      <span className="text-sm text-slate-700">
+                        Immediately actionable (readers can try it today)
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
+                      <span className="text-sm text-slate-700">
+                        Observable results (they can see/feel if it works)
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
+                      <span className="text-sm text-slate-700">
+                        Shows the mechanism (explains what actually happens)
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
+                      <span className="text-sm text-slate-700">
+                        Specific to your craft (couldn't apply to any business)
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
+                      <span className="text-sm text-slate-700">
+                        Builds expertise quietly (teaches without selling)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Voice Recommendation */}
+                <div className="bg-white rounded-lg border border-slate-200 p-6">
+                  <h4 className="font-semibold text-slate-900 mb-4">Voice Recommendation:</h4>
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
+                      <span className="text-sm text-slate-700">
+                        Tips work best with <strong>Warm & Conversational</strong> (friendly instruction, like showing someone a technique)
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
+                      <span className="text-sm text-slate-700">
+                        Use <strong>Authoritative & Precise</strong> for clinical/technical fields (health, trades, professional services)
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <span className="text-sm text-slate-700">
+                        Tips are about teaching practical techniques—warmth makes instruction approachable, precision makes it trustworthy.
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Example Post */}
+              <div>
+                <div className="mb-3">
+                  <span className="text-sm font-medium text-slate-500">Example: Lawrence Physiotherapy</span>
+                </div>
+                
+                {/* Example Post Card */}
+                <Card className="border-slate-200 shadow-sm overflow-hidden">
+                  <div className="p-4 flex items-center gap-3 bg-white">
+                    <div className="w-10 h-10 rounded-full bg-cyan-800 flex items-center justify-center text-white font-bold text-lg shrink-0">
+                      T
+                    </div>
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className="font-bold text-slate-900 text-sm leading-tight">Lawrence Physiotherapy</span>
+                      <div className="flex items-center justify-between gap-2 mt-1">
+                        <span className="text-[10px] text-slate-500 font-medium truncate">Lawrence Park, Toronto</span>
+                        <span className="shrink-0 text-[10px] font-black text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded uppercase tracking-widest">
+                          Generated in 22s
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <CardContent className="px-4 pb-3 pt-0">
+                    <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">
+{`When you return to movement after time off, start with half the range of motion you think you need.
+
+Your nervous system reads full range as permission to load it immediately. By moving through 50% of what feels available, you're signaling "this is safe," which lets your tissues adapt without triggering protective tightness. Do this for 3-4 days before expanding.
+
+At our clinic, we see this pattern every spring as patients resume outdoor activity after winter. You'll feel less stiff, not more.`}
+                    </p>
+                  </CardContent>
+
+                  <div className="w-full aspect-square bg-slate-100 border-y border-slate-100">
+                    <img 
+                      src="/Physio-movement-range.png"
+                      alt="Progressive movement range demonstration" 
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+
+                  <div className="px-4 py-3 bg-white border-t border-slate-100">
+                    <div className="flex items-center justify-between text-xs text-slate-500">
+                      <span>5 credits • Tip of the Day mode</span>
+                      <span className="font-medium text-cyan-800">#PhysiotherapyTip #LawrencePark #MovementTip</span>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Second Example */}
+                <div className="mt-6 mb-3">
+                  <span className="text-sm font-medium text-slate-500">Example: Riverside Barbershop</span>
+                </div>
+
+                <Card className="border-slate-200 shadow-sm overflow-hidden">
+                  <div className="p-4 flex items-center gap-3 bg-white">
+                    <div className="w-10 h-10 rounded-full bg-cyan-800 flex items-center justify-center text-white font-bold text-lg shrink-0">
+                      Q
+                    </div>
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className="font-bold text-slate-900 text-sm leading-tight">Riverside Barbershop</span>
+                      <div className="flex items-center justify-between gap-2 mt-1">
+                        <span className="text-[10px] text-slate-500 font-medium truncate">Riverside, Toronto</span>
+                        <span className="shrink-0 text-[10px] font-black text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded uppercase tracking-widest">
+                          Generated in 24s
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <CardContent className="px-4 pb-3 pt-0">
+                    <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">
+{`When blending between clipper guards, place your longer guard flat against the scalp, then tilt it 45 degrees at the line where you want the transition to begin.
+
+The tilted guard removes less hair at that boundary, preventing the hard line that occurs when guards meet skin at full contact. This creates a natural diffusion zone.
+
+At Riverside, we use this before scissor-over-comb work—it establishes a soft gradient that your scissors can refine. Your fade guide appears without the client seeing distinct clipper steps.`}
+                    </p>
+                  </CardContent>
+
+                  <div className="w-full aspect-square bg-slate-100 border-y border-slate-100">
+                    <img 
+                      src="/Barber-clipper-angle.jpeg"
+                      alt="Clipper guard angle demonstration" 
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+
+                  <div className="px-4 py-3 bg-white border-t border-slate-100">
+                    <div className="flex items-center justify-between text-xs text-slate-500">
+                      <span>5 credits • Tip of the Day mode</span>
+                      <span className="font-medium text-cyan-800">#BarbershopTip #Riverside #FadeTechnique</span>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            </div>
+
+            {/* Not Just These Fields */}
+            <div className="mb-12">
+              <h3 className="text-2xl font-bold mb-6 text-slate-900">Works Across Industries</h3>
+              <p className="text-slate-600 mb-8 max-w-3xl">
+                Tips work for any business where <strong>technique matters</strong>. If there's a better way to do something—a timing window, a micro-adjustment, an observable cue—Shoreline turns it into teachable content.
+              </p>
+
+              <div className="grid md:grid-cols-3 gap-6">
+                <Card className="border-slate-200">
+                  <CardContent className="p-6">
+                    <h4 className="font-semibold text-slate-900 mb-3">Bakeries</h4>
+                    <p className="text-sm text-slate-600 italic leading-relaxed">
+                      "When scoring sourdough, hold your blade at 30 degrees, not vertical. The shallow angle creates an ear that lifts during baking. Vertical cuts seal flat. The difference is in the angle before the oven, not what happens inside it."
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-slate-200">
+                  <CardContent className="p-6">
+                    <h4 className="font-semibold text-slate-900 mb-3">Personal Training</h4>
+                    <p className="text-sm text-slate-600 italic leading-relaxed">
+                      "Before increasing weight, check your bar speed on the concentric phase. If the bar slows in the middle third of the lift, you're not ready. Speed consistency across the full range means your nervous system can handle more load."
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-slate-200">
+                  <CardContent className="p-6">
+                    <h4 className="font-semibold text-slate-900 mb-3">HVAC</h4>
+                    <p className="text-sm text-slate-600 italic leading-relaxed">
+                      "When checking refrigerant charge, measure superheat at the evaporator coil, not just at the compressor. A 5-degree difference between the two points means you have a restriction in the line. The compressor reading alone won't show it."
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* When to Use */}
+            <div className="bg-white rounded-lg border border-slate-200 p-8">
+              <h3 className="text-xl font-semibold text-slate-900 mb-4">When to Use Tips</h3>
+              <p className="text-slate-700 leading-relaxed mb-4">
+                Use Tips when you notice a technique, timing window, or observable cue that most people miss. Perfect for teaching the micro-adjustments that separate good results from great ones.
+              </p>
+              <p className="text-slate-700 leading-relaxed">
+                Tips work best for businesses where <strong>how you do something</strong> matters as much as what you do—where small adjustments create measurable differences. If you find yourself saying "here's the trick" or "most people don't notice this," that's a tip.
               </p>
             </div>
           </div>
@@ -294,7 +544,7 @@ Cold butter is harder to handle, but it's not about ease—it's about structure 
               <div className="space-y-6">
                 <div>
                   <h3 className="text-xl font-semibold text-slate-900 mb-4">
-                    What Makes Behind the Scenes Different
+                    What Makes Behind the Curtain Different
                   </h3>
                   <div className="text-slate-700 space-y-4">
                     <p>
@@ -520,255 +770,6 @@ I cap both syringes and set them side by side on the sterile tray. The consultat
         </section>
 
         {/* ===================================== */}
-        {/* TIP OF THE DAY SECTION (Full Detail) */}
-        {/* ===================================== */}
-        <section id="tip-of-the-day" className="bg-slate-50 py-16 md:py-24 border-b scroll-mt-16">
-          <div className="mx-auto max-w-6xl px-6 sm:px-6">
-            {/* Header */}
-            <div className="mb-12 max-w-3xl">
-              <div className="inline-block px-3 py-1 bg-cyan-100 text-cyan-800 text-sm font-semibold rounded-full mb-4">
-                Post Type #3
-              </div>
-              <h2 className="text-3xl font-bold mb-4 text-slate-900">
-                Tip of the Day: Teaching Without Selling
-              </h2>
-              <p className="text-lg text-slate-600 leading-relaxed">
-                Share one specific, actionable technique your customers can use immediately. Not vague advice—practical instruction grounded in your craft.
-              </p>
-            </div>
-
-            {/* Two-column layout: Explanation + Example */}
-            <div className="grid lg:grid-cols-2 gap-12 mb-16">
-              {/* Left Column: Explanation */}
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-xl font-semibold text-slate-900 mb-4">
-                    What Makes Tips Work
-                  </h3>
-                  <div className="text-slate-700 space-y-4">
-                    <p>
-                      Most social media tips are generic platitudes. "Stay hydrated!" "Listen to your body!" Everyone says the same thing.
-                    </p>
-                    <p>
-                      Shoreline's Tip of the Day mode teaches <strong>specific techniques from your actual practice</strong>—the micro-adjustments, timing windows, and observable cues that separate good results from great ones.
-                    </p>
-                    <p>
-                      Each tip follows a tight structure: state the action → show what happens → done. No motivation, no life coaching. Just the technique.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Why This Works */}
-                <div className="bg-white rounded-lg border border-slate-200 p-6">
-                  <h4 className="font-semibold text-slate-900 mb-4">Why this works:</h4>
-                  <div className="space-y-3">
-                    <div className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
-                      <span className="text-sm text-slate-700">
-                        Immediately actionable (readers can try it today)
-                      </span>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
-                      <span className="text-sm text-slate-700">
-                        Observable results (they can see/feel if it works)
-                      </span>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
-                      <span className="text-sm text-slate-700">
-                        Shows the mechanism (explains what actually happens)
-                      </span>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
-                      <span className="text-sm text-slate-700">
-                        Specific to your craft (couldn't apply to any business)
-                      </span>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
-                      <span className="text-sm text-slate-700">
-                        Builds expertise quietly (teaches without selling)
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Voice Recommendation */}
-                <div className="bg-white rounded-lg border border-slate-200 p-6">
-                  <h4 className="font-semibold text-slate-900 mb-4">Voice Recommendation:</h4>
-                  <div className="space-y-3">
-                    <div className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
-                      <span className="text-sm text-slate-700">
-                        Tips work best with <strong>Warm & Conversational</strong> (friendly instruction, like showing someone a technique)
-                      </span>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
-                      <span className="text-sm text-slate-700">
-                        Use <strong>Authoritative & Precise</strong> for clinical/technical fields (health, trades, professional services)
-                      </span>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <span className="text-sm text-slate-700">
-                        Tips are about teaching practical techniques—warmth makes instruction approachable, precision makes it trustworthy.
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Column: Example Post */}
-              <div>
-                <div className="mb-3">
-                  <span className="text-sm font-medium text-slate-500">Example: Lawrence Physiotherapy</span>
-                </div>
-                
-                {/* Example Post Card */}
-                <Card className="border-slate-200 shadow-sm overflow-hidden">
-                  <div className="p-4 flex items-center gap-3 bg-white">
-                    <div className="w-10 h-10 rounded-full bg-cyan-800 flex items-center justify-center text-white font-bold text-lg shrink-0">
-                      T
-                    </div>
-                    <div className="flex flex-col flex-1 min-w-0">
-                      <span className="font-bold text-slate-900 text-sm leading-tight">Lawrence Physiotherapy</span>
-                      <div className="flex items-center justify-between gap-2 mt-1">
-                        <span className="text-[10px] text-slate-500 font-medium truncate">Lawrence Park, Toronto</span>
-                        <span className="shrink-0 text-[10px] font-black text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded uppercase tracking-widest">
-                          Generated in 22s
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <CardContent className="px-4 pb-3 pt-0">
-                    <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">
-{`When you return to movement after time off, start with half the range of motion you think you need.
-
-Your nervous system reads full range as permission to load it immediately. By moving through 50% of what feels available, you're signaling "this is safe," which lets your tissues adapt without triggering protective tightness. Do this for 3-4 days before expanding.
-
-At our clinic, we see this pattern every spring as patients resume outdoor activity after winter. You'll feel less stiff, not more.`}
-                    </p>
-                  </CardContent>
-
-                  <div className="w-full aspect-square bg-slate-100 border-y border-slate-100">
-                    <img 
-                      src="/Physio-movement-range.png"
-                      alt="Progressive movement range demonstration" 
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-
-                  <div className="px-4 py-3 bg-white border-t border-slate-100">
-                    <div className="flex items-center justify-between text-xs text-slate-500">
-                      <span>5 credits • Tip of the Day mode</span>
-                      <span className="font-medium text-cyan-800">#PhysiotherapyTip #LawrencePark #MovementTip</span>
-                    </div>
-                  </div>
-                </Card>
-
-                {/* Second Example */}
-                <div className="mt-6 mb-3">
-                  <span className="text-sm font-medium text-slate-500">Example: Riverside Barbershop</span>
-                </div>
-
-                <Card className="border-slate-200 shadow-sm overflow-hidden">
-                  <div className="p-4 flex items-center gap-3 bg-white">
-                    <div className="w-10 h-10 rounded-full bg-cyan-800 flex items-center justify-center text-white font-bold text-lg shrink-0">
-                      Q
-                    </div>
-                    <div className="flex flex-col flex-1 min-w-0">
-                      <span className="font-bold text-slate-900 text-sm leading-tight">Riverside Barbershop</span>
-                      <div className="flex items-center justify-between gap-2 mt-1">
-                        <span className="text-[10px] text-slate-500 font-medium truncate">Riverside, Toronto</span>
-                        <span className="shrink-0 text-[10px] font-black text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded uppercase tracking-widest">
-                          Generated in 24s
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <CardContent className="px-4 pb-3 pt-0">
-                    <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">
-{`When blending between clipper guards, place your longer guard flat against the scalp, then tilt it 45 degrees at the line where you want the transition to begin.
-
-The tilted guard removes less hair at that boundary, preventing the hard line that occurs when guards meet skin at full contact. This creates a natural diffusion zone.
-
-At Riverside, we use this before scissor-over-comb work—it establishes a soft gradient that your scissors can refine. Your fade guide appears without the client seeing distinct clipper steps.`}
-                    </p>
-                  </CardContent>
-
-                  <div className="w-full aspect-square bg-slate-100 border-y border-slate-100">
-                    <img 
-                      src="/Barber-clipper-angle.jpeg"
-                      alt="Clipper guard angle demonstration" 
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-
-                  <div className="px-4 py-3 bg-white border-t border-slate-100">
-                    <div className="flex items-center justify-between text-xs text-slate-500">
-                      <span>5 credits • Tip of the Day mode</span>
-                      <span className="font-medium text-cyan-800">#BarbershopTip #Riverside #FadeTechnique</span>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-            </div>
-
-            {/* Not Just These Fields */}
-            <div className="mb-12">
-              <h3 className="text-2xl font-bold mb-6 text-slate-900">Works Across Industries</h3>
-              <p className="text-slate-600 mb-8 max-w-3xl">
-                Tips work for any business where <strong>technique matters</strong>. If there's a better way to do something—a timing window, a micro-adjustment, an observable cue—Shoreline turns it into teachable content.
-              </p>
-
-              <div className="grid md:grid-cols-3 gap-6">
-                <Card className="border-slate-200">
-                  <CardContent className="p-6">
-                    <h4 className="font-semibold text-slate-900 mb-3">Bakeries</h4>
-                    <p className="text-sm text-slate-600 italic leading-relaxed">
-                      "When scoring sourdough, hold your blade at 30 degrees, not vertical. The shallow angle creates an ear that lifts during baking. Vertical cuts seal flat. The difference is in the angle before the oven, not what happens inside it."
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-slate-200">
-                  <CardContent className="p-6">
-                    <h4 className="font-semibold text-slate-900 mb-3">Personal Training</h4>
-                    <p className="text-sm text-slate-600 italic leading-relaxed">
-                      "Before increasing weight, check your bar speed on the concentric phase. If the bar slows in the middle third of the lift, you're not ready. Speed consistency across the full range means your nervous system can handle more load."
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-slate-200">
-                  <CardContent className="p-6">
-                    <h4 className="font-semibold text-slate-900 mb-3">HVAC</h4>
-                    <p className="text-sm text-slate-600 italic leading-relaxed">
-                      "When checking refrigerant charge, measure superheat at the evaporator coil, not just at the compressor. A 5-degree difference between the two points means you have a restriction in the line. The compressor reading alone won't show it."
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-
-            {/* When to Use */}
-            <div className="bg-white rounded-lg border border-slate-200 p-8">
-              <h3 className="text-xl font-semibold text-slate-900 mb-4">When to Use Tips</h3>
-              <p className="text-slate-700 leading-relaxed mb-4">
-                Use Tips when you notice a technique, timing window, or observable cue that most people miss. Perfect for teaching the micro-adjustments that separate good results from great ones.
-              </p>
-              <p className="text-slate-700 leading-relaxed">
-                Tips work best for businesses where <strong>how you do something</strong> matters as much as what you do—where small adjustments create measurable differences. If you find yourself saying "here's the trick" or "most people don't notice this," that's a tip.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* ===================================== */}
         {/* PROMOTION / OFFER SECTION (Full Detail) */}
         {/* ===================================== */}
         <section id="promotion" className="bg-white py-16 md:py-24 border-b scroll-mt-16">
@@ -776,7 +777,7 @@ At Riverside, we use this before scissor-over-comb work—it establishes a soft 
             {/* Header */}
             <div className="mb-12 max-w-3xl">
               <div className="inline-block px-3 py-1 bg-cyan-100 text-cyan-800 text-sm font-semibold rounded-full mb-4">
-                Post Type #4
+                Post Type #3
               </div>
               <h2 className="text-3xl font-bold mb-4 text-slate-900">
                 Promotion / Offer: Soft-Sell Invitations
@@ -1021,7 +1022,7 @@ It's basically there for students (or anyone) who needs actual food late. Sunday
             {/* Header */}
             <div className="mb-12 max-w-3xl">
               <div className="inline-block px-3 py-1 bg-cyan-100 text-cyan-800 text-sm font-semibold rounded-full mb-4">
-                Post Type #5
+                Post Type #4
               </div>
               <h2 className="text-3xl font-bold mb-4 text-slate-900">
                 Local Event / News: Neighbourly Mentions
@@ -1267,7 +1268,7 @@ Worth a walk if you're around.`}
             {/* Header */}
             <div className="mb-12 max-w-3xl">
               <div className="inline-block px-3 py-1 bg-cyan-100 text-cyan-800 text-sm font-semibold rounded-full mb-4">
-                Post Type #6
+                Post Type #5
               </div>
               <h2 className="text-3xl font-bold mb-4 text-slate-900">
                 Community Moment: Creating Presence Through Atmosphere
