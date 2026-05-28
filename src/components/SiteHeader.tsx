@@ -28,11 +28,6 @@ export function SiteHeader() {
 
           {/* Right Side Navigation */}
           <div className="flex items-center gap-4 sm:gap-6">
-            
-            {/* Contact Link */}
-            <Link href="/contact" className="text-sm font-medium text-slate-600 hover:text-cyan-800 transition">
-              Contact
-            </Link>
 
             {/* Auth Buttons - Desktop Only */}
             <Show when="signed-out">
