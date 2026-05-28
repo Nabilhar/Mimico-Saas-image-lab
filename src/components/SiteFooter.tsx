@@ -11,7 +11,7 @@ export default function SiteFooter() {
           <div className="md:col-span-1">
             <Link href="/" className="flex items-center mb-4">
               <Image 
-                src="/icon_inline_logo.png" 
+                src="/icon_stacked_logo.png" 
                 alt="Shoreline Studio"
                 width={200} 
                 height={50}

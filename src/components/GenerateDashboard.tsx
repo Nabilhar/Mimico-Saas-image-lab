@@ -1009,8 +1009,8 @@ useEffect(() => {
             </div>
             <span className="text-[10px] font-bold uppercase tracking-widest text-cyan-700">AI Engine: Optimized</span>
           </div>
-          <div className="text-[10px] font-black text-slate-400 uppercase">
-            {content.trim().split(/\s+/).filter(Boolean).length} Words
+          <div className="text-[10px] font-black text-slate-400">
+          {content.trim().split(/\s+/).filter(Boolean).length} Words./AI and can make mistakes. Please double-check before you post. 
           </div>
         </div>
       </div>

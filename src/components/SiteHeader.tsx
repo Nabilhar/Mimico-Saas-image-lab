@@ -17,7 +17,7 @@ export function SiteHeader() {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 shrink-0">
             <Image 
-              src="/icon_stacked_logo.png" 
+              src="/icon_inline_logo.png" 
               alt="Shoreline Studio" 
               width={120} 
               height={30}
@@ -111,7 +111,7 @@ export function SiteHeader() {
         <div className="flex items-center justify-between p-6 border-b border-slate-200">
           <div className="flex items-center gap-2">
             <Image 
-              src="/icon_stacked_logo.png" 
+              src="/icon_inline_logo.png" 
               alt="Shoreline Studio" 
               width={100} 
               height={25}
