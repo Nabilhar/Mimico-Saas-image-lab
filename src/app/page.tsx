@@ -110,13 +110,13 @@ export default function Home() {
         {/* Gallery Section */}
         <GallerySection />
 
+        {/* Post Types Grid section */}   
         <PostTypesGridLanding />
 
         {/* Myth busting section */}
         <TipofthedayFeature />
-
-        {/* Post Types Grid section */}
-        <PostTypesGrid />
+        
+        {/*<PostTypesGrid />*/}
 
         {/* Features Section */}
         <section className="bg-white py-16 md:py-24 border-b">

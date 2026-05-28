@@ -15,8 +15,8 @@ export default function PostTypesGridLanding() {
     {
       id: 'behind-the-scenes',
       icon: Eye,
-      name: 'Behind the Scenes',
-      description: 'Show the unseen work happening right now—present-tense, operational moments.',
+      name: 'Behind the Curtain',
+      description: 'Show the unseen work happening right now—present-tense. Pull back the curtain on operational moments.',
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
       borderColor: 'hover:border-blue-200'
@@ -25,7 +25,7 @@ export default function PostTypesGridLanding() {
       id: 'community-moment',
       icon: Heart,
       name: 'Community Moment',
-      description: 'Pure sensory snapshots creating atmosphere through concrete details.',
+      description: 'Pure sensory snapshots creating atmosphere through concrete details and humain connection.',
       color: 'text-pink-600',
       bgColor: 'bg-pink-50',
       borderColor: 'hover:border-pink-200'
@@ -34,7 +34,7 @@ export default function PostTypesGridLanding() {
       id: 'promotion',
       icon: Megaphone,
       name: 'Promotion / Offer',
-      description: 'Soft-sell invitations connecting observed work to what is available.',
+      description: 'Announce offers, services, or products. Grounded in local context, not generic ads.',
       color: 'text-green-600',
       bgColor: 'bg-green-50',
       borderColor: 'hover:border-green-200'
@@ -43,7 +43,7 @@ export default function PostTypesGridLanding() {
       id: 'local-event',
       icon: Calendar,
       name: 'Local Event',
-      description: 'Casual mentions of neighborhood happenings connected to your business.',
+      description: 'Connect your business to what is happening in your neighborhood. Community-first.',
       color: 'text-orange-600',
       bgColor: 'bg-orange-50',
       borderColor: 'hover:border-orange-200'
@@ -56,10 +56,11 @@ export default function PostTypesGridLanding() {
         {/* Header */}
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
-            Five Post Types for Every Business Need
+            5 Ways to Connect With Your Community
           </h2>
           <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-            Shoreline generates content across five distinct modes—each designed for a specific purpose, all grounded in your actual work.
+            Each post type helps you show up differently. All grounded in your neighborhood, 
+            all written in your voice, all generated in real-time.
           </p>
         </div>
 
