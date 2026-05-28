@@ -1,35 +1,45 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Copy, Check, Share2, Trash2, X, Image } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Copy, Check, Share2, Trash2, X, Image, Flag } from 'lucide-react';
+import { useAuth } from '@clerk/nextjs';
+import { createClerksupabase } from '@/lib/supabase';
 
 interface PostActionsProps {
   content: string;
   imageUrl?: string | null;
   onDelete: () => void;
   showCopy?: boolean;
+  postId?: string;
+  initialFlagged?: boolean;
 }
 
-export default function PostActions({ content, imageUrl, onDelete, showCopy = false }: PostActionsProps) {
+export default function PostActions({
+  content,
+  imageUrl,
+  onDelete,
+  showCopy = false,
+  postId,
+  initialFlagged = false,
+}: PostActionsProps) {
+  const { getToken } = useAuth();
+  const supabase = useMemo(() => createClerksupabase(() => getToken()), []);
+
   const [textCopied, setTextCopied] = useState(false);
   const [imageCopied, setImageCopied] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [modalStep, setModalStep] = useState<'ready' | 'done'>('ready');
 
+  const [isFlagged, setIsFlagged] = useState(initialFlagged);
+  const [showFlagModal, setShowFlagModal] = useState(false);
+  const [flagReason, setFlagReason] = useState('');
+  const [flagSubmitting, setFlagSubmitting] = useState(false);
+
   useEffect(() => {
-    if (showModal) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-
-    // This is the cleanup function
-    return () => {
-      document.body.style.overflow = '';
-      document.body.style.paddingRight = '';
-    };
-  }, [showModal]);
-
+    const anyModal = showModal || showFlagModal;
+    document.body.style.overflow = anyModal ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [showModal, showFlagModal]);
 
   const handleCopyText = async () => {
     try {
@@ -109,6 +119,42 @@ export default function PostActions({ content, imageUrl, onDelete, showCopy = fa
     setTimeout(() => setModalStep('ready'), 2000);
   };
 
+  const handleFlagClick = () => {
+    if (!postId) return;
+    if (isFlagged) {
+      // Unflag immediately — no modal
+      handleUnflag();
+    } else {
+      setFlagReason('');
+      setShowFlagModal(true);
+    }
+  };
+
+  const handleUnflag = async () => {
+    if (!postId) return;
+    setIsFlagged(false);
+    await supabase
+      .from('community_posts')
+      .update({ is_flagged: false, flag_reason: null })
+      .eq('id', postId);
+  };
+
+  const handleFlagSubmit = async () => {
+    if (!postId) return;
+    setFlagSubmitting(true);
+    const { error } = await supabase
+      .from('community_posts')
+      .update({ is_flagged: true, flag_reason: flagReason.trim() || null })
+      .eq('id', postId);
+
+    if (!error) {
+      setIsFlagged(true);
+      setShowFlagModal(false);
+      setFlagReason('');
+    }
+    setFlagSubmitting(false);
+  };
+
   return (
     <>
       <div className="mt-4 pt-4 border-t border-slate-100">
@@ -144,7 +190,19 @@ export default function PostActions({ content, imageUrl, onDelete, showCopy = fa
             <Share2 size={13} />
             <span>Share kit</span>
           </button>
-  
+
+          {postId && (
+            <button
+              onClick={handleFlagClick}
+              title={isFlagged ? 'Flagged — click to unflag' : 'Flag this post'}
+              className={`p-2 transition-all ${
+                isFlagged ? 'text-amber-500 hover:text-amber-600' : 'text-slate-300 hover:text-amber-400'
+              }`}
+            >
+              <Flag size={18} fill={isFlagged ? 'currentColor' : 'none'} />
+            </button>
+          )}
+
           <button
             onClick={onDelete}
             className="p-2 text-slate-300 hover:text-red-500 transition-all"
@@ -154,6 +212,56 @@ export default function PostActions({ content, imageUrl, onDelete, showCopy = fa
         </div>
       </div>
 
+      {/* ── FLAG MODAL ─────────────────────────────────────────────── */}
+      {showFlagModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowFlagModal(false); }}
+        >
+          <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden mb-28 sm:mb-0">
+            <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-slate-100">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-amber-500">Flag post</p>
+                <p className="text-base font-bold text-slate-900 mt-0.5">Something wrong with this post?</p>
+              </div>
+              <button onClick={() => setShowFlagModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="px-5 py-4">
+              <label className="block text-xs font-semibold text-slate-500 mb-2">
+                Reason <span className="font-normal text-slate-400">(optional)</span>
+              </label>
+              <textarea
+                value={flagReason}
+                onChange={(e) => setFlagReason(e.target.value)}
+                placeholder="e.g. Wrong tone, incorrect info, off-brand…"
+                rows={3}
+                className="w-full text-sm text-slate-800 placeholder-slate-300 border border-slate-200 rounded-xl px-3 py-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-transparent"
+              />
+            </div>
+
+            <div className="px-5 pb-5 flex gap-2">
+              <button
+                onClick={() => setShowFlagModal(false)}
+                className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-500 hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleFlagSubmit}
+                disabled={flagSubmitting}
+                className="flex-1 py-2.5 rounded-xl bg-amber-500 text-white text-sm font-bold hover:bg-amber-600 transition-colors disabled:opacity-60"
+              >
+                {flagSubmitting ? 'Flagging…' : 'Flag post'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SHARE KIT MODAL ────────────────────────────────────────── */}
       {showModal && (
         <div
           className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-4"
@@ -195,7 +303,7 @@ export default function PostActions({ content, imageUrl, onDelete, showCopy = fa
             </div>
 
             <div className="px-5 pb-4 grid grid-cols-2 gap-2">
-              <a 
+              <a
                 href="https://www.facebook.com/"
                 target="_blank"
                 rel="noopener noreferrer"
@@ -204,7 +312,7 @@ export default function PostActions({ content, imageUrl, onDelete, showCopy = fa
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
                 Facebook
               </a>
-              <a 
+              <a
                 href="https://www.instagram.com/"
                 target="_blank"
                 rel="noopener noreferrer"

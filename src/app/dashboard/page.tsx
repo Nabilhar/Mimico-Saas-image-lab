@@ -23,6 +23,8 @@ export type Post = {
   content_category?: string | null;
   content_summary?: string | null;
   offerings_referenced?: string[];
+  is_flagged?: boolean;        // ← new
+  flag_reason?: string | null; // ← new
 }
 interface BusinessData { 
   id: string; 
@@ -424,6 +426,8 @@ export default function DashboardPage() {
                     imageUrl={post.image_url}
                     onDelete={() => deletePost(post.id)}
                     showCopy={true}
+                    postId={post.id}                          // ← new
+                    initialFlagged={post.is_flagged ?? false} // ← new
                   />
                 </div>
               </div>

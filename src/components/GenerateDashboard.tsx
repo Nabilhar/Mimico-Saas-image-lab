@@ -900,6 +900,7 @@ useEffect(() => {
             imageUrl={currentImage || undefined}
             onDelete={onDelete}
             showCopy={true}
+            postId={lastPostId ?? undefined} // ← new
           />
         </div>
       </div>

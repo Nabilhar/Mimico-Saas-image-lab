@@ -544,46 +544,46 @@ We are in the office if you want to sit down and look at the actual numbers.
               {/* Starter */}
               <div className="flex flex-col gap-2 p-5 rounded-2xl border border-slate-200 bg-white">
                 <span className="text-[11px] font-semibold px-2 py-1 rounded-md bg-cyan-50 text-cyan-800 w-fit">Starter</span>
-                <p className="text-sm font-semibold text-slate-900 mt-1">75 credits / Top up</p>
-                <p className="text-sm text-slate-500 leading-relaxed">Up to 15 complete posts. Perfect for posting a few times a week.</p>
+                <p className="text-sm font-semibold text-slate-900 mt-1">80 credits / Top up</p>
+                <p className="text-sm text-slate-500 leading-relaxed">Up to 16 complete posts. Perfect for posting a few times a week.</p>
                 <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-sm text-slate-400 line-through">$49</span>
-                  <span className="text-2xl font-bold text-slate-900">$25</span>
+                  <span className="text-sm text-slate-400 line-through">$39</span>
+                  <span className="text-2xl font-bold text-slate-900">$19</span>
                 </div>
                 <span className="text-[11px] font-semibold text-cyan-700">50% off — first 6 months</span>
                 <hr className="border-slate-100 my-1" />
-                <div className="flex justify-between text-sm text-slate-500"><span>Complete posts</span><span className="font-semibold text-slate-900">up to 15</span></div>
-                <div className="flex justify-between text-sm text-slate-500"><span>Cost per post</span><span className="font-semibold text-slate-900">$1.66</span></div>
+                <div className="flex justify-between text-sm text-slate-500"><span>Complete posts</span><span className="font-semibold text-slate-900">up to 20</span></div>
+                <div className="flex justify-between text-sm text-slate-500"><span>Cost per post</span><span className="font-semibold text-slate-900">$1.18</span></div>
               </div>
 
               {/* Daily — featured */}
               <div className="flex flex-col gap-2 p-5 rounded-2xl border-2 border-blue-600 bg-white">
                 <span className="text-[11px] font-semibold px-2 py-1 rounded-md bg-cyan-700 text-white w-fit">Most popular</span>
-                <p className="text-sm font-semibold text-slate-900 mt-1">160 credits / Top up</p>
-                <p className="text-sm text-slate-500 leading-relaxed">Up to 32 complete posts. One post every day, with room to spare.</p>
+                <p className="text-sm font-semibold text-slate-900 mt-1">180 credits / Top up</p>
+                <p className="text-sm text-slate-500 leading-relaxed">Up to 36 complete posts. One post every day, with room to spare.</p>
                 <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-sm text-slate-400 line-through">$89</span>
-                  <span className="text-2xl font-bold text-slate-900">$45</span>
+                  <span className="text-sm text-slate-400 line-through">$79</span>
+                  <span className="text-2xl font-bold text-slate-900">$39</span>
                 </div>
                 <span className="text-[11px] font-semibold text-cyan-700">50% off — first 6 months</span>
                 <hr className="border-slate-100 my-1" />
-                <div className="flex justify-between text-sm text-slate-500"><span>Complete posts</span><span className="font-semibold text-slate-900">up to 32</span></div>
-                <div className="flex justify-between text-sm text-slate-500"><span>Cost per post</span><span className="font-semibold text-slate-900">$1.40</span></div>
+                <div className="flex justify-between text-sm text-slate-500"><span>Complete posts</span><span className="font-semibold text-slate-900">up to 36</span></div>
+                <div className="flex justify-between text-sm text-slate-500"><span>Cost per post</span><span className="font-semibold text-slate-900">$1.08</span></div>
               </div>
 
               {/* Growth */}
               <div className="flex flex-col gap-2 p-5 rounded-2xl border border-slate-200 bg-white">
                 <span className="text-[11px] font-semibold px-2 py-1 rounded-md bg-cyan-50 text-cyan-800 w-fit">Growth</span>
-                <p className="text-sm font-semibold text-slate-900 mt-1">350 credits / Top up</p>
-                <p className="text-sm text-slate-500 leading-relaxed">Up to 70 complete posts. For businesses posting multiple times a day.</p>
+                <p className="text-sm font-semibold text-slate-900 mt-1">400 credits / Top up</p>
+                <p className="text-sm text-slate-500 leading-relaxed">Up to 80 complete posts. For owners posting multiple times a day, multiple businesses/locations.</p>
                 <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-sm text-slate-400 line-through">$169</span>
-                  <span className="text-2xl font-bold text-slate-900">$85</span>
+                  <span className="text-sm text-slate-400 line-through">$149</span>
+                  <span className="text-2xl font-bold text-slate-900">$75</span>
                 </div>
                 <span className="text-[11px] font-semibold text-cyan-700">50% off — first 6 months</span>
                 <hr className="border-slate-100 my-1" />
-                <div className="flex justify-between text-sm text-slate-500"><span>Complete posts</span><span className="font-semibold text-slate-900">up to 70</span></div>
-                <div className="flex justify-between text-sm text-slate-500"><span>Cost per post</span><span className="font-semibold text-slate-900">$1.21</span></div>
+                <div className="flex justify-between text-sm text-slate-500"><span>Complete posts</span><span className="font-semibold text-slate-900">up to 80</span></div>
+                <div className="flex justify-between text-sm text-slate-500"><span>Cost per post</span><span className="font-semibold text-slate-900">$0.94</span></div>
               </div>
 
             </div>
