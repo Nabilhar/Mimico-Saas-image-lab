@@ -4,13 +4,13 @@ import { Card, CardContent } from '@/components/ui/card';
 export default function PostTypesGridLanding() {
   const postTypes = [
     {
-      id: 'myth-busting',
+      id: 'tip-of-the-day',
       icon: Lightbulb,
-      name: 'Myth-busting',
-      description: 'Correct common misconceptions in your field with evidence-based explanations.',
-      color: 'text-amber-600',
-      bgColor: 'bg-amber-50',
-      borderColor: 'hover:border-amber-200'
+      name: 'Tip of the Day',
+      description: 'Share specific, actionable techniques customers can use immediately.',
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-50',
+      borderColor: 'hover:border-purple-200'
     },
     {
       id: 'behind-the-scenes',
@@ -22,13 +22,13 @@ export default function PostTypesGridLanding() {
       borderColor: 'hover:border-blue-200'
     },
     {
-      id: 'tip-of-the-day',
-      icon: Sparkles,
-      name: 'Tip of the Day',
-      description: 'Share specific, actionable techniques customers can use immediately.',
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50',
-      borderColor: 'hover:border-purple-200'
+      id: 'community-moment',
+      icon: Heart,
+      name: 'Community Moment',
+      description: 'Pure sensory snapshots creating atmosphere through concrete details.',
+      color: 'text-pink-600',
+      bgColor: 'bg-pink-50',
+      borderColor: 'hover:border-pink-200'
     },
     {
       id: 'promotion',
@@ -47,15 +47,6 @@ export default function PostTypesGridLanding() {
       color: 'text-orange-600',
       bgColor: 'bg-orange-50',
       borderColor: 'hover:border-orange-200'
-    },
-    {
-      id: 'community-moment',
-      icon: Heart,
-      name: 'Community Moment',
-      description: 'Pure sensory snapshots creating atmosphere through concrete details.',
-      color: 'text-pink-600',
-      bgColor: 'bg-pink-50',
-      borderColor: 'hover:border-pink-200'
     }
   ];
 
@@ -65,10 +56,10 @@ export default function PostTypesGridLanding() {
         {/* Header */}
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
-            Six Post Types for Every Business Need
+            Five Post Types for Every Business Need
           </h2>
           <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-            Shoreline generates content across six distinct modes—each designed for a specific purpose, all grounded in your actual work.
+            Shoreline generates content across five distinct modes—each designed for a specific purpose, all grounded in your actual work.
           </p>
         </div>
 

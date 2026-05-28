@@ -20,11 +20,11 @@ import {
 export function PostTypesGrid() {
   const postTypes = [
     {
-      id: "myth-busting",
-      icon: LightbulbIcon,
-      name: "Myth-busting",
-      description: "Correct common misconceptions using your craft expertise. Education that builds trust.",
-      href: "/post-types#myth-busting"
+      id: "tip-of-the-day",
+      icon: SparklesIcon,
+      name: "Tip of the Day",
+      description: "Share actionable advice customers can use immediately. Practical and specific.",
+      href: "/post-types#tip-of-the-day"
     },
     {
       id: "behind-the-scenes",
@@ -34,11 +34,11 @@ export function PostTypesGrid() {
       href: "/post-types#behind-the-scenes"
     },
     {
-      id: "tip-of-the-day",
-      icon: SparklesIcon,
-      name: "Tip of the Day",
-      description: "Share actionable advice customers can use immediately. Practical and specific.",
-      href: "/post-types#tip-of-the-day"
+      id: "community-moment",
+      icon: HeartIcon,
+      name: "Community Moment",
+      description: "Celebrate milestones, thank customers, or acknowledge local moments. Human connection.",
+      href: "/post-types#community-moment"
     },
     {
       id: "promotion",
@@ -53,13 +53,6 @@ export function PostTypesGrid() {
       name: "Local Event",
       description: "Connect your business to what's happening in your neighborhood. Community-first.",
       href: "/post-types#local-event"
-    },
-    {
-      id: "community-moment",
-      icon: HeartIcon,
-      name: "Community Moment",
-      description: "Celebrate milestones, thank customers, or acknowledge local moments. Human connection.",
-      href: "/post-types#community-moment"
     }
   ];
 
@@ -69,7 +62,7 @@ export function PostTypesGrid() {
         {/* Header */}
         <div className="mb-12 text-center max-w-3xl mx-auto">
           <h2 className="text-3xl font-bold mb-4 text-slate-900">
-            6 Ways to Connect With Your Community
+            5 Ways to Connect With Your Community
           </h2>
           <p className="text-lg text-slate-600 leading-relaxed">
             Each post type helps you show up differently. All grounded in your neighborhood, 

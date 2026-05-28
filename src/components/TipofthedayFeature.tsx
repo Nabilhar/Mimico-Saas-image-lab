@@ -299,14 +299,14 @@ At Riverside, we use this before scissor-over-comb work—it establishes a soft 
         {/* CTA */}
         <div className="mt-12 text-center">
           <p className="text-slate-600 mb-6">
-            Today's Tip is one of 6 post types. Each one helps you connect with your community in a different way.
+            Today's Tip is one of 5 post types. Each one helps you connect with your community in a different way.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a 
               href="/post-types"
               className="inline-flex items-center justify-center px-6 py-3 bg-cyan-800 hover:bg-cyan-900 text-white font-medium rounded-md transition-colors"
             >
-              See All 6 Post Types
+              See All 5 Post Types
             </a>
             <a 
               href="#cta"
