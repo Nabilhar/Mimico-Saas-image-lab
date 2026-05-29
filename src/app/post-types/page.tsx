@@ -19,7 +19,7 @@ export default function PostTypesPage() {
           <div className="mx-auto max-w-6xl px-6 sm:px-6">
             <div className="max-w-3xl">
               <h1 className="text-4xl md:text-5xl font-bold mb-6 text-slate-900">
-                6 Post Types, Always Fresh
+                5 Post Types, Always Fresh
               </h1>
               <p className="text-xl text-slate-600 leading-relaxed mb-8">
                 Each post type helps you connect with your community in a different way. 
@@ -423,7 +423,7 @@ At our clinic, we see this pattern every spring as patients resume outdoor activ
 
                 {/* Second Example */}
                 <div className="mt-6 mb-3">
-                  <span className="text-sm font-medium text-slate-500">Example: Riverside Barbershop</span>
+                  <span className="text-sm font-medium text-slate-500">Example: Riverside Shawarma</span>
                 </div>
 
                 <Card className="border-slate-200 shadow-sm overflow-hidden">
@@ -432,7 +432,7 @@ At our clinic, we see this pattern every spring as patients resume outdoor activ
                       Q
                     </div>
                     <div className="flex flex-col flex-1 min-w-0">
-                      <span className="font-bold text-slate-900 text-sm leading-tight">Riverside Barbershop</span>
+                      <span className="font-bold text-slate-900 text-sm leading-tight">Riverside Shawarma</span>
                       <div className="flex items-center justify-between gap-2 mt-1">
                         <span className="text-[10px] text-slate-500 font-medium truncate">Riverside, Toronto</span>
                         <span className="shrink-0 text-[10px] font-black text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded uppercase tracking-widest">
@@ -444,18 +444,16 @@ At our clinic, we see this pattern every spring as patients resume outdoor activ
 
                   <CardContent className="px-4 pb-3 pt-0">
                     <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">
-{`When blending between clipper guards, place your longer guard flat against the scalp, then tilt it 45 degrees at the line where you want the transition to begin.
+{`When you're threading shish tawook onto the skewer, grab chicken breasts that are all the same size and thickness. Uniform pieces cook at the same rate—the thin edge and thick end both hit that golden char at the exact same moment. Uneven breasts mean you're either pulling thin pieces off early or waiting for thick ones to catch up, and by then the thin ones are dry.
 
-The tilted guard removes less hair at that boundary, preventing the hard line that occurs when guards meet skin at full contact. This creates a natural diffusion zone.
-
-At Riverside, we use this before scissor-over-comb work—it establishes a soft gradient that your scissors can refine. Your fade guide appears without the client seeing distinct clipper steps.`}
+We size-match at the counter before they go on the flame. Takes a minute, saves the whole plate.`}
                     </p>
                   </CardContent>
 
                   <div className="w-full aspect-square bg-slate-100 border-y border-slate-100">
                     <img 
-                      src="/Barber-clipper-angle.jpeg"
-                      alt="Clipper guard angle demonstration" 
+                      src="/chicken-same-size.png"
+                      alt="Chicken same size cooked" 
                       className="w-full h-full object-cover"
                     />
                   </div>
@@ -463,7 +461,7 @@ At Riverside, we use this before scissor-over-comb work—it establishes a soft 
                   <div className="px-4 py-3 bg-white border-t border-slate-100">
                     <div className="flex items-center justify-between text-xs text-slate-500">
                       <span>5 credits • Tip of the Day mode</span>
-                      <span className="font-medium text-cyan-800">#BarbershopTip #Riverside #FadeTechnique</span>
+                      <span className="font-medium text-cyan-800">#ShawarmaLife #Riverside #ShishTawook</span>
                     </div>
                   </div>
                 </Card>
@@ -624,7 +622,7 @@ At Riverside, we use this before scissor-over-comb work—it establishes a soft 
               {/* Right Column: Example Posts */}
               <div>
                 <div className="mb-3">
-                  <span className="text-sm font-medium text-slate-500">Example: Chinatown Ramen Shop</span>
+                  <span className="text-sm font-medium text-slate-500">Example: North York YOGA Studio</span>
                 </div>
                 
                 {/* Example Post Card */}
@@ -634,9 +632,9 @@ At Riverside, we use this before scissor-over-comb work—it establishes a soft 
                       C
                     </div>
                     <div className="flex flex-col flex-1 min-w-0">
-                      <span className="font-bold text-slate-900 text-sm leading-tight">Chinatown Ramen</span>
+                      <span className="font-bold text-slate-900 text-sm leading-tight">TYB YOGA Studio</span>
                       <div className="flex items-center justify-between gap-2 mt-1">
-                        <span className="text-[10px] text-slate-500 font-medium truncate">Chinatown, Toronto</span>
+                        <span className="text-[10px] text-slate-500 font-medium truncate">North York, Toronto</span>
                         <span className="shrink-0 text-[10px] font-black text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded uppercase tracking-widest">
                           Generated in 26s
                         </span>
@@ -646,18 +644,16 @@ At Riverside, we use this before scissor-over-comb work—it establishes a soft 
 
                   <CardContent className="px-4 pb-3 pt-0">
                     <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">
-{`6:32 PM. I'm leaning over the broth pot with my thermometer. 205°F. Too high—the fat's starting to split from the collagen, and I can see those tiny oil droplets breaking the emulsion we spent eighteen hours building.
+{`The mirror's edge catches fingerprints from this morning's class. I'm moving along the length of it with a microfiber cloth, watching the light shift across the surface as I go—pushing out smudges, checking the angle of reflection against the floor line where people will stand. The studio's bright and clear right now, quiet before bodies come back in.
 
-My cook Kenji's already reaching for the valve before I say anything. We drop it to medium-low. In about four minutes, we'll hit that sweet spot at 198°F where everything stays suspended and silky.
-
-Meanwhile, Lin's portioning alkaline noodles at the other station—130 grams per bowl, always by hand, never the scale. Her fingers just know. Three orders are up. The broth's almost ready.`}
+I step back. The reflection needs to be true. When someone's holding a pose, grounding into their foundation, the mirror shows them exactly what's happening—spine stacked, shoulders settled, weight distributed. A smudged surface steals that feedback. So I keep moving, cloth in steady passes, until the glass gives back a clean line again. Ready. 🧘‍♀️✨`}
                     </p>
                   </CardContent>
 
                   <div className="w-full aspect-square bg-slate-100 border-y border-slate-100">
                     <img 
-                      src="/Ramen-Broth-temperature.jpeg"
-                      alt="Broth temperature check during service" 
+                      src="/yoga-clean-mirrors.png"
+                      alt="Yoga clean mirrors" 
                       className="w-full h-full object-cover"
                     />
                   </div>
@@ -665,14 +661,14 @@ Meanwhile, Lin's portioning alkaline noodles at the other station—130 grams pe
                   <div className="px-4 py-3 bg-white border-t border-slate-100">
                     <div className="flex items-center justify-between text-xs text-slate-500">
                       <span>5 credits • Behind the Scenes mode</span>
-                      <span className="font-medium text-cyan-800">#ChinatownRamen #TorontoFood #RamenPrep</span>
+                      <span className="font-medium text-cyan-800">#TherapyStudio #StudioCraft #FlowPrep</span>
                     </div>
                   </div>
                 </Card>
 
                 {/* Second Example */}
                 <div className="mt-6 mb-3">
-                  <span className="text-sm font-medium text-slate-500">Example: Glow Aesthetics</span>
+                  <span className="text-sm font-medium text-slate-500">Example: Glow Skin Medical</span>
                 </div>
 
                 <Card className="border-slate-200 shadow-sm overflow-hidden">
@@ -681,7 +677,7 @@ Meanwhile, Lin's portioning alkaline noodles at the other station—130 grams pe
                       G
                     </div>
                     <div className="flex flex-col flex-1 min-w-0">
-                      <span className="font-bold text-slate-900 text-sm leading-tight">Glow Aesthetics</span>
+                      <span className="font-bold text-slate-900 text-sm leading-tight">Glow Skin Medical</span>
                       <div className="flex items-center justify-between gap-2 mt-1">
                         <span className="text-[10px] text-slate-500 font-medium truncate">Yorkville, Toronto</span>
                         <span className="shrink-0 text-[10px] font-black text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded uppercase tracking-widest">
@@ -693,18 +689,18 @@ Meanwhile, Lin's portioning alkaline noodles at the other station—130 grams pe
 
                   <CardContent className="px-4 pb-3 pt-0">
                     <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">
-{`The clinic is quiet before a consultation, and I'm marking the syringes we'll need—three units here, half there. The patient asked for "fuller lips but natural," which means I'm choosing between two filler densities before she even arrives.
+{`We keep our HydraFacial serums stored upright in a cool, dark cabinet away from direct light. When these vials stay vertical, the concentrated actives—peptides, hyaluronic acid, antioxidants—remain stable and settle properly. 
 
-If I pull the thicker product, we can add definition but risk that stiff look she specifically said she doesn't want. The thinner one gives softness but might need a touch-up in eight months instead of twelve.
+Horizontal storage or exposure to heat and light degrades them faster, so you're applying weakened formulas that won't deliver the results the treatment promises.
 
-I cap both syringes and set them side by side on the sterile tray. The consultation starts in five minutes.`}
+Store upright. Keep it dark and cool. The serum performs exactly as designed.`}
                     </p>
                   </CardContent>
 
                   <div className="w-full aspect-square bg-slate-100 border-y border-slate-100">
                     <img 
-                      src="/Syringe-preparation.jpeg"
-                      alt="Syringe preparation on sterile tray" 
+                      src="/serum-upright-applied.png"
+                      alt="Serum applied on skin" 
                       className="w-full h-full object-cover"
                     />
                   </div>
@@ -770,6 +766,253 @@ I cap both syringes and set them side by side on the sterile tray. The consultat
         </section>
 
         {/* ===================================== */}
+        {/* COMMUNITY MOMENT SECTION (Full Detail) */}
+        {/* ===================================== */}
+        <section id="community-moment" className="bg-slate-50 py-16 md:py-24 border-b scroll-mt-16">
+          <div className="mx-auto max-w-6xl px-6 sm:px-6">
+            {/* Header */}
+            <div className="mb-12 max-w-3xl">
+              <div className="inline-block px-3 py-1 bg-cyan-100 text-cyan-800 text-sm font-semibold rounded-full mb-4">
+                Post Type #3
+              </div>
+              <h2 className="text-3xl font-bold mb-4 text-slate-900">
+                Community Moment: Creating Presence Through Atmosphere
+              </h2>
+              <p className="text-lg text-slate-600 leading-relaxed">
+                Capture a specific sensory moment happening in your space right now. Not explaining what it means—just layering the concrete details that create presence.
+              </p>
+            </div>
+
+            {/* Two-column layout: Explanation + Example */}
+            <div className="grid lg:grid-cols-2 gap-12 mb-16">
+              {/* Left Column: Explanation */}
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-xl font-semibold text-slate-900 mb-4">
+                    What Makes Community Moment Different
+                  </h3>
+                  <div className="text-slate-700 space-y-4">
+                    <p>
+                      Most "vibe" posts tell you what the atmosphere is. "Cozy vibes today!" "Love this energy!" Generic mood statements that could apply anywhere.
+                    </p>
+                    <p>
+                      Shoreline's Community Moment mode creates atmosphere through <strong>pure sensory detail</strong>—what you see, hear, and physically feel right now. Temperature, light, sound, movement, texture. The feeling emerges from the specifics, not from naming it.
+                    </p>
+                    <p>
+                      No interpretation. No reflection. Just a sensory snapshot—like a photograph made of words.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Why This Works */}
+                <div className="bg-white rounded-lg border border-slate-200 p-6">
+                  <h4 className="font-semibold text-slate-900 mb-4">Why this works:</h4>
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
+                      <span className="text-sm text-slate-700">
+                        Pure sensory immersion (readers feel present in the space)
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
+                      <span className="text-sm text-slate-700">
+                        Concrete specifics (38°C, -5°C, not "warm" or "cold")
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
+                      <span className="text-sm text-slate-700">
+                        No atmosphere naming (lets details create the feeling)
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
+                      <span className="text-sm text-slate-700">
+                        Present tense creates immediacy (happening right now)
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
+                      <span className="text-sm text-slate-700">
+                        Creates belonging (readers want to be part of this moment)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Voice Recommendation */}
+                <div className="bg-white rounded-lg border border-slate-200 p-6">
+                  <h4 className="font-semibold text-slate-900 mb-4">Voice Recommendation:</h4>
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
+                      <span className="text-sm text-slate-700">
+                        Community Moment works best with <strong>Warm & Conversational</strong> (creates human presence—readers feel like they're standing there with you)
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
+                      <span className="text-sm text-slate-700">
+                        Use <strong>Clean & Understated</strong> for high-end brands (elegant restraint creates sophisticated atmosphere)
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <span className="text-sm text-slate-700">
+                        Community Moment creates atmosphere through sensory immersion—warmth makes it feel authentic, restraint makes it feel premium.
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Example Posts */}
+              <div>
+                <div className="mb-3">
+                  <span className="text-sm font-medium text-slate-500">Example: Junction Coffee</span>
+                </div>
+                
+                {/* Example Post Card */}
+                <Card className="border-slate-200 shadow-sm overflow-hidden">
+                  <div className="p-4 flex items-center gap-3 bg-white">
+                    <div className="w-10 h-10 rounded-full bg-cyan-800 flex items-center justify-center text-white font-bold text-lg shrink-0">
+                      J
+                    </div>
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className="font-bold text-slate-900 text-sm leading-tight">Junction Coffee</span>
+                      <div className="flex items-center justify-between gap-2 mt-1">
+                        <span className="text-[10px] text-slate-500 font-medium truncate">The Junction, Toronto</span>
+                        <span className="shrink-0 text-[10px] font-black text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded uppercase tracking-widest">
+                          Generated in 20s
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <CardContent className="px-4 pb-3 pt-0">
+                    <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">
+{`7:30 AM. The door opens and cold air rushes across the floor tiles. A woman unwraps her scarf at the counter, her glasses fogging white. The espresso machine hisses, releasing steam that spreads across the front window where frost patterns still cling to the corners.
+
+Outside, grey-blue light sits flat on Dundas Street. Inside, the halogen pendants cast yellow circles on the bar top.
+
+Someone's gloves drip onto the reclaimed wood table. The grinder starts its sharp whirr. A regular stamps snow off his boots—three quick thumps on the mat—then pulls the door closed behind him, muffling the street.`}
+                    </p>
+                  </CardContent>
+
+                  <div className="w-full aspect-square bg-slate-100 border-y border-slate-100">
+                    <img 
+                      src="/coffee-shop-frosted.jpeg"
+                      alt="Morning coffee shop with frosted windows" 
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+
+                  <div className="px-4 py-3 bg-white border-t border-slate-100">
+                    <div className="flex items-center justify-between text-xs text-slate-500">
+                      <span>5 credits • Community Moment mode</span>
+                      <span className="font-medium text-cyan-800">#JunctionCoffee #TorontoMorning #TheJunction</span>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Second Example */}
+                <div className="mt-6 mb-3">
+                  <span className="text-sm font-medium text-slate-500">Example: Yorkville Beauty Center</span>
+                </div>
+
+                <Card className="border-slate-200 shadow-sm overflow-hidden">
+                  <div className="p-4 flex items-center gap-3 bg-white">
+                    <div className="w-10 h-10 rounded-full bg-cyan-800 flex items-center justify-center text-white font-bold text-lg shrink-0">
+                      R
+                    </div>
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className="font-bold text-slate-900 text-sm leading-tight">Yorkville Beauty Center</span>
+                      <div className="flex items-center justify-between gap-2 mt-1">
+                        <span className="text-[10px] text-slate-500 font-medium truncate">Yorkville, Toronto</span>
+                        <span className="shrink-0 text-[10px] font-black text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded uppercase tracking-widest">
+                          Generated in 22s
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <CardContent className="px-4 pb-3 pt-0">
+                    <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">
+{`By 3 o'clock on Thursdays, the two armchairs by the windows shift. Shopping bags settle on the light wood floor, designer handles catching the afternoon light. Same pattern every week—someone sits, sets their phone face-down on the side table, and doesn't touch it for twenty minutes. 
+
+Sometimes two people claim both chairs at once, bags lined up like checkpoints between them. They're not waiting. They're stopping. There's something about that stretch of window view and the quiet that makes people pause mid-afternoon, mid-errand, and just sit.`}
+                    </p>
+                  </CardContent>
+
+                  <div className="w-full aspect-square bg-slate-100 border-y border-slate-100">
+                    <img 
+                      src="/bags-view-chairs.png"
+                      alt="Sitting on chairs with shopping bags" 
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+
+                  <div className="px-4 py-3 bg-white border-t border-slate-100">
+                    <div className="flex items-center justify-between text-xs text-slate-500">
+                      <span>5 credits • Community Moment mode</span>
+                      <span className="font-medium text-cyan-800">#TorontoAesthetics #SpaceObservations #MedicalSpa</span>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            </div>
+
+            {/* Works Across Industries */}
+            <div className="mb-12">
+              <h3 className="text-2xl font-bold mb-6 text-slate-900">Works Across Industries</h3>
+              <p className="text-slate-600 mb-8 max-w-3xl">
+                Community Moment works for any business where <strong>atmosphere matters</strong>—where the space itself creates a sense of belonging. Coffee shops, studios, bookstores, salons—places where people gather and the environment shapes the experience.
+              </p>
+
+              <div className="grid md:grid-cols-3 gap-6">
+                <Card className="border-slate-200">
+                  <CardContent className="p-6">
+                    <h4 className="font-semibold text-slate-900 mb-3">Bookstore</h4>
+                    <p className="text-sm text-slate-600 italic leading-relaxed">
+                      "Saturday afternoon. Light slants through the front window onto the poetry shelf. Someone's turning pages in the corner armchair—the soft flutter, then stillness. A stack of new arrivals sits on the counter, spines facing out. The register drawer slides open with its familiar metallic click."
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-slate-200">
+                  <CardContent className="p-6">
+                    <h4 className="font-semibold text-slate-900 mb-3">Hair Salon</h4>
+                    <p className="text-sm text-slate-600 italic leading-relaxed">
+                      "10 AM. Three chairs running. Scissors snipping in quick succession at station two. The blow dryer hums at station one. Someone's hair falls in dark curves onto the cape. Water runs in the wash basin. A client flips through a magazine, waiting. The front door chimes."
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-slate-200">
+                  <CardContent className="p-6">
+                    <h4 className="font-semibold text-slate-900 mb-3">Brewery Taproom</h4>
+                    <p className="text-sm text-slate-600 italic leading-relaxed">
+                      "Thursday evening. The west windows glow orange. Two groups at the long table, glasses catching the light. Someone laughs—sharp and sudden over the low conversation. The tap handle clicks. Beer hits glass with that particular sound. Condensation runs down the side."
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* When to Use */}
+            <div className="bg-white rounded-lg border border-slate-200 p-8">
+              <h3 className="text-xl font-semibold text-slate-900 mb-4">When to Use Community Moment</h3>
+              <p className="text-slate-700 leading-relaxed mb-4">
+                Use Community Moment when you want to capture the atmosphere of your space without explaining it. Perfect for businesses where <strong>environment creates belonging</strong>—coffee shops, studios, salons, bookstores, taprooms—places where people gather and the sensory experience matters.
+              </p>
+              <p className="text-slate-700 leading-relaxed">
+                Community Moment works best when there's an actual moment worth capturing: morning rush energy, quiet afternoon reading time, early class preparation, evening gathering warmth. If your space has a "you had to be there" quality, that's Community Moment territory.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* ===================================== */}
         {/* PROMOTION / OFFER SECTION (Full Detail) */}
         {/* ===================================== */}
         <section id="promotion" className="bg-white py-16 md:py-24 border-b scroll-mt-16">
@@ -777,7 +1020,7 @@ I cap both syringes and set them side by side on the sterile tray. The consultat
             {/* Header */}
             <div className="mb-12 max-w-3xl">
               <div className="inline-block px-3 py-1 bg-cyan-100 text-cyan-800 text-sm font-semibold rounded-full mb-4">
-                Post Type #3
+                Post Type #4
               </div>
               <h2 className="text-3xl font-bold mb-4 text-slate-900">
                 Promotion / Offer: Soft-Sell Invitations
@@ -928,7 +1171,7 @@ Kitchen's hot, espresso machine's dialed in, and we've got the space to actually
                       P
                     </div>
                     <div className="flex flex-col flex-1 min-w-0">
-                      <span className="font-bold text-slate-900 text-sm leading-tight">Paramount Shawarma</span>
+                      <span className="font-bold text-slate-900 text-sm leading-tight">Annex Shawarma</span>
                       <div className="flex items-center justify-between gap-2 mt-1">
                         <span className="text-[10px] text-slate-500 font-medium truncate">The Annex, Toronto</span>
                         <span className="shrink-0 text-[10px] font-black text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded uppercase tracking-widest">
@@ -940,24 +1183,26 @@ Kitchen's hot, espresso machine's dialed in, and we've got the space to actually
 
                   <CardContent className="px-4 pb-3 pt-0">
                     <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">
-{`We're open until 1 AM Sunday through Thursday, and honestly, the 10 PM to close window is when our kitchen hits a nice rhythm. Fewer tickets coming in, but we're still running everything at full capacity—meat on the spit, fries going, all the fixings prepped.
+{`Thursday afternoons, we see the same thing: people swing by between work and whatever's next, looking for something solid that doesn't demand much thought or budget.
 
-So we're testing something: Large chicken or beef shawarma wrap + fries + pop for $12 during those hours. Usually $16, but the timing works better for us anyway.
+We're running the Thursday Special every week, 11:45 a.m. through 9:59 p.m. Chicken shawarma wrap, fries, and a pop—$12.99. That's it. No complications, no upselling.
 
-It's basically there for students (or anyone) who needs actual food late. Sunday to Thursday, 10 PM to 1 AM. That's it. Kitchen's running, wraps are fresh, price makes sense for the window.`}
+Stop by this Thursday, we are on Dundas St.`}
                     </p>
                   </CardContent>
 
                   <div className="w-full aspect-square bg-slate-100 border-y border-slate-100">
-                    <div className="w-full h-full flex items-center justify-center text-slate-400">
-                      <span className="text-sm">AI-generated image: Late night shawarma wrap and fries</span>
-                    </div>
+                    <img 
+                      src="/promotion-shawarma-combo.png"
+                      alt="Thursday Special shawarma wrap and fries" 
+                      className="w-full h-full object-cover"
+                    />
                   </div>
 
                   <div className="px-4 py-3 bg-white border-t border-slate-100">
                     <div className="flex items-center justify-between text-xs text-slate-500">
                       <span>5 credits • Promotion mode</span>
-                      <span className="font-medium text-cyan-800">#ParamountShawarma #LateNight #TheAnnex</span>
+                      <span className="font-medium text-cyan-800">#TheAnnex #ThursdaySpecial #ShawarmaWrap</span>
                     </div>
                   </div>
                 </Card>
@@ -1022,7 +1267,7 @@ It's basically there for students (or anyone) who needs actual food late. Sunday
             {/* Header */}
             <div className="mb-12 max-w-3xl">
               <div className="inline-block px-3 py-1 bg-cyan-100 text-cyan-800 text-sm font-semibold rounded-full mb-4">
-                Post Type #4
+                Post Type #5
               </div>
               <h2 className="text-3xl font-bold mb-4 text-slate-900">
                 Local Event / News: Neighbourly Mentions
@@ -1149,9 +1394,11 @@ Might swing by ourselves for some produce.`}
                   </CardContent>
 
                   <div className="w-full aspect-square bg-slate-100 border-y border-slate-100">
-                    <div className="w-full h-full flex items-center justify-center text-slate-400">
-                      <span className="text-sm">AI-generated image: Outdoor farmers market scene</span>
-                    </div>
+                    <img 
+                      src="/pizza-patio.png"
+                      alt="Pizza in patio" 
+                      className="w-full h-full object-cover"
+                    />
                   </div>
 
                   <div className="px-4 py-3 bg-white border-t border-slate-100">
@@ -1259,258 +1506,7 @@ Worth a walk if you're around.`}
           </div>
         </section>
 
-        
-        {/* ===================================== */}
-        {/* COMMUNITY MOMENT SECTION (Full Detail) */}
-        {/* ===================================== */}
-        <section id="community-moment" className="bg-slate-50 py-16 md:py-24 border-b scroll-mt-16">
-          <div className="mx-auto max-w-6xl px-6 sm:px-6">
-            {/* Header */}
-            <div className="mb-12 max-w-3xl">
-              <div className="inline-block px-3 py-1 bg-cyan-100 text-cyan-800 text-sm font-semibold rounded-full mb-4">
-                Post Type #5
-              </div>
-              <h2 className="text-3xl font-bold mb-4 text-slate-900">
-                Community Moment: Creating Presence Through Atmosphere
-              </h2>
-              <p className="text-lg text-slate-600 leading-relaxed">
-                Capture a specific sensory moment happening in your space right now. Not explaining what it means—just layering the concrete details that create presence.
-              </p>
-            </div>
-
-            {/* Two-column layout: Explanation + Example */}
-            <div className="grid lg:grid-cols-2 gap-12 mb-16">
-              {/* Left Column: Explanation */}
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-xl font-semibold text-slate-900 mb-4">
-                    What Makes Community Moment Different
-                  </h3>
-                  <div className="text-slate-700 space-y-4">
-                    <p>
-                      Most "vibe" posts tell you what the atmosphere is. "Cozy vibes today!" "Love this energy!" Generic mood statements that could apply anywhere.
-                    </p>
-                    <p>
-                      Shoreline's Community Moment mode creates atmosphere through <strong>pure sensory detail</strong>—what you see, hear, and physically feel right now. Temperature, light, sound, movement, texture. The feeling emerges from the specifics, not from naming it.
-                    </p>
-                    <p>
-                      No interpretation. No reflection. Just a sensory snapshot—like a photograph made of words.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Why This Works */}
-                <div className="bg-white rounded-lg border border-slate-200 p-6">
-                  <h4 className="font-semibold text-slate-900 mb-4">Why this works:</h4>
-                  <div className="space-y-3">
-                    <div className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
-                      <span className="text-sm text-slate-700">
-                        Pure sensory immersion (readers feel present in the space)
-                      </span>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
-                      <span className="text-sm text-slate-700">
-                        Concrete specifics (38°C, -5°C, not "warm" or "cold")
-                      </span>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
-                      <span className="text-sm text-slate-700">
-                        No atmosphere naming (lets details create the feeling)
-                      </span>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
-                      <span className="text-sm text-slate-700">
-                        Present tense creates immediacy (happening right now)
-                      </span>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
-                      <span className="text-sm text-slate-700">
-                        Creates belonging (readers want to be part of this moment)
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Voice Recommendation */}
-                <div className="bg-white rounded-lg border border-slate-200 p-6">
-                  <h4 className="font-semibold text-slate-900 mb-4">Voice Recommendation:</h4>
-                  <div className="space-y-3">
-                    <div className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
-                      <span className="text-sm text-slate-700">
-                        Community Moment works best with <strong>Warm & Conversational</strong> (creates human presence—readers feel like they're standing there with you)
-                      </span>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
-                      <span className="text-sm text-slate-700">
-                        Use <strong>Clean & Understated</strong> for high-end brands (elegant restraint creates sophisticated atmosphere)
-                      </span>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <span className="text-sm text-slate-700">
-                        Community Moment creates atmosphere through sensory immersion—warmth makes it feel authentic, restraint makes it feel premium.
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Column: Example Posts */}
-              <div>
-                <div className="mb-3">
-                  <span className="text-sm font-medium text-slate-500">Example: Junction Coffee</span>
-                </div>
-                
-                {/* Example Post Card */}
-                <Card className="border-slate-200 shadow-sm overflow-hidden">
-                  <div className="p-4 flex items-center gap-3 bg-white">
-                    <div className="w-10 h-10 rounded-full bg-cyan-800 flex items-center justify-center text-white font-bold text-lg shrink-0">
-                      J
-                    </div>
-                    <div className="flex flex-col flex-1 min-w-0">
-                      <span className="font-bold text-slate-900 text-sm leading-tight">Junction Coffee</span>
-                      <div className="flex items-center justify-between gap-2 mt-1">
-                        <span className="text-[10px] text-slate-500 font-medium truncate">The Junction, Toronto</span>
-                        <span className="shrink-0 text-[10px] font-black text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded uppercase tracking-widest">
-                          Generated in 20s
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <CardContent className="px-4 pb-3 pt-0">
-                    <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">
-{`7:30 AM. The door opens and cold air rushes across the floor tiles. A woman unwraps her scarf at the counter, her glasses fogging white. The espresso machine hisses, releasing steam that spreads across the front window where frost patterns still cling to the corners.
-
-Outside, grey-blue light sits flat on Dundas Street. Inside, the halogen pendants cast yellow circles on the bar top.
-
-Someone's gloves drip onto the reclaimed wood table. The grinder starts its sharp whirr. A regular stamps snow off his boots—three quick thumps on the mat—then pulls the door closed behind him, muffling the street.`}
-                    </p>
-                  </CardContent>
-
-                  <div className="w-full aspect-square bg-slate-100 border-y border-slate-100">
-                    <img 
-                      src="/coffee-shop-frosted.jpeg"
-                      alt="Morning coffee shop with frosted windows" 
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-
-                  <div className="px-4 py-3 bg-white border-t border-slate-100">
-                    <div className="flex items-center justify-between text-xs text-slate-500">
-                      <span>5 credits • Community Moment mode</span>
-                      <span className="font-medium text-cyan-800">#JunctionCoffee #TorontoMorning #TheJunction</span>
-                    </div>
-                  </div>
-                </Card>
-
-                {/* Second Example */}
-                <div className="mt-6 mb-3">
-                  <span className="text-sm font-medium text-slate-500">Example: Riverside Yoga Studio</span>
-                </div>
-
-                <Card className="border-slate-200 shadow-sm overflow-hidden">
-                  <div className="p-4 flex items-center gap-3 bg-white">
-                    <div className="w-10 h-10 rounded-full bg-cyan-800 flex items-center justify-center text-white font-bold text-lg shrink-0">
-                      R
-                    </div>
-                    <div className="flex flex-col flex-1 min-w-0">
-                      <span className="font-bold text-slate-900 text-sm leading-tight">Riverside Yoga Studio</span>
-                      <div className="flex items-center justify-between gap-2 mt-1">
-                        <span className="text-[10px] text-slate-500 font-medium truncate">Riverside, Toronto</span>
-                        <span className="shrink-0 text-[10px] font-black text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded uppercase tracking-widest">
-                          Generated in 22s
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <CardContent className="px-4 pb-3 pt-0">
-                    <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">
-{`The radiators tick and hum. 6:03 AM on the wall clock. Two students unroll mats near the windows—that familiar sticky-rubber sound against bamboo floors. Someone's boots leave small water prints from melted snow in the entrance.
-
-The room sits at 24°C now. I'm adjusting the thermostat dial, feeling the warmth gather at shoulder height. A woman in a grey hoodie sits cross-legged, retying her hair.
-
-The front door opens again—cold air rushes in for three seconds, then gone. Mats form uneven rows. Seven people breathing quietly, stretching hamstrings, rolling shoulders back.`}
-                    </p>
-                  </CardContent>
-
-                  <div className="w-full aspect-square bg-slate-100 border-y border-slate-100">
-                    <img 
-                      src="/yoga-morning-warming.jpeg"
-                      alt="Early morning yoga studio warming up" 
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-
-                  <div className="px-4 py-3 bg-white border-t border-slate-100">
-                    <div className="flex items-center justify-between text-xs text-slate-500">
-                      <span>5 credits • Community Moment mode</span>
-                      <span className="font-medium text-cyan-800">#RiversideYoga #TorontoYoga #MorningFlow</span>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-            </div>
-
-            {/* Works Across Industries */}
-            <div className="mb-12">
-              <h3 className="text-2xl font-bold mb-6 text-slate-900">Works Across Industries</h3>
-              <p className="text-slate-600 mb-8 max-w-3xl">
-                Community Moment works for any business where <strong>atmosphere matters</strong>—where the space itself creates a sense of belonging. Coffee shops, studios, bookstores, salons—places where people gather and the environment shapes the experience.
-              </p>
-
-              <div className="grid md:grid-cols-3 gap-6">
-                <Card className="border-slate-200">
-                  <CardContent className="p-6">
-                    <h4 className="font-semibold text-slate-900 mb-3">Bookstore</h4>
-                    <p className="text-sm text-slate-600 italic leading-relaxed">
-                      "Saturday afternoon. Light slants through the front window onto the poetry shelf. Someone's turning pages in the corner armchair—the soft flutter, then stillness. A stack of new arrivals sits on the counter, spines facing out. The register drawer slides open with its familiar metallic click."
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-slate-200">
-                  <CardContent className="p-6">
-                    <h4 className="font-semibold text-slate-900 mb-3">Hair Salon</h4>
-                    <p className="text-sm text-slate-600 italic leading-relaxed">
-                      "10 AM. Three chairs running. Scissors snipping in quick succession at station two. The blow dryer hums at station one. Someone's hair falls in dark curves onto the cape. Water runs in the wash basin. A client flips through a magazine, waiting. The front door chimes."
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-slate-200">
-                  <CardContent className="p-6">
-                    <h4 className="font-semibold text-slate-900 mb-3">Brewery Taproom</h4>
-                    <p className="text-sm text-slate-600 italic leading-relaxed">
-                      "Thursday evening. The west windows glow orange. Two groups at the long table, glasses catching the light. Someone laughs—sharp and sudden over the low conversation. The tap handle clicks. Beer hits glass with that particular sound. Condensation runs down the side."
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-
-            {/* When to Use */}
-            <div className="bg-white rounded-lg border border-slate-200 p-8">
-              <h3 className="text-xl font-semibold text-slate-900 mb-4">When to Use Community Moment</h3>
-              <p className="text-slate-700 leading-relaxed mb-4">
-                Use Community Moment when you want to capture the atmosphere of your space without explaining it. Perfect for businesses where <strong>environment creates belonging</strong>—coffee shops, studios, salons, bookstores, taprooms—places where people gather and the sensory experience matters.
-              </p>
-              <p className="text-slate-700 leading-relaxed">
-                Community Moment works best when there's an actual moment worth capturing: morning rush energy, quiet afternoon reading time, early class preparation, evening gathering warmth. If your space has a "you had to be there" quality, that's Community Moment territory.
-              </p>
-            </div>
-          </div>
-        </section>
-        
-
-        {/* CTA Section */}
+                {/* CTA Section */}
         <section className="bg-gradient-to-b from-slate-50 to-white py-16 md:py-24">
           <div className="mx-auto max-w-3xl px-6 sm:px-6 text-center">
             <h2 className="text-3xl font-bold mb-4 text-slate-900">

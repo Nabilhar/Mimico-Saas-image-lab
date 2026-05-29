@@ -552,7 +552,7 @@ We are in the office if you want to sit down and look at the actual numbers.
                 </div>
                 <span className="text-[11px] font-semibold text-cyan-700">50% off — first 6 months</span>
                 <hr className="border-slate-100 my-1" />
-                <div className="flex justify-between text-sm text-slate-500"><span>Complete posts</span><span className="font-semibold text-slate-900">up to 20</span></div>
+                <div className="flex justify-between text-sm text-slate-500"><span>Complete posts</span><span className="font-semibold text-slate-900">up to 16</span></div>
                 <div className="flex justify-between text-sm text-slate-500"><span>Cost per post</span><span className="font-semibold text-slate-900">$1.18</span></div>
               </div>
 
