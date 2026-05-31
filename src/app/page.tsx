@@ -532,7 +532,7 @@ We are in the office if you want to sit down and look at the actual numbers.
               <h2 className="text-3xl font-bold mb-4 text-slate-900">Simple, Transparent Pricing</h2>
               <div className="text-slate-600 max-w-2xl space-y-2">
                 <p>No subscriptions. Buy credits, use them when you post.</p>
-                <p>Sign up now and get 25 free credits. Try your first 5 complete posts (text + image).</p>
+                <p>Get started and receive 25 free credits. Try your first 5 complete posts (text + image).</p>
                 <p>Early adopter pricing active now — 50% off your first 6 months.</p>
               </div>
             </div>
