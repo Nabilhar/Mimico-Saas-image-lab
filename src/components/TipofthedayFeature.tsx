@@ -78,30 +78,6 @@ export function TipofthedayFeature() {
                 </div>
               </div>
             </div>
-
-            {/* Voice Recommendation */}
-            <div className="bg-white rounded-lg border border-slate-200 p-6">
-              <h4 className="font-semibold text-slate-900 mb-4">Voice Recommendation:</h4>
-              <div className="space-y-3">
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
-                  <span className="text-sm text-slate-700">
-                    Tips work best with <strong>Warm & Conversational</strong> (friendly instruction, like showing someone a technique)
-                  </span>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
-                  <span className="text-sm text-slate-700">
-                    Use <strong>Authoritative & Precise</strong> for clinical/technical fields (health, trades, professional services)
-                  </span>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="text-sm text-slate-700">
-                    Tips are about teaching practical techniques—warmth makes instruction approachable, precision makes it trustworthy.
-                  </span>
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* Right Column: Example Post */}
@@ -198,43 +174,6 @@ At Riverside, we use this before scissor-over-comb work—it establishes a soft 
                   <span className="font-medium text-cyan-800">#BarbershopTip #Riverside #FadeTechnique</span>
                 </div>
               </div>
-            </Card>
-          </div>
-        </div>
-
-        {/* Not Just These Fields */}
-        <div className="mb-12">
-          <h3 className="text-2xl font-bold mb-6 text-slate-900">Works Across Industries</h3>
-          <p className="text-slate-600 mb-8 max-w-3xl">
-            Tips work for any business where <strong>technique matters</strong>. If there's a better way to do something—a timing window, a micro-adjustment, an observable cue—Shoreline turns it into teachable content.
-          </p>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            <Card className="border-slate-200">
-              <CardContent className="p-6">
-                <h4 className="font-semibold text-slate-900 mb-3">Bakeries</h4>
-                <p className="text-sm text-slate-600 italic leading-relaxed">
-                  "When scoring sourdough, hold your blade at 30 degrees, not vertical. The shallow angle creates an ear that lifts during baking. Vertical cuts seal flat. The difference is in the angle before the oven, not what happens inside it."
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-slate-200">
-              <CardContent className="p-6">
-                <h4 className="font-semibold text-slate-900 mb-3">Personal Training</h4>
-                <p className="text-sm text-slate-600 italic leading-relaxed">
-                  "Before increasing weight, check your bar speed on the concentric phase. If the bar slows in the middle third of the lift, you're not ready. Speed consistency across the full range means your nervous system can handle more load."
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-slate-200">
-              <CardContent className="p-6">
-                <h4 className="font-semibold text-slate-900 mb-3">HVAC</h4>
-                <p className="text-sm text-slate-600 italic leading-relaxed">
-                  "When checking refrigerant charge, measure superheat at the evaporator coil, not just at the compressor. A 5-degree difference between the two points means you have a restriction in the line. The compressor reading alone won't show it."
-                </p>
-              </CardContent>
             </Card>
           </div>
         </div>

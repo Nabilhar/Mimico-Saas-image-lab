@@ -13,6 +13,7 @@ import { auth } from "@clerk/nextjs/server";
 import { getImageModeTemplate } from '@/lib/image-mode-templates';
 import { selectZonePhoto } from "@/lib/select-zone-photo";
 import { fetchWeatherForCity } from "@/lib/weather";
+import { getMultimodalImageTemplate, getLocalEventVariant } from '@/lib/image-mode-templates-multimodal';
 
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
@@ -360,7 +361,7 @@ export async function POST(req: Request) {
     // Post record is source of truth for copy + mode (not live dashboard state).
     const { data: post, error: postError } = await supabase
       .from("community_posts")
-      .select("id, content, post_type, business_name, location_snapshot, voice_used")
+      .select("id, content, post_type, content_category, business_name, location_snapshot, voice_used")
       .eq("id", postId)
       .eq("business_id", userId)
       .single();
@@ -532,69 +533,92 @@ export async function POST(req: Request) {
 // Controlled by IMAGE_GENERATION_MODE=GEMINI_MULTIMODAL in .env
 // Falls back to architect path automatically if no zone photo or on error
 // ============================================================================
-const IMAGE_GEN_MODE = process.env.IMAGE_GENERATION_MODE || "ARCHITECT";
+const IMAGE_GEN_MODE = process.env.IMAGE_GENERATION_MODE || "GEMINI_MULTIMODAL";
 
 if (IMAGE_GEN_MODE === "GEMINI_MULTIMODAL") {
   console.log("🎨 [GEMINI_MULTIMODAL] Starting multimodal path...");
 
   try {
-    // 1. Select the right zone photo for this post type
-    const { photoUrl, zoneKey, zoneLabel, fallbackReason } = await selectZonePhoto(
-      supabase, userId, postType, zoneFocusOverride
+    // ── 1. Resolve zone for Local event / news (conditional) ──
+    let localEventVariant: "exterior" | "interior" | undefined;
+    let resolvedZoneOverride: ZoneKey | ZoneKey[] | undefined = zoneFocusOverride;
+
+    if (postType === "Local event / news") {
+      localEventVariant = getLocalEventVariant(post.content_category);
+      resolvedZoneOverride = localEventVariant === "exterior"
+        ? "entrance"
+        : "customer_space";
+    }
+
+    // ── 2. Select zone photo ──
+    let { photoUrl, zoneKey, zoneLabel, fallbackReason } = await selectZonePhoto(
+      supabase, userId, postType, resolvedZoneOverride
     );
 
-    if (!photoUrl) {
+    // ── 3. Fallback: exterior requested but no entrance photo → interior ──
+    if (localEventVariant === "exterior" && !photoUrl) {
+      console.log("[GEMINI_MULTIMODAL] No entrance photo — falling back to interior variant");
+      localEventVariant = "interior";
+      const fallback = await selectZonePhoto(supabase, userId, postType, "customer_space");
+      photoUrl = fallback.photoUrl;
+      zoneKey = fallback.zoneKey;
+      zoneLabel = fallback.zoneLabel;
+      fallbackReason = fallback.fallbackReason;
+    }
+
+    // ── 4. No photo at all → fall through to architect ──
+    if (!photoUrl || !zoneLabel) {
       console.warn(`[GEMINI_MULTIMODAL] No zone photo (${fallbackReason}) — falling back to architect.`);
-      // Falls through to architect path below
 
     } else {
       console.log(`[GEMINI_MULTIMODAL] ✅ Using ${zoneLabel} photo for "${postType}"`);
 
-      // 2. Build multimodal prompt
-      const imageModeLogicMulti = getImageModeTemplate(postType as any);
+      // ── 5. Build template block (hero already resolved by visual mode) ──
+      const imageModeLogicMulti = getMultimodalImageTemplate(
+        postType as any,
+        business.category,
+        { localEventVariant }
+      );
 
       const multimodalPrompt = `
-REFERENCE IMAGE: The attached photo shows the actual ${zoneLabel} of ${business_name}.
-Use this space as the setting. Match its lighting, materials, colors, and spatial character exactly.
+      TASK: Generate a single photographic image.
+      The reference photo attached is the spatial anchor — match its room, lighting, and materials exactly.
 
-[POST]:
-Type: ${postType}
-"${generatedPost}"
+      [POST]:
+      Type: ${postType}
+      "${generatedPost}"
 
-[MODE LOGIC — THIS DRIVES WHAT TO GENERATE]:
-${imageModeLogicMulti}
+      [VISUAL BRIEF]:
+      ${imageModeLogicMulti}
 
-[VOICE]:
-${voiceDescription}
+      [VOICE]:
+      ${voiceDescription}
 
-[BRAND CONTEXT]:
-Business: ${business_name} (${niche})
-Color Mood: ${b.color_mood}
-Palette: ${b.color_primary} / ${b.color_secondary} / ${b.color_accent}
+      [BRAND]:
+      ${business_name} — ${niche}
+      Color mood: ${b.color_mood}
+      Palette: ${b.color_primary} / ${b.color_secondary} / ${b.color_accent}
 
-[SPACE — FROM REFERENCE IMAGE]:
-You can see the actual ${zoneLabel}. Use it.
-Match the exact lighting quality, shadow direction, and color temperature from the photo.
-Place the hero naturally within this space — do not invent a different room.
+      [SPACE]:
+      The reference photo shows the actual ${zoneLabel}. Anchor the hero there.
+      Match its lighting quality, shadow direction, and color temperature exactly.
+      Do not invent a different room.
 
-[TIMING]:
-${currentMonth}, ${currentTime}
-Weather: ${currentWeather}
+      [TIMING]:
+      ${currentMonth}, ${currentTime}
+      Weather: ${currentWeather}
 
-[TECHNICAL]:
-- Hero: sharp focus
-- Space: softly blurred background
-- Depth of field: shallow (f/1.8 equivalent)
-- One subtle imperfection: ${imperfectionGuidance}
-- Never add imperfections to: people, products, clinical equipment
-- No legible faces — people are hands/bodies/silhouettes only
-- No text overlays, no watermarks
-- Square crop (1:1)
-- Professional commercial photography quality
+      [TECHNICAL]:
+      - Hero: sharp focus
+      - Background: softly blurred (f/1.8 equivalent)
+      - People: welcome as atmosphere — blurred, partial, angled away, never identifiable
+      - No faces in sharp focus
+      - One subtle imperfection: ${imperfectionGuidance}
+      - No text overlays, no watermarks
+      - Square crop (1:1)
 
-Before generating, write one sentence describing exactly what the image shows: 
-the hero, its placement in the space, and the lighting mood. Then generate the image.
-`.trim();
+      Describe in one sentence what the image shows: hero, placement, lighting mood. Then generate it.
+      `.trim();
 
       console.log("\n=== GEMINI MULTIMODAL PROMPT ===");
       console.log(multimodalPrompt);

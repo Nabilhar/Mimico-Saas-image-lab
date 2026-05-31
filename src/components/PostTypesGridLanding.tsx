@@ -6,7 +6,7 @@ export default function PostTypesGridLanding() {
     {
       id: 'tip-of-the-day',
       icon: Lightbulb,
-      name: 'Tip of the Day',
+      name: 'Today`s tip',
       description: 'Share specific, actionable techniques customers can use immediately.',
       color: 'text-purple-600',
       bgColor: 'bg-purple-50',
@@ -25,7 +25,7 @@ export default function PostTypesGridLanding() {
       id: 'community-moment',
       icon: Heart,
       name: 'Community Moment',
-      description: 'Pure sensory snapshots creating atmosphere through concrete details and humain connection.',
+      description: 'Describe a recurring pattern your regulars leave behind — what they do, where they settle, how they use your space. Behavior over atmosphere.',
       color: 'text-pink-600',
       bgColor: 'bg-pink-50',
       borderColor: 'hover:border-pink-200'
@@ -33,7 +33,7 @@ export default function PostTypesGridLanding() {
     {
       id: 'promotion',
       icon: Megaphone,
-      name: 'Promotion / Offer',
+      name: 'Promotion',
       description: 'Announce offers, services, or products. Grounded in local context, not generic ads.',
       color: 'text-green-600',
       bgColor: 'bg-green-50',

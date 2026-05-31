@@ -107,8 +107,8 @@ export default function Home() {
         {/* Hero Section */}
         <HeroSection />
 
-        {/* Gallery Section */}
-        <GallerySection />
+        {/* Gallery Section 
+        <GallerySection /> */}
 
         {/* Post Types Grid section */}   
         <PostTypesGridLanding />
@@ -174,7 +174,7 @@ export default function Home() {
             <div className="mb-12">
               <h2 className="text-3xl font-bold mb-4 text-slate-900">How It Works</h2>
               <p className="text-slate-600 max-w-2xl">
-                Three simple steps to professional social media posts that sound like you.
+                Three steps. The first one is the only one that takes more than a minute.
               </p>
             </div>
             <div className="grid md:grid-cols-3 gap-8 mb-12">
@@ -184,14 +184,15 @@ export default function Home() {
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-cyan-800 text-white font-bold text-lg">
                     1
                   </div>
-                  <h3 className="text-xl font-semibold text-slate-900">Choose Your Niche</h3>
+                  <h3 className="text-xl font-semibold text-slate-900">Set Up Your Business Profile</h3>
                 </div>
                 <p className="text-slate-600 mb-3 flex-grow">
-                  Select your industry (e.g.,Restaurant, Real Estate, Chiropractor,Dentist, Café, Salon). Add the address, upload a photo of your storefront / logo and the AI learns your exact colors, style, and neighbourhood — so every post and image feels like it came from your business specifically.
+                  Enter your business details and address. Then upload up to 3 zone photos — your storefront, customer space, and work space.
+                  Shoreline analyzes each photo for colors, materials, lighting, and layout. At the same time, it researches your business online to find your specific offerings, signature practices, neighborhood landmarks, and local context. This runs once and powers every post you generate.
                 </p>
                 <div className="flex flex-col gap-1 text-sm font-semibold text-cyan-800">
-                  <span>✓ Built specifically for local businesses</span>
-                  <span>✓ Preset Niches</span>
+                  <span>✓ Zone-by-zone visual analysis</span>
+                  <span>✓ Craft identity from your real offerings</span>
                 </div>
               </div>
 
@@ -201,15 +202,15 @@ export default function Home() {
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-cyan-800 text-white font-bold text-lg">
                     2
                   </div>
-                  <h3 className="text-xl font-semibold text-slate-900">Add Real-Time Local Context</h3>
+                  <h3 className="text-xl font-semibold text-slate-900">Pick a Post Type — Hit Generate</h3>
                 </div>
                 <p className="text-slate-600 mb-3 flex-grow">
-                Every post is generated using live local signals—weather, landmarks, neighbourhood events, seasonal context, and time of day—so your content reflects what's happening right now.
-                You can also include Promotions/Offers, and the AI Engin naturally weaves them into the post in a way that feels organic.
+                  Choose from 5 post types — a craft tip, a behind-the-scenes moment, a community observation, a local event shoutout, or a promotion. Hit Generate.
+                  Current weather, time of day, season, and your neighborhood context are pulled in automatically. Shoreline selects one of your offerings to feature and rotates through them so you never repeat yourself. If you have a promotion or local event to mention, add those details and it weaves them in naturally.
                 </p>
                 <div className="flex flex-col gap-1 text-sm font-semibold text-cyan-800">
-                  <span>✓ Always context-aware</span>
-                  <span>✓ Naturally includes your offers when relevant</span>
+                  <span>✓ Real-time signals injected automatically</span>
+                  <span>✓ Offering rotation built in</span>
                 </div>
               </div>
 
@@ -219,14 +220,15 @@ export default function Home() {
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-cyan-800 text-white font-bold text-lg">
                     3
                   </div>
-                  <h3 className="text-xl font-semibold text-slate-900">Generate & Share Instantly</h3>
+                  <h3 className="text-xl font-semibold text-slate-900">Copy, Share — Add an Image if You Want</h3>
                 </div>
                 <p className="text-slate-600 mb-3 flex-grow">
-                Create a post for this exact moment, copy and share it in seconds with your prefered social media platform. No templates. No batching. No pre-written content.
+                  Your post is ready. Copy it, paste it to your platform, and post. That's it.
+                  Optionally, generate a matching image. Shoreline uses your actual zone photo as the reference and produces something that looks like a professional photo taken in your real space — not stock, not generic AI art.
                 </p>
                 <div className="flex flex-col gap-1 text-sm font-semibold text-cyan-800">
-                  <span>✓ Ready in 30 seconds</span>
-                  <span>✓ Built for real-time posting</span>
+                  <span>✓ Ready in 45 seconds</span>
+                  <span>✓ Images grounded in your real space</span>
                 </div>
               </div>
             </div>
@@ -239,23 +241,22 @@ export default function Home() {
                   <Watch className="h-5 w-5 text-cyan-800" />
                 </div>
                 <div>
-                  <h4 className="text-lg font-semibold text-slate-900 mb-2">Time-to-Post-Alerts (Timing Reminders)</h4>
-                  
+                  <h4 className="text-lg font-semibold text-slate-900 mb-2">Never Miss a Posting Day</h4>
+
                   <div>
                     <div className="text-slate-600 mb-4 space-y-2">
-                      <p>Set your schedule once and Shoreline exports it directly to your calendar.</p>
-                      <p>Your calendar app reminds you when it's time to post.</p>
-                      <p>Tap the alert, generate a fresh post and share it while it still matters.</p>
+                      <p>Set your posting schedule in Shoreline and download a calendar file (.ics). Open it once and your posting reminders are saved directly to your calendar — Google, Apple, Outlook, whatever you use.</p>
+                      <p>When the reminder fires, open Shoreline, generate a fresh post for that exact moment, and share it. The content is always created at posting time — never written in advance, never stale.</p>
                     </div>
                     <div className="flex flex-col gap-2 text-sm font-semibold text-cyan-800">
                       <div className="flex items-center gap-2">
-                        <span>✓</span> <span>No content stored in advance</span>
+                        <span>✓</span> <span>Works with any calendar app</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span>✓</span> <span>No forgotten posting days</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span>✓</span> <span>Always create posts in the moment</span>
+                        <span>✓</span> <span>Content is always generated in the moment — never scheduled in advance</span>
                       </div>
                     </div>
                   </div>
@@ -534,6 +535,7 @@ We are in the office if you want to sit down and look at the actual numbers.
               <h2 className="text-3xl font-bold mb-4 text-slate-900">Simple, Transparent Pricing</h2>
               <div className="text-slate-600 max-w-2xl space-y-2">
                 <p>No subscriptions. Buy credits, use them when you post.</p>
+                <p>Sign up now and get 25 free credits. Try your first 5 complete posts (text + image)</p>
                 <p>Early adopter pricing active now — 50% off your first 6 months.</p>
               </div>
             </div>

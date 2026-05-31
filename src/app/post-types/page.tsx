@@ -27,7 +27,7 @@ export default function PostTypesPage() {
               </p>
               <div className="flex gap-4">
                 <a 
-                  href="#myth-busting"
+                  href="#tip-of-the-day"
                   className="inline-flex items-center justify-center px-6 py-3 bg-cyan-800 hover:bg-cyan-900 text-white font-medium rounded-md transition-colors"
                 >
                   Explore Post Types
@@ -529,7 +529,7 @@ We size-match at the counter before they go on the flame. Takes a minute, saves 
                 Post Type #2
               </div>
               <h2 className="text-3xl font-bold mb-4 text-slate-900">
-                Behind the Scenes: The Work Nobody Sees
+                Behind the Curtain: The Work Nobody Sees
               </h2>
               <p className="text-lg text-slate-600 leading-relaxed">
                 Show a specific moment happening inside your work that customers rarely witness. Not explaining why it matters—just capturing what's happening right now.
@@ -776,10 +776,10 @@ Store upright. Keep it dark and cool. The serum performs exactly as designed.`}
                 Post Type #3
               </div>
               <h2 className="text-3xl font-bold mb-4 text-slate-900">
-                Community Moment: Creating Presence Through Atmosphere
+                Community Moment: The Patterns Your Regulars Leave Behind
               </h2>
               <p className="text-lg text-slate-600 leading-relaxed">
-                Capture a specific sensory moment happening in your space right now. Not explaining what it means—just layering the concrete details that create presence.
+                Describe a recurring pattern you've noticed in your space—what customers do, where they settle, how they use specific spots in the room. Not atmosphere. Not feelings. The specific behavior that keeps happening.
               </p>
             </div>
 
@@ -793,13 +793,13 @@ Store upright. Keep it dark and cool. The serum performs exactly as designed.`}
                   </h3>
                   <div className="text-slate-700 space-y-4">
                     <p>
-                      Most "vibe" posts tell you what the atmosphere is. "Cozy vibes today!" "Love this energy!" Generic mood statements that could apply anywhere.
+                      Most "community" posts tell you how it feels. "Love our regulars!" "Such good energy in here today!" Mood statements that could apply to any business anywhere.
                     </p>
                     <p>
-                      Shoreline's Community Moment mode creates atmosphere through <strong>pure sensory detail</strong>—what you see, hear, and physically feel right now. Temperature, light, sound, movement, texture. The feeling emerges from the specifics, not from naming it.
+                      Shoreline's Community Moment mode captures <strong>a specific recurring pattern</strong>—what a particular customer always does, where a group consistently settles, what keeps happening at a specific spot in your room. Actions, positions, small gestures. The belonging comes through in the behavior, not the words.
                     </p>
                     <p>
-                      No interpretation. No reflection. Just a sensory snapshot—like a photograph made of words.
+                      No interpreting emotions. No naming the atmosphere. Just the pattern itself—described the way someone who's watched it happen a hundred times would describe it.
                     </p>
                   </div>
                 </div>
@@ -811,31 +811,31 @@ Store upright. Keep it dark and cool. The serum performs exactly as designed.`}
                     <div className="flex items-start gap-3">
                       <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
                       <span className="text-sm text-slate-700">
-                        Pure sensory immersion (readers feel present in the space)
+                        Anchored in a specific spot (the corner table, the window chairs, the waiting bench)
                       </span>
                     </div>
                     <div className="flex items-start gap-3">
                       <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
                       <span className="text-sm text-slate-700">
-                        Concrete specifics (38°C, -5°C, not "warm" or "cold")
+                        Describes actions, not feelings (what they do, not how they feel about it)
                       </span>
                     </div>
                     <div className="flex items-start gap-3">
                       <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
                       <span className="text-sm text-slate-700">
-                        No atmosphere naming (lets details create the feeling)
+                        Recurring pattern language ("always", "every Tuesday", "by 3 PM someone")
                       </span>
                     </div>
                     <div className="flex items-start gap-3">
                       <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
                       <span className="text-sm text-slate-700">
-                        Present tense creates immediacy (happening right now)
+                        No interpretation (readers draw their own conclusions)
                       </span>
                     </div>
                     <div className="flex items-start gap-3">
                       <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
                       <span className="text-sm text-slate-700">
-                        Creates belonging (readers want to be part of this moment)
+                        Recognizable to other business owners (they'll nod at their own version of it)
                       </span>
                     </div>
                   </div>
@@ -848,18 +848,18 @@ Store upright. Keep it dark and cool. The serum performs exactly as designed.`}
                     <div className="flex items-start gap-3">
                       <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
                       <span className="text-sm text-slate-700">
-                        Community Moment works best with <strong>Warm & Conversational</strong> (creates human presence—readers feel like they're standing there with you)
+                        Community Moment works best with <strong>Warm & Conversational</strong> (creates the feel of an owner who knows their regulars—observant, not performing)
                       </span>
                     </div>
                     <div className="flex items-start gap-3">
                       <CheckCircle className="w-5 h-5 text-cyan-800 flex-shrink-0 mt-0.5" />
                       <span className="text-sm text-slate-700">
-                        Use <strong>Clean & Understated</strong> for high-end brands (elegant restraint creates sophisticated atmosphere)
+                        Use <strong>Clean & Understated</strong> for high-end brands (restraint matches the observation—no commentary, just the pattern)
                       </span>
                     </div>
                     <div className="flex items-start gap-3">
                       <span className="text-sm text-slate-700">
-                        Community Moment creates atmosphere through sensory immersion—warmth makes it feel authentic, restraint makes it feel premium.
+                        The goal is to sound like someone who pays attention to their space—not someone narrating it for an audience.
                       </span>
                     </div>
                   </div>
@@ -966,7 +966,7 @@ Sometimes two people claim both chairs at once, bags lined up like checkpoints b
             <div className="mb-12">
               <h3 className="text-2xl font-bold mb-6 text-slate-900">Works Across Industries</h3>
               <p className="text-slate-600 mb-8 max-w-3xl">
-                Community Moment works for any business where <strong>atmosphere matters</strong>—where the space itself creates a sense of belonging. Coffee shops, studios, bookstores, salons—places where people gather and the environment shapes the experience.
+                Community Moment works for any business with regulars—where <strong>people develop habits around your space</strong>. Coffee shops, salons, studios, bookstores, taprooms—places where customers return often enough that you start to notice their patterns.
               </p>
 
               <div className="grid md:grid-cols-3 gap-6">
@@ -974,7 +974,7 @@ Sometimes two people claim both chairs at once, bags lined up like checkpoints b
                   <CardContent className="p-6">
                     <h4 className="font-semibold text-slate-900 mb-3">Bookstore</h4>
                     <p className="text-sm text-slate-600 italic leading-relaxed">
-                      "Saturday afternoon. Light slants through the front window onto the poetry shelf. Someone's turning pages in the corner armchair—the soft flutter, then stillness. A stack of new arrivals sits on the counter, spines facing out. The register drawer slides open with its familiar metallic click."
+                      "The armchair by the poetry shelf fills up by noon on Saturdays. Same rotation—someone reads for an hour, leaves, another person takes it within ten minutes. Nobody coordinates this. By 2 PM the seat's been through four or five people and nobody's spoken to each other once."
                     </p>
                   </CardContent>
                 </Card>
@@ -983,7 +983,7 @@ Sometimes two people claim both chairs at once, bags lined up like checkpoints b
                   <CardContent className="p-6">
                     <h4 className="font-semibold text-slate-900 mb-3">Hair Salon</h4>
                     <p className="text-sm text-slate-600 italic leading-relaxed">
-                      "10 AM. Three chairs running. Scissors snipping in quick succession at station two. The blow dryer hums at station one. Someone's hair falls in dark curves onto the cape. Water runs in the wash basin. A client flips through a magazine, waiting. The front door chimes."
+                      "Every Friday a regular comes in, sits in the same chair, and catches up with whoever's next to her—even if she's never met them. By the time her color's setting she knows where they work, what they're doing that weekend. The dryer goes on and she keeps talking through it."
                     </p>
                   </CardContent>
                 </Card>
@@ -992,7 +992,7 @@ Sometimes two people claim both chairs at once, bags lined up like checkpoints b
                   <CardContent className="p-6">
                     <h4 className="font-semibold text-slate-900 mb-3">Brewery Taproom</h4>
                     <p className="text-sm text-slate-600 italic leading-relaxed">
-                      "Thursday evening. The west windows glow orange. Two groups at the long table, glasses catching the light. Someone laughs—sharp and sudden over the low conversation. The tap handle clicks. Beer hits glass with that particular sound. Condensation runs down the side."
+                      "Thursday evenings the same four people take the end of the long table. They don't reserve it—they just show up and it's open. Been happening for months. One of them always brings a board game that never gets opened. It stays in the bag the whole time."
                     </p>
                   </CardContent>
                 </Card>
@@ -1003,10 +1003,10 @@ Sometimes two people claim both chairs at once, bags lined up like checkpoints b
             <div className="bg-white rounded-lg border border-slate-200 p-8">
               <h3 className="text-xl font-semibold text-slate-900 mb-4">When to Use Community Moment</h3>
               <p className="text-slate-700 leading-relaxed mb-4">
-                Use Community Moment when you want to capture the atmosphere of your space without explaining it. Perfect for businesses where <strong>environment creates belonging</strong>—coffee shops, studios, salons, bookstores, taprooms—places where people gather and the sensory experience matters.
+                Use Community Moment when you've noticed something your customers consistently do—not a one-off, but a pattern that keeps repeating. A regular who always takes the same seat. A group that claims the same table every week. The way people use a specific part of your space that you never designed for that purpose.
               </p>
               <p className="text-slate-700 leading-relaxed">
-                Community Moment works best when there's an actual moment worth capturing: morning rush energy, quiet afternoon reading time, early class preparation, evening gathering warmth. If your space has a "you had to be there" quality, that's Community Moment territory.
+                If you find yourself thinking "it's funny, every time..." or "there's always someone who..."—that's Community Moment territory. The post writes itself once you've named the pattern.
               </p>
             </div>
           </div>
@@ -1023,7 +1023,7 @@ Sometimes two people claim both chairs at once, bags lined up like checkpoints b
                 Post Type #4
               </div>
               <h2 className="text-3xl font-bold mb-4 text-slate-900">
-                Promotion / Offer: Soft-Sell Invitations
+                Promotion: Soft-Sell Invitations
               </h2>
               <p className="text-lg text-slate-600 leading-relaxed">
                 Show work happening right now, then mention what's available. No hype, no urgency tactics—just observation connected to offer.
@@ -1270,7 +1270,7 @@ Stop by this Thursday, we are on Dundas St.`}
                 Post Type #5
               </div>
               <h2 className="text-3xl font-bold mb-4 text-slate-900">
-                Local Event / News: Neighbourly Mentions
+                Local Event: Neighbourly Mentions
               </h2>
               <p className="text-lg text-slate-600 leading-relaxed">
                 Notice a pattern at your business, then casually mention a related local event. No hype, no community preaching—just neighborly conversation.
@@ -1294,6 +1294,9 @@ Stop by this Thursday, we are on Dundas St.`}
                     </p>
                     <p>
                       No building up to the event. No explaining why it matters. Just: this is happening here, this is happening nearby.
+                    </p>
+                    <p className="text-sm bg-slate-50 border border-slate-200 rounded-md px-4 py-3 text-slate-600">
+                      <strong>How it works:</strong> You tell Shoreline what's happening—a market, a festival, a shoutout to a neighboring business—and it writes the post around it. The AI handles the voice and observation; you supply the local detail it can't discover on its own.
                     </p>
                   </div>
                 </div>
@@ -1510,7 +1513,7 @@ Worth a walk if you're around.`}
         <section className="bg-gradient-to-b from-slate-50 to-white py-16 md:py-24">
           <div className="mx-auto max-w-3xl px-6 sm:px-6 text-center">
             <h2 className="text-3xl font-bold mb-4 text-slate-900">
-              Try All 6 Post Types with Free Credits
+              Try All 5 Post Types with Free Credits
             </h2>
             <p className="text-lg text-slate-600 mb-8">
               Sign up for the beta waitlist and get 25 free credits to explore every post type. 

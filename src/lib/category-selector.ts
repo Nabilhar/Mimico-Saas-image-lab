@@ -35,11 +35,10 @@ export const POST_TYPE_CATEGORIES: Partial<Record<PostType, string[]>> = {
   ],
 
   "Local event / news": [
-    "Preparation pattern",
+    "The regular",
     "Neighborhood rhythm",
-    "Space shift",
-    "The regular", 
-    "Timing observation",
+    "Peak / rush",     
+    "Shared moment",
     "Season / weather impact",
   ],
   // "Promotion / offer" intentionally omitted — user-driven, no rotation

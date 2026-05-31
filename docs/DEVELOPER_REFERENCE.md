@@ -1,7 +1,7 @@
 # Shoreline Studio - Developer Reference Guide
 
-**Version:** 1.0  
-**Last Updated:** May 13, 2026  
+**Version:** 1.1  
+**Last Updated:** May 28, 2026  
 **Production URL:** https://shorelinestudio.ca  
 **Status:** Pre-launch (Development Complete)
 
@@ -22,6 +22,7 @@
 11. [Pricing & Business Model](#pricing--business-model)
 12. [Future Roadmap](#future-roadmap)
 13. [Third-Party API Integration](#third-party-api-integration)
+14. [Cleanup Required](#cleanup-required)
 
 ---
 
@@ -43,18 +44,24 @@ Shoreline Studio is an AI-powered social media content generation platform for l
 │                         API ROUTES                              │
 ├─────────────────────────────────────────────────────────────────┤
 │  /api/generate              - Text content generation           │
-│  /api/generate-image        - Image generation                  │
-│  /api/prepare-image-prompt  - Image prompt architecture         │
+│  /api/generate-image        - Image generation (polling)        │
+│  /api/prepare-image-prompt  - Architect (async, writes to DB)   │
 │  /api/discover-brand        - Brand identity extraction         │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                    EXTERNAL AI SERVICES                         │
-├─────────────────────────────────────────────────────────────────┤
-│  • Claude (Anthropic)  - Content generation (Haiku 4.5)         │
-│  • Gemini (Google)     - Vision analysis + Image generation     │
-│  • Groq/OpenRouter     - Prompt optimization                    │
-└─────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                    EXTERNAL AI SERVICES                                      │
+├──────────────────────────────────────────────────────────────────────────────┤
+│  • Claude (Anthropic)  - Content generation (Haiku 4.5)                      │
+│  • Gemini (Google)     - Vision analysis (gemini-2.5-flash)                  │
+│  • Claude (Anthropic)  - brand discovery (Haiku 4.5)                         │
+│  • OpenRouter          - Image gen: gemini-3.1-flash-image-preview (primary) │
+│  • DeepInfra           - Image gen: FLUX-2-pro (fallback)                    │
+│  • OpenRouter          - Image gen: FLUX.2 Pro (fallback)                    │
+│  • HuggingFace         - Image gen: FLUX.1-schnell (fallback)                │
+│  • Cloudflare          - Image gen: SDXL (fallback)                          │
+│  • Pollinations        - Image gen: unhosted URL (last resort)               │
+└──────────────────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
 │                    DATA & AUTHENTICATION                        │
@@ -70,35 +77,53 @@ Shoreline Studio is an AI-powered social media content generation platform for l
 1. USER INPUT
    ↓
    - Business profile (name, location, niche)
+   - 3 Photos of business
    - Voice selection (tone preference)
-   - Post type selection (6 modes)
+   - Post type selection (5 modes)
    ↓
 2. BRAND DISCOVERY (One-time/On-demand)
    ↓
    - Photo upload → Gemini Vision API
-   - Web research → Claude Haiku + Web Search
-   - Merge visual + semantic data
-   - Store in Supabase (color_theme, business_description, etc.)
+   - Web research → Haiku or Gemma + Google Search
+   - Vision returns: color_theme + zones (entrance/customer_space/work_space)
+   - Research returns: description, offerings with signature practices
+   - Merge → Store in Supabase
    ↓
 3. CONTENT GENERATION
    ↓
-   - Select cognitive lens (4 lenses rotate to avoid repetition)
-   - Build mode-specific prompt (6 templates)
+   - Select ONE offering via rotation (avoids repeating same service)
+   - Select post type category (rotate to avoid repetition)
+   - Build mode-specific prompt (5 templates via buildModePrompt)
    - Inject business context + brand identity
-   - Send to Claude Haiku 4.5
-   - Receive generated post (150-200 words)
+   - Send to Claude Haiku 4.5 → OpenRouter → DeepInfra (fallback chain)
+   - Receive generated post
+   - Save to community_posts with structured metadata
    ↓
-4. IMAGE GENERATION (Optional)
+4. IMAGE GENERATION (Async, user-triggered)
    ↓
-   - Pass post + brand data to "Architect" (prompt optimizer)
-   - Architect writes detailed image prompt (60-70 words)
-   - Send to Gemini Imagen 3
-   - Receive 1024x1024 image
+   - User saves post → gets postId
+   - User clicks "Generate Image"
+   - Fire-and-forget: /api/prepare-image-prompt starts (reads post + content_category from DB)
+   - Resolves zone photo: post type + content_category → ZoneKey → photo URL from businesses table
+   - Local event / news: content_category determines entrance (exterior) or customer_space (interior)
+     Fallback: if exterior requested but no entrance photo → silently uses customer_space
+   - PATH A — GEMINI_MULTIMODAL (IMAGE_GENERATION_MODE=GEMINI_MULTIMODAL):
+       Builds multimodal prompt using image-mode-templates-multimodal.ts
+       Hero resolved by visual mode (product vs experience) based on business category
+       Sends zone photo + prompt to google/gemini-3.1-flash-image-preview via OpenRouter
+       Gemini generates image → uploaded to Supabase post-images bucket
+       image_url saved directly to community_posts
+   - PATH B — ARCHITECT (fallback or IMAGE_GENERATION_MODE=ARCHITECT):
+       Gemma 4 31B writes FLUX prompt → saved to community_posts.image_prompt
+       Polling loop: /api/generate-image checks DB every 3s (max 40 attempts = 120s)
+       Prompt found → DeepInfra FLUX → OpenRouter → HuggingFace → Cloudflare → Pollinations
+       Image uploaded to Supabase Storage
+   - save_image_and_deduct RPC atomically saves URL + deducts 3 credits
    ↓
 5. SAVE & DISPLAY
    ↓
-   - Deduct credits (2 for text, 3 for image)
-   - Save to community_posts table
+   - Post saved at generate time (text only, 2 credits deducted)
+   - Image saved at generate-image time (3 credits deducted — see RPC below)
    - Display in user's content library
 ```
 
@@ -116,17 +141,20 @@ Shoreline Studio is an AI-powered social media content generation platform for l
 ### Backend
 - **Runtime:** Next.js API Routes (Edge/Node.js)
 - **Database:** Supabase (PostgreSQL)
-- **Storage:** Supabase Storage (for uploaded photos)
+- **Storage:** Supabase Storage (for uploaded photos + generated images)
 - **Authentication:** Clerk
 
 ### AI & ML Services
 | Service | Purpose | Model | Cost |
 |---------|---------|-------|------|
 | **Anthropic Claude** | Content generation | Haiku 4.5 | ~$0.0005/post |
-| **Google Gemini** | Vision analysis | Gemini 2.5 Flash | Free tier |
-| **Google Gemini** | Image generation | Imagen 3 | ~$0.04/image |
-| **Groq** | Fast prompt optimization | Llama 3.1 8B | Very low |
-| **OpenRouter** | Alternative routing | Claude Haiku | ~$0.0005/post |
+| **Google Gemini Flash** | Vision analysis | gemini-2.5-flash | Free tier |
+| **Google Gemma 4** | Brand research | gemma-4-31b-it | Free tier |
+| **DeepInfra** | Image generation (primary) | FLUX-2-pro | ~$0.03/image |
+| **OpenRouter** | Image generation (fallback) | FLUX.2 Pro | ~$0.04/image |
+| **HuggingFace** | Image generation (fallback) | FLUX.1-schnell | Free tier |
+| **Cloudflare AI** | Image generation (fallback) | SDXL | Very low |
+| **Pollinations** | Image generation (last resort) | FLUX | Free (unhosted) |
 
 ### Infrastructure
 - **Hosting:** Vercel
@@ -160,25 +188,36 @@ businesses
 ├─ is_active (BOOLEAN) - Active business for this user
 ├─ brand_source (TEXT) - "photos" | "text_search" | null
 ├─ color_theme (JSONB) - {primary, secondary, accent, description}
-├─ business_visuals (JSONB) - {logoColors, storefrontColors, interiorColors}
-├─ business_description (JSONB) - Craft identity, neighborhood, products, etc.
-├─ storefront_architecture (JSONB) - Physical appearance details
-├─ interior_layout (JSONB) - Interior design details
+├─ zones (JSONB) - Per-zone layout + colors (entrance/customer_space/work_space) ← NEW
+├─ business_description (JSONB) - Craft identity, offerings, neighbourhood, etc.
 ├─ contact_info (JSONB) - Discovered contact details
+├─ business_visuals (JSONB) - LEGACY: {logoColors, storefrontColors, interiorColors} ← not written by new discovery
+├─ storefront_architecture (JSONB) - LEGACY: Physical appearance details ← not written by new discovery
+├─ interior_layout (JSONB) - LEGACY: Interior design details ← not written by new discovery
 ├─ last_analyzed_business_name (TEXT) - For change detection
 ├─ last_analyzed_street, last_analyzed_city (TEXT)
 └─ last_text_discovery_at (TIMESTAMP)
 
 community_posts
 ├─ id (UUID, PK)
-├─ business_id (TEXT, FK → profiles.id) - Note: Uses user_id, not business UUID
+├─ business_id (TEXT, FK → profiles.id) - Stores user_id (not business UUID)
 ├─ content (TEXT) - Generated post text
 ├─ image_url (TEXT, nullable) - Supabase storage URL
-├─ image_prompt (TEXT, nullable) - The prompt used for image generation
+├─ image_prompt (TEXT, nullable) - Written by Architect, read by generate-image
 ├─ created_at (TIMESTAMP)
 ├─ business_name (TEXT) - Snapshot at time of creation
 ├─ location_snapshot (TEXT) - Snapshot at time of creation
-└─ cognitive_lens (TEXT) - Which lens was used
+├─ cognitive_lens (TEXT) - Which lens was used
+├─ post_type (TEXT) - "Tip of the Day" | "Behind the scenes" | etc. ← NEW
+├─ content_category (TEXT) - Sub-category within the post type ← NEW
+├─ content_summary (TEXT) - Short summary for deduplication ← NEW
+├─ offerings_referenced (TEXT[]) - Which offering(s) were featured ← NEW
+├─ event_referenced (TEXT) - Event name if applicable ← NEW
+├─ hook_used (TEXT) - Opening hook used ← NEW
+├─ voice_used (TEXT) - Voice selected for this post ← NEW
+├─ ai_provider (TEXT) - Which AI provider generated the content ← NEW
+├─ word_count (INTEGER) ← NEW
+└─ tokens_used (INTEGER) ← NEW
 ```
 
 ### Key Relationships
@@ -189,7 +228,7 @@ profiles (1) ──────→ (many) businesses
    └──────→ (many) community_posts (via business_id = profiles.id)
 ```
 
-**Important Note:** `community_posts.business_id` currently stores the **user ID** (not the business UUID). This is historical and works because users initially had only one business. Future refactoring may change this to use the actual business UUID.
+**Important Note:** `community_posts.business_id` stores the **user ID** (not the business UUID). This is historical and works because users initially had only one business.
 
 ---
 
@@ -199,39 +238,20 @@ profiles (1) ──────→ (many) businesses
 
 ```
 1. USER SIGNS IN
+   ↓ Clerk handles authentication
+   ↓ Clerk generates JWT with user_id
    ↓
-   Clerk handles authentication
+2. NEXT.JS API ROUTES
+   ↓ const { userId } = await auth()
+   ↓ supabaseAdmin (service role key) used for all server-side writes
    ↓
-2. CLERK GENERATES JWT
-   ↓
-   JWT contains user_id
-   ↓
-3. NEXT.JS MIDDLEWARE
-   ↓
-   getToken({ template: 'supabase-prod' })
-   ↓
-   Returns Supabase-compatible JWT
-   ↓
-4. SUPABASE CLIENT CREATION
-   ↓
-   createClerksupabase(() => getToken({ template }))
-   ↓
-   Supabase client has user context
-   ↓
-5. ROW LEVEL SECURITY (RLS)
-   ↓
-   Supabase enforces:
-   - profiles: user can only see/edit their own row
-   - businesses: user can only see/edit their own businesses
-   - community_posts: user can only see/edit posts where business_id = auth.uid()
+3. SUPABASE CLIENT (Client components)
+   ↓ createClerksupabase(() => getToken({ template }))
+   ↓ Token template: supabase-dev (dev) or supabase-prod (prod)
+   ↓ Supabase enforces RLS via auth.uid()
 ```
 
 ### Supabase Templates
-
-The system uses **two Supabase templates** configured in Clerk:
-
-- **Development:** `supabase-dev`
-- **Production:** `supabase-prod`
 
 Selection is automatic based on `process.env.NEXT_PUBLIC_APP_ENV`:
 
@@ -245,23 +265,15 @@ const template = process.env.NEXT_PUBLIC_APP_ENV === 'development'
 
 ```
 1. User signs up with Clerk
+   ↓ Clerk webhook → /api/webhooks/clerk
+   ↓ handle_new_user() RPC: creates profiles row (tier=1, credits=0)
    ↓
-2. Clerk webhook fires → /api/webhooks/clerk
+2. User redirected to /profile
+   ↓ Fills in business details
+   ↓ Uploads photos (optional)
+   ↓ Brand discovery runs
    ↓
-3. handle_new_user() RPC function runs
-   ↓
-   - Creates row in profiles table
-   - Sets tier = 1 (free)
-   - Sets credits = 0
-   - Sets free_text_discovery_used = false
-   ↓
-4. User redirected to /profile
-   ↓
-5. User fills in business details
-   ↓
-6. Brand discovery runs (free for first time)
-   ↓
-7. User redirected to /dashboard
+3. User redirected to /dashboard
 ```
 
 ---
@@ -279,242 +291,240 @@ const template = process.env.NEXT_PUBLIC_APP_ENV === 'development'
 | **Tier 1** | Manual checkbox (user opt-in) | First free, then 3 credits |
 | **Tier 2** | Automatic on business creation | Always free |
 
-**Two Parallel Paths:**
+**Two Parallel Paths (run concurrently with Promise.allSettled):**
 
 #### Path A: Vision Analysis (Gemini 2.5 Flash)
-- **Input:** 1-3 photos (storefront, logo, interior)
-- **Process:**
-  1. Photos uploaded to Supabase Storage
-  2. Public URLs sent to Gemini Vision API
-  3. Gemini extracts:
-     - Color palette (primary, secondary, accent)
-     - Storefront architecture (materials, style, signage)
-     - Interior layout (seating, lighting, counter position)
-     - Logo colors
-- **Output:** Stored in `color_theme`, `business_visuals`, `storefront_architecture`, `interior_layout`
-- **Cost:** Free (within Gemini free tier)
 
-#### Path B: Web Research (Claude Haiku 4.5 + Web Search)
-- **Input:** Business name + full address + category + niche
-- **Process:**
-  1. Claude searches the web for business information
-  2. Extracts:
-     - Craft identity (what makes them unique)
-     - Neighborhood context (local landmarks, transit)
-     - Products/services offered
-     - Local trends (customer behaviors)
-     - Contact information (email, social, phone)
-  3. Strips citations from search results
-- **Output:** Stored in `business_description`, `contact_info`
+- **Input:** 1-3 photos with zone labels: `entrance`, `customer_space`, `work_space`
+- **Photo matching:** Each photo is matched to its zone by label (not array order). Photos are interleaved with zone headers before being sent to Gemini.
+- **Output per zone:**
+  - `layout`: spatial_arrangement, focal_feature, materials_finishes, lighting_mood, activity_zone
+  - `colors`: dominant, supporting, accent, materials_palette
+- **Output global:**
+  - `color_theme`: primary, secondary, accent, description (synthesized across all zones)
+- **Saved to:** `businesses.zones` (JSONB) and `businesses.color_theme` (JSONB)
+- **Cost:** Free
+
+#### Path B: Web Research (Gemma 4 or Haiku, configurable)
+
+- **Provider:** Controlled by `DISCOVERY_RESEARCH_PROVIDER` env var ("gemma" or "haiku")
+- **Gemma path:** `models/gemma-4-31b-it` + Google Search (5 web searches)
+- **Haiku path:** `claude-haiku-4-5-20251001` + web_search tool (5 uses max)
+- **Output:**
+  - `description`: 2-3 sentence business identity
+  - `products_services`: `{ "Offering Name": ["practice 1", "practice 2", ...], ... }` (new nested format)
+  - `neighbourhood`, `landmarks[]`, `transit[]`, `local_trends[]`
+  - `contact`: email, instagram, facebook, linkedin, phone, whatsapp
+- **Saved to:** `businesses.business_description` (JSONB), `businesses.contact_info` (JSONB)
 - **Cost:** 3 credits (Tier 1 after first use), Free (Tier 2)
 
+**New products_services format (since last doc version):**
+
+The research prompt now asks for offerings with nested signature practices:
+```json
+{
+  "Vinyasa Yoga": ["60-minute heated flow at 85°F", "Max 25 mats per class"],
+  "Reformer Pilates": ["8-person cap", "Instructor adjustments throughout"]
+}
+```
+
+This object is stored flat in `business_description.products_services`. The `extractOfferingNames()` and `extractPracticesByOffering()` functions in `parse-business-intel.ts` handle both the old array format and the new nested object format.
+
 **Merge Logic:**
-- Vision data **always overwrites** color/visual fields (source of truth for aesthetics)
-- Research data **always overwrites** semantic fields (source of truth for craft identity)
-- `brand_source` set to:
-  - `"photos"` if vision analysis succeeded and provided rich data
-  - `"text_search"` if only research ran or vision was blind/limited
+- Vision data owns: `color_theme`, `zones`
+- Research data owns: `business_description`, `contact_info`
+- `brand_source`:
+  - `"photos"` if vision ran AND (color is visible OR ≥2 zones visible)
+  - `"text_search"` otherwise
 
 **Code Location:**
-- `lib/brandDiscovery.ts` - Core logic
-- `/api/discover-brand/route.ts` - API endpoint
+- `src/lib/brandDiscovery.ts` — all discovery logic
+- `src/app/api/discover-brand/route.ts` — API endpoint
+- `src/lib/parse-business-intel.ts` — `parseZones()`, `extractOfferingNames()`, `extractPracticesByOffering()`
 
 ---
 
 ### 2. Content Generation System
 
-**Architecture: Mode Templates + Cognitive Lenses**
+**Architecture: Mode Templates + POST_TYPE_CATEGORIES + Offering Rotation**
 
-#### 6 Post Modes (Templates)
+#### 5 Active Post Modes
 
-Each mode defines **structure, tone, and constraints** for content:
+| Mode | Post Type | Variety Mechanism |
+|------|-----------|-------------------|
+| **EDUCATION - Tip** | Tip of the Day | `tip_category` rotates (Technique, Timing, Selection, Care, The why, Tools/setup, Pairing) |
+| **OBSERVATION - Behind** | Behind the scenes | `moment_type` rotates (Early prep, Active craft, Wait/passive, The adjustment, Repetition, The standard) |
+| **OBSERVATION - Promo** | Promotion/Offer | User-driven (no rotation — user provides offer details) |
+| **CASUAL - Event** | Local event / news | `scene_type` rotates (Preparation pattern, Neighborhood rhythm, Space shift, The regular, Timing observation, Season/weather impact) |
+| **ATMOSPHERIC - Moment** | Community moment | `scene_type` rotates (Peak/rush, Lull/quiet, Solo customer, Shared moment, Weather-shaped) |
 
-| Mode | Post Type | Purpose | Structure |
-|------|-----------|---------|-----------|
-| **EDUCATION - Tip** | Tip of the Day | Share 3 practical tips | Numbered list (1, 2, 3) |
-| **EDUCATION - Myth** | Myth-busting | Correct misconceptions | Belief → Reality → Correction |
-| **OBSERVATION - Behind** | Behind the scenes | Show process moments | Present-tense observation |
-| **OBSERVATION - Promo** | Promotion/Offer | Announce deals atmospherically | No sales pressure, just facts |
-| **CASUAL - Event** | Local event / shout-out | Community engagement | Conversational, no CTA |
-| **ATMOSPHERIC - Moment** | Community moment | Ambient presence | Pure sensory, no teaching |
+Templates defined in `src/lib/mode-templates.ts`. Each template is filled via `buildModePrompt()` in `src/lib/prompt-builder.ts`.
 
-**Template System:**
-- Defined in `lib/mode-templates.ts`
-- Each template is a ~500-word prompt with placeholders
-- Placeholders include: `{{business_name}}`, `{{niche}}`, `{{lens}}`, `{{voice_description}}`, etc.
+**Note on Myth-busting:** A 6th template (`"Myth-busting"`) exists in `mode-templates.ts` and still uses `{{lens}}` / `{{lensDefinition}}` placeholders. It has been removed from the UI dropdown and is not accessible to users. Scheduled for deletion along with the cognitive lens system.
 
-#### 4 Cognitive Lenses (Content Angles)
+#### Cognitive Lenses — Dead Code
 
-Lenses define **what pattern to demonstrate** in the content:
+`src/lib/cognitive-lenses.ts`, `src/lib/angle-selector.ts`, and the `selectAngle()` call in `generate/route.ts` are all dead in practice. The only template that used them (Myth-busting) is removed from the dropdown. The `angle.lens` and `angle.lensDefinition` values are still passed to `buildModePrompt()` and into the `variables` map in `prompt-builder.ts`, but they resolve to empty strings in all 5 active templates (none of them use `{{lens}}`).
 
-| Lens | Pattern | Example Context |
-|------|---------|------------------|
-| **Latent Point** | The early decision that determines all future outcomes | "HVAC sizing calculation that sets comfort and efficiency for next 15 years" |
-| **Tradeoff Lock** | The operational shortcut that creates long-term costs | "Installation shortcut that reduces time but increases future maintenance risk" |
-| **Divergence** | Why identical inputs produce different results | "Identical treatment paths → different recovery speeds due to home exercise execution quality" |
-| **Invisible Causality** | The hidden mechanism that determines surface outcomes | "The cleaning technique that determines coating longevity (scrubbing vs. rinsing pressure)" |
+See **Cleanup Required** section for removal plan.
 
-**Lens Selection Logic:**
-```typescript
-// In lib/angle-selector.ts
-export function selectAngle(recentLenses: CognitiveLens[]): AngleVariant {
-  // Get lenses NOT used in last 3 posts
-  const availableLenses = ALL_LENSES.filter(
-    lens => !recentLenses.slice(0, 3).includes(lens)
-  );
-  
-  // Pick random available lens
-  const selectedLens = availableLenses[
-    Math.floor(Math.random() * availableLenses.length)
-  ];
-  
-  // Get 5 variants for this lens
-  const variants = COGNITIVE_LENSES[selectedLens];
-  
-  // Pick random variant
-  return variants[Math.floor(Math.random() * variants.length)];
-}
-```
+#### Offering Rotation (NEW)
 
-**Smart Context Strategy:**
-- Lenses have **generic universal contexts** that work across all niches
-- At runtime, Claude is instructed to **mentally translate** generic context into niche-specific examples
-- This avoids maintaining 132 niche-specific contexts (11 categories × 12 niches × 4 lenses × 5 variants)
+Instead of injecting all offerings into every prompt, a single offering is selected per post and rotated to avoid repetition.
+
+**How it works:**
+1. `getRecentOfferingsInOrder()` fetches last 5 posts' `offerings_referenced` from DB (most recent first, deduped)
+2. `getOfferingCatalog()` builds the ordered list from `practices_by_offering` keys (or `products_services` as fallback)
+3. `selectNextOffering()` picks the next offering after the last used one, skipping any in the recent list
+4. Only the selected offering's practices are injected into the prompt via `formatOfferingWithPractices()`
+5. The used offering is saved back to `community_posts.offerings_referenced`
+
+**Code location:** `src/lib/offering-rotation.ts`
 
 #### Generation Flow
 
 ```
 1. User clicks "Generate" on Dashboard
    ↓
-2. System fetches:
-   - Business data (name, location, niche, voice)
-   - Brand identity (color_theme, business_description, etc.)
-   - Recent post history (last 5 posts with cognitive_lens field)
+2. /api/generate receives: business fields, postType, voice, history[], address
    ↓
-3. Select post type → determine MODE template
+3. Fetch active business from Supabase (id, brand data, zones)
    ↓
-4. Extract recent lenses from history
+4. selectAngle() → cognitive lens (avoids last 3 used)
    ↓
-5. Select cognitive lens (avoid repetition)
+5. getRecentPostHistory() → categories + summaries for dedup
    ↓
-6. Build prompt:
-   - Start with mode template
-   - Replace {{placeholders}} with actual data
-   - Inject selected lens definition
-   - Add brand intelligence (craft identity, neighborhood, etc.)
-   - Add voice instructions
+6. getRecentOfferingsInOrder() + selectNextOffering() → one offering
    ↓
-7. Send to Claude Haiku 4.5
-   - Model: "anthropic/claude-haiku-4.5:beta" (via OpenRouter)
-   - Temperature: 0.7
-   - Max tokens: 1500
+7. buildModePrompt() assembles the final prompt with:
+   - Mode template for postType
+   - Lens + definition
+   - Business intel (neighbourhood, landmarks, zones, offering + practices)
+   - Weather, time, season
+   - Recent history for variety
    ↓
-8. Receive generated post
-   - Clean any preamble (<<<POST_BEGIN>>>)
-   - Validate length (target: 150-200 words)
+8. callAIProvider() → fallback chain: anthropic → openrouter → deepinfra
    ↓
-9. Display to user
-   - User can regenerate or save
+9. parseGeneratedPost() extracts content, hashtags, content_summary, etc.
    ↓
-10. If user chooses image:
-    - Proceed to Image Generation flow
+10. validateOfferings() cross-checks offerings_referenced against known catalog
+    ↓
+11. Response returned with structured metadata
+    ↓
+12. Dashboard calls onGenerateSuccess() → save_post_and_deduct RPC
+    - Saves to community_posts with all metadata fields
+    - Deducts 2 credits atomically
+    - Returns postId for image generation
 ```
 
+**Text generation fallback chain:**
+- Primary: `anthropic` (direct Anthropic API, claude-haiku-4-5-20251001)
+- Fallback 1: `openrouter` (claude-haiku-4.5 via OpenRouter)
+- Fallback 2: `deepinfra` (openai/gpt-oss-120b)
+
 **Code Locations:**
-- `lib/mode-templates.ts` - 6 mode templates
-- `lib/cognitive-lenses.ts` - 4 lenses × 5 variants each
-- `lib/angle-selector.ts` - Lens selection logic
-- `lib/prompt-builder.ts` - Prompt assembly (fills placeholders)
-- `/api/generate/route.ts` - API endpoint
+- `src/lib/mode-templates.ts` — 6 mode templates
+- `src/lib/cognitive-lenses.ts` — 4 lenses × 5 variants each
+- `src/lib/angle-selector.ts` — Lens selection logic
+- `src/lib/prompt-builder.ts` — Prompt assembly
+- `src/lib/offering-rotation.ts` — Offering rotation
+- `src/lib/post-history.ts` — History fetching for variety
+- `src/lib/post-parser.ts` — Parses structured metadata from model output
+- `src/app/api/generate/route.ts` — API endpoint
 
 ---
 
 ### 3. Image Generation System
 
-**Three-Stage Pipeline:** Post → Architect → Imagen
+**Pipeline:** Save post → prepare-image-prompt (async, two paths) → generate-image (polling)
 
-#### Stage 1: User Request
-- User generates a text post
-- Clicks "Generate Image" button
-- Post content + business data sent to `/api/prepare-image-prompt`
+#### Stage 1: User Saves Post
 
-#### Stage 2: The Architect (Prompt Optimizer)
+- User generates text post → clicks "Save"
+- `save_post_and_deduct()` RPC saves post, deducts 2 credits, returns `postId`
+- Dashboard stores `postId` in state
 
-**Purpose:** Convert a business post into a **photorealistic image prompt** that Imagen can render well.
+#### Stage 2: prepare-image-prompt — Fire and Forget
 
-**Input Data:**
+**Triggered by:** User clicks "Generate Image"
+
+Dashboard fires `POST /api/prepare-image-prompt` non-blocking (`.catch()` only). The route then takes one of two paths based on `IMAGE_GENERATION_MODE` env var:
+
+---
+
+**Path A: GEMINI_MULTIMODAL (default in production)**
+
+1. Fetch post content + post_type + business data from DB by `postId`
+2. `resolveZoneFocus(postType)` → which zone photo to use (work_space for BTS/Tips, customer_space/entrance for Community/Promo)
+3. `selectZonePhoto(supabase, userId, postType)` → fetches the Supabase URL of the user's uploaded zone photo
+4. Fetch that photo → convert to base64
+5. Build multimodal prompt (post content + brand context + zone description + technical spec)
+6. Send photo + prompt to `gemini-3.1-flash-image-preview` → model generates a new image that matches the real space's lighting, materials, and color
+7. Upload generated image to Supabase Storage (`post-images` bucket)
+8. Save image URL directly to `community_posts.image_url`
+9. Save Gemini's text description to `community_posts.image_prompt`
+10. Return `{ success: true, imageUrl, method: 'GEMINI_MULTIMODAL' }`
+
+The polling route (`generate-image`) detects `image_url` already set and returns it immediately — no FLUX chain runs.
+
+**Fallback within GEMINI_MULTIMODAL:** If `selectZonePhoto` finds no photo for the required zone, the route falls through to Path B.
+
+**IMAGE_GEN_PROVIDER sub-toggle** (within multimodal path):
+- `GOOGLE_API` (default) — direct Google AI SDK, `gemini-2.5-flash-image`
+- `OPENROUTER` — `google/gemini-3.1-flash-image-preview` via OpenRouter
+
+---
+
+**Path B: ARCHITECT (fallback — no zone photo)**
+
+1. Fetch post content + business data from DB
+2. `buildBrandVariables()` → structured brand context from zones + color
+3. `getImageModeTemplate(postType)` → post-type-specific image instruction
+4. Build 60-70 word FLUX-2-pro prompt (Gemma default, see `ARCHITECT_MODE` hardcoded at line 39)
+5. **Write prompt to `community_posts.image_prompt`** (not the image itself)
+6. generate-image polling route picks this up and runs the FLUX chain
+
+**ARCHITECT_MODE** (`prepare-image-prompt/route.ts` line 39 — hardcoded, not env-controlled):
 ```typescript
-{
-  post: string,                    // The generated text
-  business_name: string,
-  niche: string,
-  business_description: {...},     // Craft identity, products, etc.
-  color_theme: {...},              // Primary, secondary, accent colors
-  business_visuals: {...},         // Logo/storefront/interior colors
-  storefront_architecture: {...},  // Physical appearance
-  interior_layout: {...}           // Interior design details
-}
+const ARCHITECT_MODE: "GEMINI" | "GROQ" | "GEMMA" | "OPENROUTER" = "GEMMA";
 ```
 
-**Architect Modes (Toggle):**
+**Code Location:** `src/app/api/prepare-image-prompt/route.ts`
 
-The system supports 4 different AI models for architecting:
+---
 
-| Mode | Model | Provider | Best For |
-|------|-------|----------|----------|
-| `GEMINI` | Gemini 2.5 Flash | Google | General purpose, balanced |
-| `GROQ` | Llama 3.1 8B | Groq | Fastest, low latency |
-| `GEMMA` | Gemma 4 31B | Groq | Grounded, search-enhanced |
-| `OPENROUTER` | Claude Haiku 4.5 | OpenRouter | Quality + speed balance |
+#### Stage 3: generate-image — Polling
 
-**Current Default:** `GEMMA` (line 38 in `/api/prepare-image-prompt/route.ts`)
+Dashboard polls `POST /api/generate-image` every 3 seconds (max 20 attempts = 60s):
 
-**Architect Instructions (System Prompt):**
 ```
-You are a professional brand photographer specializing in authentic, 
-lifestyle imagery for local businesses.
-
-CRITICAL OUTPUT REQUIREMENT:
-- Output ONLY the image prompt description
-- No preamble, no "Here's the prompt:", no markdown, no analysis
-- Just the raw description that will be sent directly to the image generator
-
-YOUR ASSIGNMENT:
-Transform this business post into a photorealistic image prompt that:
-1. Captures ONE moment that reinforces the post's message
-2. Feels authentic (real world imperfections, natural lighting)
-3. Integrates brand colors naturally (not forced)
-4. Shows the craft in action
-
-[Full detailed instructions follow...]
+Poll response cases:
+  - 202 { status: 'WAITING' }  → image_prompt is null, Architect still writing → keep polling
+  - 200 { url }                → image_url already set (multimodal path succeeded) → done
+  - 500 { status: 'ERROR' }   → image_prompt starts with "ERROR:" → generation failed
+  - prompt ready               → run FLUX chain below
 ```
 
-**Output:** 60-70 word photorealistic description
-- Example: *"Medium shot of skilled hands kneading sourdough on marble counter dusted with flour. Soft morning light through window casts gentle shadows. Professional mixing bowls visible in background. Warm cream and natural wood tones match bakery aesthetic. Focus on flour texture and dough elasticity. Canon EF 50mm f/1.4, natural depth of field, authentic workspace."*
+**FLUX image provider fallback chain** (only reached on Architect path):
+```
+FALLBACK mode (IMAGE_ENGINE_MODE=FALLBACK, default):
+  1. DeepInfra — FLUX-2-pro (b64_json)
+  2. OpenRouter — FLUX.2 Pro (base64 or URL)
+  3. HuggingFace — FLUX.1-schnell (blob)
+  4. Cloudflare — SDXL (blob)
+  → All hosted: upload to Supabase Storage (post-images bucket)
+  → Last resort: Pollinations URL (unhosted, hosted: false in response)
 
-**Code Location:**
-- `/api/prepare-image-prompt/route.ts` - API endpoint
-- Architect prompt is inline (lines ~150-700)
+TOGGLE mode (IMAGE_ENGINE_MODE=TOGGLE):
+  Uses IMAGE_PROVIDER env var, no chain
+```
 
-#### Stage 3: Image Generation (Gemini Imagen 3)
+**Credit deduction for image:**
+- On success, Dashboard calls `save_image_and_deduct()` RPC
+- Atomically: sets `image_url` on the post + deducts **3 credits** from user
+- Total image cost: 3 credits (separate from the 2 for text)
 
-**Process:**
-1. Architect prompt sent to `/api/generate-image`
-2. API calls Gemini Imagen 3 via Google Generative AI SDK
-3. Parameters:
-   - **Model:** `imagen-3.0-generate-001`
-   - **Number of images:** 1
-   - **Aspect ratio:** `1:1` (square, 1024×1024)
-   - **Safety settings:** Default (block harmful content)
-   - **Person generation:** Allowed (for showing craft in action)
-4. Imagen returns base64-encoded image
-5. Image uploaded to Supabase Storage (`community-post-images` bucket)
-6. Public URL returned
-
-**Cost:** ~$0.04 per image (charged to user as 3 credits)
-
-**Code Location:**
-- `/api/generate-image/route.ts`
+**Code Location:** `src/app/api/generate-image/route.ts`
 
 ---
 
@@ -524,470 +534,145 @@ Transform this business post into a photorealistic image prompt that:
 
 | Action | Cost | Notes |
 |--------|------|-------|
-| **Text post generation** | 2 credits | Claude Haiku call |
-| **Image generation** | 3 credits | Gemini Imagen call |
+| **Text post generation** | 2 credits | Deducted at save time via `save_post_and_deduct` |
+| **Image generation** | 3 credits | Deducted at image-ready time via `save_image_and_deduct` |
 | **Text discovery (Tier 1)** | 3 credits | After first free use |
 | **Text discovery (Tier 2)** | 0 credits | Always free |
 | **Vision analysis** | 0 credits | Always free |
 
-**Initial Credit Allocation:**
-- New users: **0 credits** (requires purchase or promo code)
-- Welcome bonus: **25 credits** (claim via `/api/user/claim-welcome-credits`)
-
-**Credit Deduction Flow:**
-
-```
-1. User generates post + image
-   ↓
-2. Content generated and shown to user
-   ↓
-3. User clicks "Save"
-   ↓
-4. Frontend calls savePostToCloud() with content + imageUrl
-   ↓
-5. RPC function: save_post_and_deduct(
-     p_user_id,
-     p_content,
-     p_image_url,
-     p_amount: 5,  // 2 for text + 3 for image
-     p_business_name,
-     p_location_snapshot,
-     p_cognitive_lens
-   )
-   ↓
-6. RPC atomically:
-   a. Checks if user has >= 5 credits
-   b. If yes:
-      - Inserts into community_posts
-      - Deducts 5 credits from profiles.credits
-      - Returns {success: true, post_id, new_balance}
-   c. If no:
-      - Returns {success: false, error: "insufficient_credits"}
-   ↓
-7. Frontend receives response
-   - Success: Shows new post in library, updates credit display
-   - Failure: Shows "Insufficient credits" alert
-```
+**Note:** Total for text + image = 5 credits (2 text + 3 image). Image RPC is `save_image_and_deduct`, separate from `save_post_and_deduct`.
 
 **RPC Functions:**
 
 ```sql
--- Save post and deduct credits atomically
-save_post_and_deduct(
-  p_user_id TEXT,
-  p_content TEXT,
-  p_image_url TEXT,
-  p_amount INTEGER,
-  p_business_name TEXT,
-  p_location_snapshot TEXT,
-  p_cognitive_lens TEXT
-) RETURNS JSONB
+-- Save post and deduct credits atomically (text only, called at generate time)
+save_post_and_deduct(p_user_id, p_content, p_image_url, p_amount, ...)
+RETURNS JSONB {success, post_id?, new_balance?, error?}
+
+-- Save image URL and deduct credits atomically (called after image generation)
+save_image_and_deduct(target_post_id, new_image_url, clerk_user_id)
+RETURNS JSONB
 
 -- Deduct credits for discovery
-deduct_credits(
-  p_user_id TEXT,
-  p_amount INTEGER,
-  p_reason TEXT,
-  p_business_id UUID,
-  p_metadata JSONB
-) RETURNS JSONB
+deduct_credits(p_user_id, p_amount, p_reason, p_business_id, p_metadata)
+RETURNS JSONB
 
 -- Mark first free discovery as used
-mark_free_discovery_used(p_user_id TEXT) RETURNS VOID
+mark_free_discovery_used(p_user_id) RETURNS VOID
 ```
-
-**Code Locations:**
-- Supabase: Database → Functions (via SQL Editor)
-- Frontend: `Dashboard_Page` → `savePostToCloud()` function
 
 ---
 
 ### 5. User Tiers System
 
-**Tier 1: Free Users**
-- **Businesses:** 1 maximum
-- **Text Discovery:** First free, then 3 credits
-- **Vision Discovery:** Always free
-- **Credit Purchase:** Required after initial credits run out
-- **Business Mode:** Update only (no create after first business)
-
-**Tier 2: Premium Users**
-- **Businesses:** Unlimited
-- **Text Discovery:** Always free
-- **Vision Discovery:** Always free
-- **Credit Purchase:** Not needed (all generation still free? TBD)
-- **Business Mode:** Both create and update
-
-**Tier Assignment:**
-- New users default to Tier 1
-- Manual upgrade to Tier 2 (admin dashboard TBD)
-- Stored in `profiles.tier` (INTEGER: 1 or 2)
-
-**Code Enforcement:**
-- Profile page checks tier before allowing "Create New Business"
-- Discovery route checks tier to determine pricing
-- RPC functions check tier when deducting credits
+*(Unchanged from v1.0 — see original docs)*
 
 ---
 
 ## Key Components Reference
 
-### Dashboard (`app/dashboard/page.tsx`)
+### Dashboard (`src/app/dashboard/page.tsx`)
 
-**State Management:**
+**Key Types:**
 ```typescript
-const [businessData, setBusinessData] = useState<BusinessData | null>(null);
-const [voice, setVoice] = useState("Warm & Conversational");
-const [posts, setPosts] = useState<Post[]>([]);
-const [loading, setLoading] = useState(false);
-const [activeTab, setActiveTab] = useState("generate");
+interface SavePostInput {
+  content: string;
+  imageUrl: string;
+  postType: string;
+  contentCategory?: string;
+  contentSummary?: string;
+  offeringsReferenced?: string[];
+  eventReferenced?: string | null;
+  hookUsed?: string | null;
+  priceShown?: boolean | null;
+  voiceUsed?: string;
+  aiProvider?: string;
+  wordCount?: number;
+  tokensUsed?: number;
+  cognitiveLens?: string;
+}
 ```
 
-**Key Functions:**
-
-#### `loadBusinessData()`
-- Fetches active business via `get_active_business()` RPC
-- Fetches user credits from profiles table
-- Fetches posts from community_posts (filtered by business_id)
-- Updates local state
-
-#### `savePostToCloud(newContent, imageUrl, cognitiveLens)`
+**`savePostToCloud(input: SavePostInput)`:**
 - Calls `save_post_and_deduct()` RPC
-- Deducts 2 credits (text) + 3 credits (image if present)
-- Adds post to local state immediately for fast UI
-- Returns post UUID for reference
-
-#### `deletePost(postId)`
-- Confirms with user
-- Deletes from community_posts table
-- Reloads business data to refresh UI
-
-**UI Sections:**
-
-1. **Header:** Business name, location, credits display
-2. **Tabs:** "Write New Content" | "Saved Library"
-3. **Generate Tab:** `<GenerateDashboard />` component
-4. **Library Tab:** Grid of saved posts (Facebook-style cards)
+- Deducts 2 credits for text
+- Saves all structured metadata fields to community_posts
+- Returns post UUID used for image generation
 
 ---
 
-### GenerateDashboard Component (`components/GenerateDashboard.tsx`)
+### GenerateDashboard Component (`src/components/GenerateDashboard.tsx`)
 
-**Purpose:** Main content generation interface
+**Image generation flow (new async/polling pattern):**
 
-**Key Features:**
-- Voice selector (dropdown)
-- Post type selector (6 buttons)
-- Generate button (with loading state)
-- Image generation toggle
-- Save/Delete buttons
-
-**Generation Flow:**
 ```typescript
-const handleGenerate = async () => {
-  // 1. Validate credits
-  if (userCredits < requiredCredits) {
-    alert("Insufficient credits!");
-    return;
-  }
+const handleGenerateImage = async () => {
+  // 1. Guard: needs lastPostId (from saved text post) + userCredits >= 3
   
-  // 2. Call /api/generate
-  const response = await fetch('/api/generate', {
-    method: 'POST',
-    body: JSON.stringify({
-      businessId, businessName, niche, voice,
-      postType, fullAddress, category,
-      // ... more context
-    })
+  // 2. Fire-and-forget: Architect starts writing prompt to DB
+  fetch("/api/prepare-image-prompt", { body: { postId: lastPostId, currentWeather } })
+    .catch(err => console.error(...));
+
+  // 3. Poll /api/generate-image every 3s (max 20 attempts = 60s)
+  //    202 = still waiting, data.url = success
+  
+  // 4. On success: save_image_and_deduct RPC
+  await supabase.rpc('save_image_and_deduct', {
+    target_post_id: lastPostId,
+    new_image_url: data.url,
+    clerk_user_id: user?.id
   });
-  
-  const { content } = await response.json();
-  
-  // 3. Display content to user
-  setGeneratedContent(content);
-  
-  // 4. If user wants image, call /api/prepare-image-prompt
-  if (includeImage) {
-    const promptResponse = await fetch('/api/prepare-image-prompt', {
-      method: 'POST',
-      body: JSON.stringify({ post: content, /* ... */ })
-    });
-    
-    const { visualDescription } = await promptResponse.json();
-    
-    // 5. Call /api/generate-image
-    const imageResponse = await fetch('/api/generate-image', {
-      method: 'POST',
-      body: JSON.stringify({ prompt: visualDescription })
-    });
-    
-    const { imageUrl } = await imageResponse.json();
-    setGeneratedImage(imageUrl);
-  }
-  
-  // 6. User clicks Save → onGenerateSuccess() callback
-  // This triggers savePostToCloud() in parent Dashboard
 };
 ```
 
 ---
 
-### Profile Page (`app/profile/page.tsx`)
+### Profile Page (`src/app/profile/page.tsx`)
 
-**Purpose:** Business setup and brand discovery
+**Photo upload — new zone labels:**
 
-**Mode:** "Create" vs "Update"
-- **Create:** User has 0 businesses, filling form for first time
-- **Update:** User has existing business, editing details
+The profile page now uses three labeled photo slots matching the vision system's zones:
+- `Storefront / Patio` — Street-level view — skip if no outdoor presence"
+- `customer_space` — where customer experience happens
+- `work_space` — where craft is performed
 
-**Brand Discovery Checkbox (Tier 1 Only):**
-```tsx
-{userTier === 1 && (
-  <div className="gradient-border">
-    <label>
-      <input 
-        type="checkbox" 
-        checked={runTextDiscovery}
-        onChange={(e) => setRunTextDiscovery(e.target.checked)}
-      />
-      🔍 Re-run Brand Discovery
-      {!freeDiscoveryUsed ? (
-        <span className="badge-free">FREE</span>
-      ) : (
-        <span className="badge-cost">3 CREDITS</span>
-      )}
-    </label>
-    <p className="description">
-      {!freeDiscoveryUsed
-        ? "Your first discovery is FREE! We'll research your business..."
-        : "Check this box to refresh your brand research. Cost: 3 credits"}
-    </p>
-  </div>
-)}
-```
-
-**Save Logic:**
-```typescript
-const handleSave = async () => {
-  // 1. Validate tier restrictions
-  if (userTier === 1 && saveMode === 'create' && businessCount >= 1) {
-    alert("Tier 1 users can only have one business.");
-    return;
-  }
-  
-  // 2. Check if discovery is needed and affordable
-  if (runTextDiscovery && !freeDiscoveryUsed && userCredits < 3) {
-    alert("Insufficient credits for discovery.");
-    return;
-  }
-  
-  // 3. Upload photos to Supabase Storage (if any)
-  const uploadedPhotoData = await uploadPhotosToSupabase(photos);
-  
-  // 4. Save/update business in Supabase
-  // (switch_or_create_business RPC or direct UPDATE)
-  
-  // 5. Trigger brand discovery if needed
-  if (runTextDiscovery || uploadedPhotoData.length > 0) {
-    await fetch('/api/discover-brand', {
-      method: 'POST',
-      body: JSON.stringify({
-        business_id: businessId,
-        business_name, address, photos: uploadedPhotoData,
-        category, niche,
-        run_text_discovery: runTextDiscovery
-      })
-    });
-  }
-  
-  // 6. Navigate to dashboard
-  router.push('/dashboard');
-};
-```
+These labels are passed as `photo.label` to `brandDiscovery.ts`, which uses them to match photos to zones before sending to Gemini.
 
 ---
 
 ## Database Functions & RPCs
 
-### Core RPCs
+*(Core RPCs from v1.0 still apply. New/changed RPCs below.)*
 
-#### `get_active_business(p_user_id TEXT)`
-**Purpose:** Fetch the currently active business for a user
+### `save_image_and_deduct(target_post_id, new_image_url, clerk_user_id)` — NEW
 
-**Returns:** Single row from businesses table where `is_active = true`
+**Purpose:** Atomically update a saved post's image URL and deduct image credits.
 
-**Fields Returned:**
-- All business columns (name, address, category, niche, voice)
-- Brand identity columns (color_theme, business_description, etc.)
-- Metadata (brand_source, last_analyzed_*, etc.)
-
-**Usage:**
-```typescript
-const { data: business } = await supabase
-  .rpc('get_active_business', { p_user_id: user.id })
-  .single();
-```
-
----
-
-#### `save_post_and_deduct()`
-**Purpose:** Atomically save post and deduct credits
-
-**Parameters:**
-```sql
-p_user_id TEXT,
-p_content TEXT,
-p_image_url TEXT,
-p_amount INTEGER,
-p_business_name TEXT,
-p_location_snapshot TEXT,
-p_cognitive_lens TEXT
-```
+**Called by:** GenerateDashboard after successful image generation (separate from text save).
 
 **Logic:**
 ```sql
 BEGIN
-  -- 1. Check credit balance
-  SELECT credits INTO user_credits FROM profiles WHERE id = p_user_id;
+  -- Verify post belongs to this user
+  SELECT id INTO post FROM community_posts 
+  WHERE id = target_post_id AND business_id = clerk_user_id;
   
-  IF user_credits < p_amount THEN
-    RETURN jsonb_build_object(
-      'success', false,
-      'error', 'insufficient_credits'
-    );
-  END IF;
+  IF NOT FOUND THEN RETURN {success: false, error: 'not_found'}; END IF;
   
-  -- 2. Insert post
-  INSERT INTO community_posts (
-    business_id, content, image_url, business_name,
-    location_snapshot, cognitive_lens
-  ) VALUES (
-    p_user_id, p_content, p_image_url, p_business_name,
-    p_location_snapshot, p_cognitive_lens
-  ) RETURNING id INTO new_post_id;
+  -- Check credits
+  SELECT credits INTO user_credits FROM profiles WHERE id = clerk_user_id;
+  IF user_credits < 2 THEN RETURN {success: false, error: 'insufficient_credits'}; END IF;
   
-  -- 3. Deduct credits
-  UPDATE profiles 
-  SET credits = credits - p_amount 
-  WHERE id = p_user_id
+  -- Update image URL
+  UPDATE community_posts SET image_url = new_image_url WHERE id = target_post_id;
+  
+  -- Deduct 2 credits
+  UPDATE profiles SET credits = credits - 2 WHERE id = clerk_user_id
   RETURNING credits INTO new_balance;
   
-  -- 4. Return success
-  RETURN jsonb_build_object(
-    'success', true,
-    'post_id', new_post_id,
-    'new_balance', new_balance
-  );
+  RETURN {success: true, new_balance};
 END;
 ```
-
-**Returns:** JSONB `{success, post_id?, new_balance?, error?}`
-
----
-
-#### `switch_or_create_business()`
-**Purpose:** Create new business or switch active business
-
-**Parameters:**
-```sql
-p_user_id TEXT,
-p_business_id UUID,
-p_mode TEXT  -- 'create' | 'update' | 'switch'
-```
-
-**Logic:**
-```sql
-BEGIN
-  IF p_mode = 'create' THEN
-    -- Create new business, set as active
-    INSERT INTO businesses (...) VALUES (...);
-  ELSIF p_mode = 'update' THEN
-    -- Update existing business
-    UPDATE businesses SET ... WHERE id = p_business_id;
-  ELSIF p_mode = 'switch' THEN
-    -- Deactivate all, activate selected
-    UPDATE businesses SET is_active = false WHERE user_id = p_user_id;
-    UPDATE businesses SET is_active = true WHERE id = p_business_id;
-  END IF;
-END;
-```
-
----
-
-#### `deduct_credits()`
-**Purpose:** Deduct credits with audit trail (for discovery, future purchases)
-
-**Parameters:**
-```sql
-p_user_id TEXT,
-p_amount INTEGER,
-p_reason TEXT,          -- 'text_discovery' | 'image_gen' | etc.
-p_business_id UUID,
-p_metadata JSONB        -- Flexible: {business_name, timestamp, etc.}
-```
-
-**Logic:**
-```sql
-BEGIN
-  -- Check balance
-  SELECT credits INTO current_balance FROM profiles WHERE id = p_user_id;
-  
-  IF current_balance < p_amount THEN
-    RETURN jsonb_build_object(
-      'success', false,
-      'error', 'insufficient_credits'
-    );
-  END IF;
-  
-  -- Deduct
-  UPDATE profiles SET credits = credits - p_amount WHERE id = p_user_id
-  RETURNING credits INTO new_balance;
-  
-  -- Audit log (optional table for future)
-  -- INSERT INTO credit_transactions ...
-  
-  RETURN jsonb_build_object(
-    'success', true,
-    'balance', new_balance
-  );
-END;
-```
-
----
-
-#### `mark_free_discovery_used(p_user_id TEXT)`
-**Purpose:** Mark that user has used their one free text discovery
-
-**Logic:**
-```sql
-UPDATE profiles 
-SET free_text_discovery_used = true 
-WHERE id = p_user_id;
-```
-
----
-
-#### `handle_new_user(p_user_id TEXT, p_email TEXT)`
-**Purpose:** Initialize profile for new Clerk user
-
-**Logic:**
-```sql
-INSERT INTO profiles (id, email, tier, credits, free_text_discovery_used)
-VALUES (p_user_id, p_email, 1, 0, false)
-ON CONFLICT (id) DO NOTHING;
-```
-
-**Triggered by:** Clerk webhook → `/api/webhooks/clerk`
-
----
-
-### Utility RPCs
-
-#### `get_user_profile(p_user_id TEXT)`
-Returns user tier, credits, and free discovery status
-
-#### `update_businesses_updated_at(p_business_id UUID)`
-Updates the `updated_at` timestamp for a business
 
 ---
 
@@ -995,265 +680,111 @@ Updates the `updated_at` timestamp for a business
 
 ### `/api/generate` (POST)
 
-**Purpose:** Generate text content for social media post
-
 **Request Body:**
 ```typescript
 {
-  businessId: string,
-  businessName: string,
+  business_name: string,
+  category: string,
   niche: string,
   voice: string,
   postType: PostType,
-  fullAddress: string,
-  category: string,
-  // Optional:
-  recentHistory?: Post[],
-  businessData?: {...}
+  address: { street, city, province_state, country, postal_code },
+  history: Post[],
+  // Promotion fields (if postType = "Promotion / offer")
+  offerName?: string,
+  whatsIncluded?: string,
+  availableTimeframe?: string,
+  eligibility?: string,
+  offerHook?: string,
+  valueFraming?: string,
+  showPrice?: boolean,
+  priceDetails?: string,
+  // Event fields
+  eventType?: string,
+  eventOrShoutout?: string,
 }
 ```
 
-**Process:**
-1. Fetch business data from Supabase (if not provided)
-2. Extract recent lenses from history
-3. Select cognitive lens (avoid repetition)
-4. Build prompt using mode template
-5. Call Claude Haiku via OpenRouter
-6. Clean response (remove preamble)
-7. Return content
-
-**Response:**
+**Response (new structured fields):**
 ```typescript
 {
-  content: string,  // Generated post text
-  lens: string      // Which lens was used
+  content: string,
+  hashtags: string[],
+  currentWeather: string,
+  post_type: string,
+  content_category: string,
+  content_summary: string,
+  offerings_referenced: string[],
+  event_referenced: string | null,
+  hook_used: string | null,
+  voice_used: string,
+  ai_provider: string,
+  word_count: number,
+  tokens_used: number,
+  cognitive_lens: string,
 }
 ```
-
-**Error Handling:**
-- 401: Unauthorized (no Clerk session)
-- 500: Generation failed (API error, prompt error, etc.)
 
 ---
 
 ### `/api/generate-image` (POST)
 
-**Purpose:** Generate image from prompt using Gemini Imagen
-
 **Request Body:**
 ```typescript
 {
-  prompt: string,      // Image description from Architect
-  businessId: string,
-  postId?: string      // Optional: for updating existing post
+  postId: string,       // Required — fetch prompt from DB
+  business_id: string,  // Used to verify ownership
 }
 ```
-
-**Process:**
-1. Call Gemini Imagen 3 API
-2. Receive base64-encoded image
-3. Upload to Supabase Storage (`community-post-images` bucket)
-4. Get public URL
-5. If postId provided, update community_posts.image_url
-6. Return URL
 
 **Response:**
 ```typescript
 {
-  imageUrl: string  // Public Supabase Storage URL
+  url: string,          // Public Supabase URL (or Pollinations URL if unhosted)
+  debugPrompt: string,  // The prompt that was used
+  providerUsed: string, // e.g. "DEEPINFRA", "OPENROUTER", "POLLINATIONS_UNHOSTED"
+  hosted: boolean,      // false if Pollinations fallback
 }
+// OR 202: { status: 'WAITING' }   — Architect still writing
+// OR 500: { status: 'ERROR' }     — Architect failed
 ```
 
 ---
 
 ### `/api/prepare-image-prompt` (POST)
 
-**Purpose:** Architect writes photorealistic image prompt
-
 **Request Body:**
 ```typescript
 {
-  post: string,               // Generated text content
-  businessId: string,
-  business_name: string,
-  niche: string,
-  business_description: {...},
-  color_theme: {...},
-  business_visuals: {...},
-  storefront_architecture: {...},
-  interior_layout: {...}
+  postId: string,        // Fetches post content + type from DB
+  currentWeather: string,
 }
 ```
 
 **Process:**
-1. Build architect prompt (inject brand data)
-2. Call selected AI model (GEMINI/GROQ/GEMMA/OPENROUTER)
-3. Clean response (remove preamble, "<<<PROMPT_BEGIN>>>")
-4. Validate length (~60-70 words ideal)
-5. Return prompt
+1. Fetch post (content, post_type) and business (all brand data, zones) from DB
+2. `resolveZoneFocus(postType)` → which zone to emphasize
+3. `selectZonePhoto(zones, zoneFocus)` → which zone data to use
+4. `buildBrandVariables(...)` → structured brand context
+5. `getImageModeTemplate(postType)` → post-type-specific image instruction
+6. Call Architect (GEMMA default)
+7. Write result to `community_posts.image_prompt` (or "ERROR: ..." on failure)
 
-**Response:**
-```typescript
-{
-  visualDescription: string  // 60-70 word image prompt
-}
-```
-
-**Model Selection:** Toggle via `ARCHITECT_MODE` constant (line 38)
+**Response:** `{ success: boolean }` — client doesn't need the prompt, it polls generate-image.
 
 ---
 
 ### `/api/discover-brand` (POST)
 
-**Purpose:** Run brand discovery (vision + research)
+*(Unchanged interface from v1.0. Internally now saves `zones` instead of `storefront_architecture`/`interior_layout`.)*
 
-**Request Body:**
-```typescript
-{
-  business_id: string,
-  business_name: string,
-  address: {
-    street: string,
-    city: string,
-    province_state: string,
-    country: string,
-    postalCode: string
-  },
-  photos: UploadedPhoto[],  // {url, mimeType, label}[]
-  category: string,
-  niche: string,
-  run_text_discovery: boolean  // Explicit user opt-in
-}
-```
-
-**Process:**
-
-**Step 1: Validate User & Check Credits**
-```typescript
-const userProfile = await supabase.rpc('get_user_profile', { p_user_id });
-const userTier = userProfile.tier;
-const userCredits = userProfile.credits;
-const freeDiscoveryUsed = userProfile.free_text_discovery_used;
-
-if (userTier === 1 && run_text_discovery) {
-  if (!freeDiscoveryUsed) {
-    // First free discovery
-    isFirstFree = true;
-  } else if (userCredits < 3) {
-    return 402 Payment Required;
-  }
-}
-```
-
-**Step 2: Run Text Discovery (if approved)**
-```typescript
-if (run_text_discovery) {
-  await discoverAndSaveBrandIdentity(
-    business_id, business_name, address,
-    [], category, niche  // Empty photos = text-only
-  );
-  
-  // Deduct credits (if not first free)
-  if (!isFirstFree && userTier === 1) {
-    await supabase.rpc('deduct_credits', {
-      p_user_id, p_amount: 3,
-      p_reason: 'text_discovery'
-    });
-  }
-}
-```
-
-**Step 3: Run Vision Analysis (if photos uploaded)**
-```typescript
-if (photos.length > 0) {
-  const visionData = await analyzePhotosWithGemini(
-    photos, business_name, fullAddress
-  );
-  
-  // Save vision results to business table
-  await supabase.from('businesses').update({
-    color_theme: {...},
-    business_visuals: {...},
-    storefront_architecture: {...},
-    interior_layout: {...},
-    brand_source: 'photos'
-  });
-}
-```
-
-**Response:**
-```typescript
-{
-  success: boolean,
-  credits_charged?: number  // If Tier 1 and credits deducted
-}
-```
-
-**Error Responses:**
-- 401: Unauthorized
-- 402: Insufficient credits
-- 500: Discovery failed
-
----
-
-### `/api/user/claim-welcome-credits` (POST)
-
-**Purpose:** Award welcome bonus credits to new users
-
-**Request:** No body (uses Clerk user ID from session)
-
-**Process:**
-```typescript
-const { userId } = await auth();
-
-// Check if already claimed
-const { data: profile } = await supabase
-  .from('profiles')
-  .select('credits')
-  .eq('id', userId)
-  .single();
-
-if (profile.credits > 0) {
-  return { message: "Already claimed" };
-}
-
-// Award 25 credits
-await supabase
-  .from('profiles')
-  .update({ credits: 25 })
-  .eq('id', userId);
-```
-
-**Response:**
-```typescript
-{
-  success: boolean,
-  newBalance: number
-}
-```
-
----
-
-### `/api/webhooks/clerk` (POST)
-
-**Purpose:** Handle Clerk user creation webhook
-
-**Process:**
-1. Verify webhook signature (Clerk SDK)
-2. Extract user ID and email
-3. Call `handle_new_user()` RPC
-4. Return 200 OK
-
-**Important:** Must be configured in Clerk Dashboard:
-- **Webhook URL:** `https://shorelinestudio.ca/api/webhooks/clerk`
-- **Events:** `user.created`
-- **Signing Secret:** In `.env` as `CLERK_WEBHOOK_SECRET`
+**New `DISCOVERY_RESEARCH_PROVIDER` env var:**
+- `"gemma"` (default) — Gemma 4 31B + Google Search
+- `"haiku"` — Claude Haiku 4.5 + web_search tool
 
 ---
 
 ## Environment Variables
-
-### Required for Development
 
 ```bash
 # Clerk Authentication
@@ -1264,1157 +795,330 @@ CLERK_WEBHOOK_SECRET=whsec_...
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGc...
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGc...  # For admin operations
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGc...
 
 # AI Services
 ANTHROPIC_API_KEY=sk-ant-...
 GEMINI_API_KEY=AIza...
 GROQ_API_KEY=gsk_...
 OPENROUTER_API_KEY=sk-or-...
+DEEPINFRA_API_KEY=...
+HF_TOKEN=hf_...               # HuggingFace token for FLUX.1-schnell
+CLOUDFLARE_ACCOUNT_ID=...
+CLOUDFLARE_API_TOKEN=...
 
 # Environment
-NEXT_PUBLIC_APP_ENV=development  # or 'production'
+NEXT_PUBLIC_APP_ENV=development    # or 'production'
 
-# Optional: Model Selection
-ARCHITECT_MODE=GEMMA  # GEMINI | GROQ | GEMMA | OPENROUTER
-```
+# AI Engine Control
+AI_ENGINE_MODE=FALLBACK            # TOGGLE | FALLBACK
+AI_PROVIDER=anthropic              # Used in TOGGLE mode
+IMAGE_GENERATION_MODE=GEMINI_MULTIMODAL  # GEMINI_MULTIMODAL | ARCHITECT (default: ARCHITECT)
+IMAGE_GEN_PROVIDER=GOOGLE_API            # GOOGLE_API | OPENROUTER (within multimodal path)
+IMAGE_ENGINE_MODE=FALLBACK               # TOGGLE | FALLBACK (FLUX chain, used on Architect path)
+IMAGE_PROVIDER=huggingface               # Used in TOGGLE mode
+ARCHITECT_MODE=GEMMA                     # hardcoded in route.ts line 39, not read from env
 
-### Production-Only Variables
+IMAGE_GENERATION_MODE=GEMINI_MULTIMODAL
+# Controls image generation path
+# GEMINI_MULTIMODAL: uses Gemini via OpenRouter with reference photo (primary)
+# ARCHITECT: uses Gemma to write FLUX prompt (legacy fallback)
 
-```bash
-# Vercel deployment sets these automatically
-VERCEL_URL=shorelinestudio.ca
-VERCEL_ENV=production
+IMAGE_GEN_PROVIDER=OPENROUTER
+# Controls provider within GEMINI_MULTIMODAL path
+# OPENROUTER: sends to google/gemini-3.1-flash-image-preview via OpenRouter
+# GOOGLE_API: sends directly to Google Gemini API (gemini-2.5-flash-image)
+
+# Brand Discovery
+DISCOVERY_RESEARCH_PROVIDER=gemma  # gemma | haiku
+
+# Dev tools
+NEXT_PUBLIC_MOCK_AI=false          # "true" skips AI calls for testing
 ```
 
 ---
 
 ## Deployment & Maintenance
 
-### Deployment Process
+*(Unchanged from v1.0 — see original docs for deploy steps, database migrations, and common troubleshooting.)*
 
-**Current Setup:**
-- **Platform:** Vercel
-- **Branch:** `main` (production), `dev` (staging)
-- **Domain:** shorelinestudio.ca
-- **Auto-deploy:** Enabled for both branches
+### Common Issues (Updated)
 
-**Deploy Steps:**
+#### Issue: Image generation times out (no image after 60 seconds)
 
-```bash
-# 1. Development → Staging
-git checkout dev
-git add .
-git commit -m "Feature: description"
-git push origin dev
-
-# Vercel auto-deploys to dev-shorelinestudio.vercel.app
-# Test thoroughly
-
-# 2. Staging → Production
-git checkout main
-git merge dev
-git push origin main
-
-# Vercel auto-deploys to shorelinestudio.ca
-```
-
----
-
-### Database Migrations
-
-**Problem:** Two separate Supabase databases (dev + prod) require manual syncing
-
-**Solution:** Migration tracking system (see `MIGRATION_LOG.md`)
-
-**Process:**
-
-1. **Make change in DEV Supabase:**
-   - Add column, create RPC, update RLS policy, etc.
-   - Test in development environment
-
-2. **Document in migration file:**
-   - Create `migrations/00X_description.sql`
-   - Include both UP (apply) and DOWN (rollback) sections
-
-3. **Update `MIGRATION_LOG.md`:**
-   - Add entry with status "Applied to DEV"
-   - Include risk level, dependencies, rollback plan
-
-4. **When ready for production:**
-   - Run migration SQL in PROD Supabase (via SQL Editor)
-   - Update status to "Applied to PROD"
-   - Test production thoroughly
-
-**Migration File Template:**
+**Debug:**
 ```sql
--- ============================================================================
--- Migration 00X: Description
--- ============================================================================
--- Date: YYYY-MM-DD
--- Status: DEV ONLY
--- Risk: LOW | MEDIUM | HIGH
--- Dependencies: Migration 00X-1 (if any)
--- ============================================================================
-
--- UP: Apply Migration
-BEGIN;
-
--- Your changes here
-
-COMMIT;
-
--- ============================================================================
--- DOWN: Rollback Migration
--- ============================================================================
-BEGIN;
-
--- Reverse changes here
-
-COMMIT;
-```
-
----
-
-### Monitoring & Logging
-
-**Current State:** Console logs only
-
-**Console Log Levels:**
-```typescript
-// Supabase queries
-console.log("✅ [Discovery] Text research complete");
-console.error("❌ [Discovery] Vision failed:", error);
-
-// AI API calls
-console.log("🚀 === [FULL ARCH PROMPT START] ===");
-console.log("--- OPENROUTER FINISH REASON:", result.choices[0]?.finish_reason);
-
-// Credit operations
-console.log("💳 [Discovery API] Credits deducted. New balance:", balance);
-console.error("❌ [Discovery API] Credit deduction failed:", error);
-```
-
-**Future Enhancements:**
-- Structured logging (Winston, Pino)
-- Error tracking (Sentry)
-- Analytics (PostHog, Mixpanel)
-- Performance monitoring (Vercel Analytics)
-
----
-
-### Common Issues & Troubleshooting
-
-#### Issue: "Insufficient credits" when generating
-
-**Debug:**
-```typescript
-// Check user credits
-const { data: profile } = await supabase
-  .from('profiles')
-  .select('credits')
-  .eq('id', userId)
-  .single();
-
-console.log("User credits:", profile.credits);
+-- Check if image_prompt was written by Architect
+SELECT id, image_prompt, image_url FROM community_posts WHERE id = 'post-uuid';
 ```
 
 **Solutions:**
-- Award credits via SQL: `UPDATE profiles SET credits = 100 WHERE id = 'user_xxx';`
-- Check RPC logic: Ensure `save_post_and_deduct()` is atomic
-- Verify credit cost calculation in frontend
+- If `image_prompt` is null: Architect failed. Check `prepare-image-prompt` logs.
+- If `image_prompt` starts with "ERROR:": Architect returned an error string. Re-trigger.
+- If `image_prompt` is set but `image_url` is null: Image provider chain failed. Check provider API keys.
+- Check `IMAGE_ENGINE_MODE` env var — in TOGGLE mode only one provider is tried.
 
----
-
-#### Issue: Brand discovery not running
+#### Issue: Generated posts always reference the same offering
 
 **Debug:**
-```typescript
-// Check discovery trigger conditions
-const { data: business } = await supabase
-  .from('businesses')
-  .select('brand_source, last_analyzed_business_name')
-  .eq('id', businessId)
-  .single();
-
-console.log("Current brand_source:", business.brand_source);
-console.log("Last analyzed name:", business.last_analyzed_business_name);
+```sql
+SELECT offerings_referenced FROM community_posts 
+WHERE business_id = 'user-id' 
+ORDER BY created_at DESC LIMIT 5;
 ```
 
 **Solutions:**
-- Tier 1: Ensure checkbox is checked
-- Tier 1: Ensure user has 3 credits (if not first time)
-- Check API logs: `/api/discover-brand` should log "PATH 1: Starting text research..."
-- Verify `run_text_discovery` is being passed in request
-
----
-
-#### Issue: Generated posts are generic (not business-specific)
-
-**Debug:**
-```typescript
-// Check brand intelligence is loaded
-console.log("Business description:", businessData.business_description);
-console.log("Color theme:", businessData.color_theme);
-```
-
-**Solutions:**
-- Run brand discovery (especially text research)
-- Verify `buildFullPrompt()` is injecting brand data correctly
-- Check mode template has placeholders: `{{business_summary}}`
-- Ensure smart context instruction is in template: "Before writing, mentally translate..."
-
----
-
-#### Issue: Images don't match business aesthetic
-
-**Debug:**
-```typescript
-// Check what data Architect receives
-console.log("Color theme sent to Architect:", color_theme);
-console.log("Storefront arch sent:", storefront_architecture);
-```
-
-**Solutions:**
-- Ensure vision analysis ran (check `brand_source = 'photos'`)
-- Verify Architect is building correct prompt (check console logs)
-- Try different ARCHITECT_MODE (OPENROUTER is good for quality)
-- Check Architect system prompt includes brand context
-
----
-
-#### Issue: Clerk authentication fails
-
-**Debug:**
-```typescript
-const { userId } = await auth();
-console.log("Clerk user ID:", userId);
-```
-
-**Solutions:**
-- Check `.env` has correct `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
-- Verify Clerk dashboard shows active application
-- Clear browser cookies and re-login
-- Check Middleware is configured: `middleware.ts`
-
----
-
-#### Issue: Supabase RLS blocking queries
-
-**Debug:**
-- Check Supabase logs: Dashboard → Database → Logs
-- Look for "permission denied" errors
-
-**Solutions:**
-- Verify RLS policies are correct:
-  ```sql
-  -- Example: Allow user to read their own profile
-  CREATE POLICY "Users can read own profile"
-  ON profiles FOR SELECT
-  USING (auth.uid() = id);
-  ```
-- Check JWT token includes correct user ID
-- Use `supabaseAdmin` client (service role key) for admin operations
+- Verify `business_description.products_services` is in the new object format (not old array format)
+- Check `offering-rotation.ts` — catalog must have > 1 entry for rotation to work
+- If `products_services` is an array of strings (old format), re-run brand discovery
 
 ---
 
 ## Pricing & Business Model
 
-### Current Pricing Structure (Planned)
+*(Unchanged from v1.0 — see original for credit packages, tier pricing, and unit economics.)*
 
-#### Free Tier (Tier 1)
-- **Cost:** $0/month
-- **Includes:**
-  - 1 business profile
-  - First brand discovery FREE
-  - 0 initial credits (must purchase or use promo code)
-- **Credit Costs:**
-  - Text post: 2 credits
-  - Image generation: 3 credits
-  - Brand re-discovery: 3 credits
-
-#### Premium Tier (Tier 2)
-- **Cost:** $29/month (TBD)
-- **Includes:**
-  - Unlimited business profiles
-  - Unlimited brand discoveries (text + vision)
-  - Unlimited post generation (text + images)
-  - Priority support
-  - Early access to new features
-
-### Credit Packages (Tier 1 Users)
-
-| Package | Credits | Cost | Cost per Credit |
-|---------|---------|------|-----------------|
-| **Starter** | 50 | $5 | $0.10 |
-| **Creator** | 150 | $12 | $0.08 |
-| **Pro** | 500 | $35 | $0.07 |
-
-**Credit Value Proposition:**
-- 50 credits = 25 posts (text-only) or 10 posts (text + image)
-- Average small business posts 2-3 times/week = 50 credits lasts ~2 months
-
-### Revenue Model
-
-**Target Customers:**
-- Local businesses (restaurants, cafes, clinics, shops)
-- Solopreneurs (coaches, consultants, freelancers)
-- Small agencies managing multiple clients
-
-**Customer Acquisition:**
-- **Launch:** Free credits (25) for early users
-- **Waitlist:** After free credits exhausted
-- **Referrals:** Give 25 credits, get 25 credits
-- **Content Marketing:** "How to write better social posts" (lead to product)
-
-**Monetization Paths:**
-1. **Credit purchases** (immediate revenue, low friction)
-2. **Tier 2 subscriptions** (recurring revenue, higher LTV)
-3. **Agency plans** (Tier 3, manage multiple businesses, white-label)
-4. **API access** (for developers building on top of Shoreline)
-
-**Unit Economics:**
-
-| Item | Cost | Selling Price | Margin |
-|------|------|---------------|--------|
-| Text post | $0.0005 (Haiku) | 2 credits ($0.20) | 99.75% |
-| Image generation | $0.04 (Imagen) | 3 credits ($0.30) | 86.7% |
-| Brand discovery | $0.005 (Haiku search) | 3 credits ($0.30) | 98.3% |
-
-**Profitability:** Extremely high margins on AI services due to wholesale API pricing vs. retail credit pricing.
-
-**Cost Structure (Monthly):**
-- **Infrastructure:** $20-50 (Vercel Pro)
-- **Supabase:** $25 (Pro tier for production)
-- **Domain:** $15/year
-- **Total Fixed Costs:** ~$100/month
-
-**Break-even:** ~15-20 paying Tier 1 users (average $5-7 spend/month) OR 4-5 Tier 2 subscribers
+**Credit costs:** 2 credits for text, 3 credits for image. Total for text+image = 5 credits.
 
 ---
 
 ## Future Roadmap
 
-### Phase 1: Launch & Validation (Q2 2026) - **CURRENT**
-
-**Goals:**
-- ✅ MVP complete (content generation working)
-- ✅ Brand discovery system functional
-- ✅ Credit system operational
-- 🟡 Initial user testing (10-20 early adopters)
-- 🟡 Waitlist landing page
-- 🟡 Onboarding flow optimization
-
-**Features:**
-- ✅ 6 post modes
-- ✅ 4 cognitive lenses
-- ✅ Text + image generation
-- ✅ Brand discovery (photos + research)
-- ✅ Credit system
-- ✅ User tiers (Tier 1/2)
-
----
-
-### Phase 2: Payment & Growth (Q3 2026)
-
-**Goals:**
-- Integrate Stripe for credit purchases
-- Launch Tier 2 subscriptions
-- Referral program
-- Analytics dashboard for users
-
-**Features to Add:**
-
-#### 2.1 Stripe Integration
-```typescript
-// /api/checkout/create-session
-// Create Stripe checkout for credit packages
-import Stripe from 'stripe';
-
-export async function POST(req: Request) {
-  const { package_id } = await req.json();
-  const { userId } = await auth();
-  
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-  
-  const session = await stripe.checkout.sessions.create({
-    customer_email: user.email,
-    line_items: [{
-      price: PACKAGE_PRICES[package_id],
-      quantity: 1
-    }],
-    mode: 'payment',
-    success_url: `${baseUrl}/dashboard?credits_added=true`,
-    cancel_url: `${baseUrl}/dashboard?credits_cancelled=true`,
-    metadata: {
-      user_id: userId,
-      credits: PACKAGE_CREDITS[package_id]
-    }
-  });
-  
-  return { sessionId: session.id };
-}
-```
-
-#### 2.2 Subscription Management
-- Tier 2 signup flow
-- Subscription dashboard (view plan, cancel, upgrade)
-- Usage metrics (posts generated this month, credits used)
-
-#### 2.3 Referral System
-```typescript
-// /api/referrals/generate-code
-// Generate unique referral code for user
-const referralCode = `SHORE-${userId.slice(0, 8).toUpperCase()}`;
-
-// /api/referrals/apply-code
-// When new user signs up with code:
-// 1. Award 25 credits to new user
-// 2. Award 25 credits to referrer
-```
-
-#### 2.4 User Analytics Dashboard
-- **Posts generated:** Chart by week/month
-- **Most used post types:** Pie chart
-- **Credit spending:** Bar chart (text vs images vs discoveries)
-- **Engagement preview:** Click to copy post, track shares (future)
-
----
-
-### Phase 3: Collaboration & Agency Tools (Q4 2026)
-
-**Goals:**
-- Multi-user businesses
-- Team collaboration
-- Agency/white-label plans
-
-**Features to Add:**
-
-#### 3.1 Team Members
-- Invite collaborators to business profile
-- Role-based permissions (Admin, Editor, Viewer)
-- Activity log (who generated what, when)
-
-**Schema Changes:**
-```sql
-CREATE TABLE business_members (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  business_id UUID REFERENCES businesses(id),
-  user_id TEXT REFERENCES profiles(id),
-  role TEXT CHECK (role IN ('admin', 'editor', 'viewer')),
-  invited_by TEXT REFERENCES profiles(id),
-  joined_at TIMESTAMP DEFAULT NOW()
-);
-```
-
-#### 3.2 Content Calendar
-- Schedule posts for future dates
-- Visual calendar view (drag-and-drop)
-- Auto-post to social platforms (via Zapier/Make)
-
-**Schema Changes:**
-```sql
-CREATE TABLE scheduled_posts (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  post_id UUID REFERENCES community_posts(id),
-  scheduled_for TIMESTAMP NOT NULL,
-  status TEXT CHECK (status IN ('pending', 'posted', 'failed')),
-  platform TEXT,  -- 'facebook', 'instagram', 'linkedin'
-  posted_at TIMESTAMP
-);
-```
-
-#### 3.3 Agency Dashboard (Tier 3)
-- Manage multiple client businesses from one account
-- Client-specific credit pools
-- Usage reports per client
-- White-label option (custom domain, remove Shoreline branding)
-
----
-
-### Phase 4: Advanced AI & Automation (Q1 2027)
-
-**Goals:**
-- Smarter content suggestions
-- Performance analytics (actual social media engagement)
-- Auto-generation schedules
-
-**Features to Add:**
-
-#### 4.1 AI Content Suggestions
-```typescript
-// "It's been 5 days since your last post. Generate a new one?"
-// Suggest post types based on:
-// - Time of year (seasonal)
-// - Past performance (which types got saved most often)
-// - Business events (new product launch, promotion)
-```
-
-#### 4.2 Social Media Integration (Read)
-- Connect Facebook/Instagram accounts (OAuth)
-- Fetch engagement data (likes, comments, shares)
-- Show which posts performed best
-- Learn from high-performers to improve generation
-
-**Flow:**
-```
-1. User connects Instagram
-2. Shoreline fetches last 20 posts + engagement metrics
-3. Identify top 5 posts by engagement
-4. Feed back into AI: "These topics/styles resonated most"
-5. Future generations prioritize similar patterns
-```
-
-#### 4.3 Performance Dashboard
-- **Engagement Rate:** Average likes/comments per post
-- **Best Time to Post:** When your audience is most active
-- **Top Performing Content Types:** Which cognitive lenses got most engagement
-- **Follower Growth:** Track over time
-
----
-
-### Phase 5: Platform Expansion (Q2-Q3 2027)
-
-**Goals:**
-- Support more content types (videos, carousels)
-- Localization (multi-language)
-- Mobile app
-
-**Features to Add:**
-
-#### 5.1 Video Content Generation
-- AI-generated short-form video scripts (15-60 seconds)
-- Text-to-video using services like Runway, Synthesia
-- Video editing suggestions (cuts, captions)
-
-#### 5.2 Multi-Language Support
-- Generate posts in user's preferred language
-- Translate posts on-the-fly
-- Localized brand discovery (research in local language)
-
-**Implementation:**
-```typescript
-// Add language field to businesses table
-// Modify prompt builder to include language instruction
-const languageInstruction = `
-Write this post in ${business.language}.
-Use local idioms and cultural references appropriate for ${business.country}.
-`;
-```
-
-#### 5.3 Mobile App (React Native)
-- iOS + Android apps
-- Push notifications for scheduled post reminders
-- Quick generation on-the-go
-- Camera integration (take business photo, instant discovery)
+*(Unchanged from v1.0 — see original for Phase 1-5 details.)*
 
 ---
 
 ## Third-Party API Integration
 
-### Current Integrations
+*(Entries 1, 5, 6 from v1.0 unchanged. Updated entries below.)*
 
-#### 1. Anthropic Claude API
+### Image Generation Providers (Updated)
 
-**Purpose:** Content generation
+The old Gemini Imagen 3 pipeline is replaced by a multi-provider FLUX chain.
 
-**Documentation:** https://docs.anthropic.com/
+**Provider 1: OpenRouter (Primary)**
+- Model: `google/gemini-3.1-flash-image-preview`
+- API: OpenAI-compatible endpoint (`https://openrouter.ai/api/v1/chat/completions`)
+- Format:  ["image", "text"],
+- Cost: ~$0.07/image
 
-**Models Used:**
-- `claude-haiku-4-5-20251001` (via OpenRouter)
+**Provider 2: DeepInfra (Fallback)**
+- Model: `black-forest-labs/FLUX-2-pro`
+- API: OpenAI-compatible endpoint (`https://api.deepinfra.com/v1/openai/images/generations`)
+- Format: base64 JSON (`response_format: "b64_json"`)
+- Cost: ~$0.03/image
 
-**Rate Limits:**
-- Haiku: 50 requests/minute (generous for our use case)
+**Provider 3: OpenRouter (Fallback)**
+- Model: `black-forest-labs/flux.2-pro`
+- API: `https://openrouter.ai/api/v1/chat/completions` with `modalities: ["image"]`
+- Format: base64 or URL in `message.images[0].image_url.url`
 
-**Cost:**
-- Input: $0.25 per 1M tokens
-- Output: $1.25 per 1M tokens
-- Average post: ~$0.0005
+**Provider 4: HuggingFace (Fallback)**
+- Model: `black-forest-labs/FLUX.1-schnell`
+- SDK: `@huggingface/inference` `InferenceClient.textToImage()`
+- `num_inference_steps: 4` (fast)
 
-**Error Handling:**
+**Provider 5: Cloudflare (Fallback)**
+- Model: `@cf/stabilityai/stable-diffusion-xl-base-1.0`
+- API: Cloudflare AI Workers REST endpoint
+- `num_inference_steps: 25, guidance_scale: 7.5`
+
+**Provider 6: Pollinations (Last Resort)**
+- Unhosted — returns a URL directly, not uploaded to Supabase
+- `hosted: false` in response — client should handle gracefully
+
+All hosted providers upload the resulting blob to `Supabase Storage → post-images bucket`.
+
+---
+
+## Cleanup Required
+
+This section documents dead code and inconsistencies identified during the May 2026 code audit. These should be cleaned up before adding new features.
+
+### 0. Cognitive Lenses + Myth-busting (Full Removal)
+
+**Locations:**
+- `src/lib/cognitive-lenses.ts` — lens definitions
+- `src/lib/angle-selector.ts` — lens selection logic
+- `src/app/api/generate/route.ts` — `selectAngle()` call + `recentLenses` tracking
+- `src/lib/mode-templates.ts` — `"Myth-busting"` template (uses `{{lens}}`, `{{lensDefinition}}`)
+- `src/lib/prompt-builder.ts` — `lens` and `lensDefinition` in `variables` map
+- `src/lib/prompt-builder.ts` — `PromptBuilderConfig.lens`, `.lensDefinition`, `.groupContext` fields
+- `src/app/api/generate/route.ts` — `extractRecentLenses()` helper + `recentLenses` passed to `buildModePrompt`
+- `community_posts.cognitive_lens` column — still written to but serves no active purpose
+
+**Action:** Delete `cognitive-lenses.ts` and `angle-selector.ts`. Remove `selectAngle()` call and `recentLenses` tracking from `generate/route.ts`. Remove `lens`/`lensDefinition`/`groupContext` from `PromptBuilderConfig` and the variables map. Delete the `"Myth-busting"` template from `mode-templates.ts`. Consider dropping `community_posts.cognitive_lens` column.
+
+---
+
+### 1. Dead Function: `buildLegacyPrompt()` in `generate/route.ts`
+
+**Location:** `src/app/api/generate/route.ts`, lines ~277-514
+
+`buildLegacyPrompt()` is a complete function (238+ lines) that builds the old PAS/BAB/AIDA framework-based prompt. It is **never called** — `buildModePrompt()` replaced it. It references `FRAMEWORK_SHAPES`, `FRAMEWORKS`, `NARRATIVE_COMBINATIONS`, `ANGLE_POOL`, `TIP_MODE`, and others that are only used by this dead function.
+
+**Action:** Delete `buildLegacyPrompt()` and remove its unused imports:
+- `HarmCategory`, `HarmBlockThreshold` from `@google/generative-ai`
+- `getFramework`, `Framework`, `FRAMEWORKS`, `TIP_MODE`, `CTA_BY_POST_TYPE`, `SEASONAL_NICHE_NARRATIVE`, `getSeason`, `NARRATIVE_COMBINATIONS`, `NarrativeEntry`, `ANGLE_POOL` from `@/lib/frameworks`
+- `ColorTheme`, `BusinessVisuals` from `@/lib/constants`
+
+### 2. Broken Return Types: `deepinfra` and `openrouter` in `callAIProvider()`
+
+**Location:** `src/app/api/generate/route.ts`, lines ~152-223
+
+Both the `deepinfra` and `openrouter` branches inside `callAIProvider()` return a plain string (`return content || ""`) instead of the required `AIProviderResponse` object `{ content, tokensUsed, provider }`. This causes a TypeScript type error and would break if either provider were actually called from the fallback chain.
+
+The fallback chain currently only calls `["anthropic", "openrouter", "deepinfra"]`, so `openrouter` and `deepinfra` will be hit, but the broken return shape means `result.content`, `result.tokensUsed`, and `result.provider` will be undefined.
+
+**Action:** Fix both branches to return `{ content: content || "", tokensUsed: 0, provider: "deepinfra" }` (and equivalent for openrouter).
+
+### 3. Dead Providers: `gemma` and `gemini` in `callAIProvider()`
+
+**Location:** `src/app/api/generate/route.ts`, lines ~225-267
+
+The `gemma` and `gemini` branches in `callAIProvider()` are complete implementations but never reached — the production fallback chain is `["anthropic", "openrouter", "deepinfra"]` and the TOGGLE mode uses `AI_PROVIDER` env var (unlikely to be set to these). The `groq` branch (line 82) similarly uses `openai/gpt-oss-120b` model via the Groq client but `groq` is not in the fallback chain either.
+
+**Action:** Either add these to the fallback chain or delete them. If keeping as TOGGLE options, fix the return types.
+
+### 4. Unused `const tools` in `generate-image/route.ts`
+
+**Location:** `src/app/api/generate-image/route.ts`, line 13
+
 ```typescript
-try {
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      model: 'anthropic/claude-haiku-4.5:beta',
-      messages: [
-        { role: 'system', content: 'Output only what is requested.' },
-        { role: 'user', content: prompt }
-      ]
-    })
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Claude API error: ${response.status}`);
-  }
-  
-  const data = await response.json();
-  return data.choices[0].message.content;
-} catch (error) {
-  console.error('Claude API failed:', error);
-  return { error: 'Content generation failed. Please try again.' };
+const tools = [ {googleSearch: {},},] as any;
+```
+
+Declared at module scope but never used anywhere in the file.
+
+**Action:** Delete this line.
+
+### 5. Stale Column Reads: `storefront_architecture`, `interior_layout`, `business_visuals`
+
+**Location:** `src/app/api/generate/route.ts`, line 599
+
+```typescript
+.select('id, business_name, ..., storefront_architecture, interior_layout, zones, ...')
+```
+
+The new brand discovery system writes to `zones` (not `storefront_architecture` or `interior_layout`). These two legacy columns are still selected but the data in them is from before zones were introduced — new discoveries never update them. `business_visuals` (logoColors, storefrontColors, interiorColors) is also selected but never written by the new discovery system.
+
+The old `parseInteriorLayout()` and `parseExteriorLayout()` functions parse these for injection into `businessIntel`, but `businessIntel.zones` (from the new system) takes precedence in the prompt builder.
+
+**Action:** 
+- After confirming all existing businesses have been re-discovered (data in `zones` is current), remove `storefront_architecture` and `interior_layout` from the select query in `generate/route.ts`.
+- Remove `business_visuals` from the select query and from `BusinessIdentity` type.
+- Eventually drop these columns from the database schema.
+
+### 6. Deprecated `getRecentOfferings()` in `post-history.ts`
+
+**Location:** `src/lib/post-history.ts`, lines ~84-92
+
+```typescript
+/** @deprecated Use getRecentOfferingsInOrder */
+export async function getRecentOfferings(...) {
+  return getRecentOfferingsInOrder(...);
 }
 ```
 
-**Fallback Strategy:**
-- Primary: OpenRouter (Claude Haiku)
-- Fallback 1: Direct Anthropic API (if OpenRouter down)
-- Fallback 2: Groq (Llama 3.1) - faster but lower quality
+This wrapper adds nothing. Check all call sites and update to `getRecentOfferingsInOrder()`, then delete.
 
----
+### 7. Commented-Out Architect Repair Logic in `GenerateDashboard.tsx`
 
-#### 2. Google Gemini API
+**Location:** `src/components/GenerateDashboard.tsx`, lines ~431-472
 
-**Purpose:** Vision analysis, web search, image generation
+A large commented-out block for "CASE 3: Architect Error" repair logic. Currently replaced by a simpler "generation failed" message.
 
-**Documentation:** https://ai.google.dev/docs
+**Action:** Decide if this repair flow will be re-enabled. If not, delete the commented block.
 
-**Models Used:**
-- `gemini-2.5-flash` - Vision analysis + web search
-- `imagen-3.0-generate-001` - Image generation
+### 8. `textModel` and `imageModel` Instantiated but Unused in `generate-image/route.ts`
 
-**Rate Limits:**
-- Gemini Flash: 15 requests/minute (free tier)
-- Imagen 3: 10 requests/minute
-
-**Cost:**
-- Gemini Flash: Free (within limits)
-- Imagen 3: $0.04 per image
-
-**Vision Analysis Example:**
-```typescript
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-
-// Analyze storefront photo
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
-const result = await model.generateContent([
-  {
-    inlineData: {
-      data: base64ImageData,
-      mimeType: "image/jpeg"
-    }
-  },
-  { text: "Extract color palette, architectural style, and signage details from this storefront." }
-]);
-
-const analysis = result.response.text();
-```
-
-**Web Search Example:**
-```typescript
-// Claude Haiku with web search tool (via OpenRouter)
-const model = genAI.getGenerativeModel(
-  { 
-    model: "gemini-2.5-flash",
-    tools: [{ webSearch: {} }]  // Enable web search
-  },
-  { apiVersion: "v1beta" }
-);
-
-const result = await model.generateContent([
-  { text: `Research "${businessName}" at "${fullAddress}". Find craft identity, products, and neighborhood context.` }
-]);
-```
-
-**Image Generation Example:**
-```typescript
-const model = genAI.getGenerativeModel({ model: "imagen-3.0-generate-001" });
-
-const result = await model.generateImages({
-  prompt: visualDescription,  // From Architect
-  numberOfImages: 1,
-  aspectRatio: "1:1",  // Square format
-  safetySettings: {
-    // Default: block harmful content
-  },
-  personGeneration: "allowed"  // Show people working
-});
-
-const base64Image = result.images[0].image.data;
-```
-
----
-
-#### 3. Groq API
-
-**Purpose:** Fast prompt optimization (alternative to Gemini)
-
-**Documentation:** https://console.groq.com/docs
-
-**Models Used:**
-- `llama-3.1-8b-instant` - Fastest, good for simple tasks
-- `llama-3.1-70b-versatile` - Better quality, still fast
-
-**Rate Limits:**
-- Very generous (1000+ requests/minute)
-
-**Cost:**
-- Extremely cheap (~$0.0001 per request)
-
-**Usage (as Architect):**
-```typescript
-import Groq from "groq-sdk";
-
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
-const completion = await groq.chat.completions.create({
-  messages: [
-    { role: "system", content: "You are a brand photographer..." },
-    { role: "user", content: architectPrompt }
-  ],
-  model: "llama-3.1-8b-instant",
-  temperature: 0.7,
-  max_tokens: 1000
-});
-
-const visualDescription = completion.choices[0].message.content;
-```
-
-**Pros:**
-- ⚡ Extremely fast (200-500ms response time)
-- 💰 Very cheap
-- 🔄 High rate limits
-
-**Cons:**
-- 🎯 Lower quality than Claude/Gemini (but still good)
-- 🧠 Less creative (more mechanical)
-
-**When to Use:**
-- Architect role (simple, structured task)
-- High-volume scenarios (batching many requests)
-- Cost-sensitive operations
-
----
-
-#### 4. OpenRouter
-
-**Purpose:** Unified API for multiple LLM providers
-
-**Documentation:** https://openrouter.ai/docs
-
-**Why Use OpenRouter:**
-- ✅ Single API for Claude, GPT-4, Llama, etc.
-- ✅ Built-in fallbacks (if one provider down, try another)
-- ✅ Transparent pricing
-- ✅ No rate limit headaches (they handle it)
-
-**Cost:**
-- Claude Haiku: $0.25 / $1.25 per 1M tokens (in/out)
-- GPT-4o-mini: $0.15 / $0.60 per 1M tokens
-- Llama 3.1 70B: $0.52 / $0.75 per 1M tokens
-
-**Usage:**
-```typescript
-// OpenRouter uses OpenAI SDK format
-import Groq from "groq-sdk";  // Works for OpenRouter too!
-
-const client = new Groq({
-  apiKey: process.env.OPENROUTER_API_KEY,
-  baseURL: "https://openrouter.ai/api/v1"
-});
-
-const response = await client.chat.completions.create({
-  model: "anthropic/claude-haiku-4.5:beta",
-  messages: [{ role: "user", content: prompt }]
-});
-```
-
-**Model Selection Strategy:**
-```typescript
-// Primary: Claude Haiku (best quality/price)
-let model = "anthropic/claude-haiku-4.5:beta";
-
-// Fallback 1: GPT-4o-mini (if Claude unavailable)
-if (claudeDown) {
-  model = "openai/gpt-4o-mini";
-}
-
-// Fallback 2: Llama 3.1 70B (if OpenAI down)
-if (openAIDown) {
-  model = "meta-llama/llama-3.1-70b-instruct";
-}
-```
-
----
-
-#### 5. Clerk (Authentication)
-
-**Purpose:** User authentication and management
-
-**Documentation:** https://clerk.com/docs
-
-**Features Used:**
-- Email/password auth
-- Social OAuth (Google, Facebook) - future
-- JWT generation for Supabase
-- Webhooks (user.created)
-
-**Supabase JWT Integration:**
-```typescript
-// In middleware.ts or API route
-import { auth } from '@clerk/nextjs/server';
-
-const { userId, getToken } = await auth();
-
-// Get Supabase-compatible JWT
-const supabaseToken = await getToken({ template: 'supabase-prod' });
-
-// Use with Supabase client
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  {
-    global: {
-      headers: {
-        Authorization: `Bearer ${supabaseToken}`
-      }
-    }
-  }
-);
-```
-
-**Webhook Setup:**
-```typescript
-// /api/webhooks/clerk
-import { Webhook } from 'svix';
-
-export async function POST(req: Request) {
-  const payload = await req.text();
-  const headers = Object.fromEntries(req.headers.entries());
-  
-  const webhook = new Webhook(process.env.CLERK_WEBHOOK_SECRET!);
-  
-  try {
-    const event = webhook.verify(payload, headers);
-    
-    if (event.type === 'user.created') {
-      const { id, email_addresses } = event.data;
-      
-      // Create profile in Supabase
-      await supabase.rpc('handle_new_user', {
-        p_user_id: id,
-        p_email: email_addresses[0].email_address
-      });
-    }
-    
-    return new Response('OK', { status: 200 });
-  } catch (error) {
-    console.error('Webhook verification failed:', error);
-    return new Response('Unauthorized', { status: 401 });
-  }
-}
-```
-
----
-
-#### 6. Supabase (Database & Storage)
-
-**Purpose:** PostgreSQL database, file storage, real-time subscriptions
-
-**Documentation:** https://supabase.com/docs
-
-**Features Used:**
-- PostgreSQL database
-- Row Level Security (RLS)
-- Storage buckets (for uploaded photos, generated images)
-- Functions (RPCs)
-- Realtime (future: live collaboration)
-
-**Storage Buckets:**
+**Location:** `src/app/api/generate-image/route.ts`, lines 23-24
 
 ```typescript
-// Upload photo to Supabase Storage
-const file = photoFile;  // File from <input type="file" />
-
-const { data, error } = await supabase.storage
-  .from('business-photos')
-  .upload(`${businessId}/${Date.now()}_${file.name}`, file, {
-    cacheControl: '3600',
-    upsert: false
-  });
-
-if (error) throw error;
-
-// Get public URL
-const { data: { publicUrl } } = supabase.storage
-  .from('business-photos')
-  .getPublicUrl(data.path);
-
-return publicUrl;
+const textModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }, ...);
+const imageModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash-image" }, ...);
 ```
 
-**RLS Policies Example:**
-```sql
--- Only users can read their own businesses
-CREATE POLICY "Users can read own businesses"
-ON businesses FOR SELECT
-USING (auth.uid() = user_id);
+Both are instantiated at module scope but never called — they're leftovers from the Gemini Imagen pipeline.
 
--- Only users can update their own businesses
-CREATE POLICY "Users can update own businesses"
-ON businesses FOR UPDATE
-USING (auth.uid() = user_id);
-```
+**Action:** Delete both lines (and the large commented-out Gemini image block above them).
 
----
+### 9. Unused `save_post_and_deduct` Parameter: `p_image_prompt`
 
-### API Keys Security
+**Action needed in Supabase:** Verify `save_post_and_deduct` still accepts all the new community_posts columns (`post_type`, `content_category`, `content_summary`, `offerings_referenced`, `event_referenced`, `hook_used`, `voice_used`, `ai_provider`, `word_count`, `tokens_used`). If the RPC was not updated when the new columns were added, it will silently ignore those fields. Update the RPC signature to include them.
 
-**Storage:**
-- All API keys stored in `.env.local` (development)
-- Production keys stored in Vercel Environment Variables
+### 10. image-mode-templates.ts — architect path only
+Now that GEMINI_MULTIMODAL is the primary path, image-mode-templates.ts 
+is architect-path-only. Add a comment at the top of the file:
+"// ARCHITECT PATH ONLY — for GEMINI_MULTIMODAL see image-mode-templates-multimodal.ts"
+The [EXAMPLE] sections contain FLUX prompt boilerplate and should not be 
+used in multimodal prompts.
 
-**Never Expose Client-Side:**
-```typescript
-// ❌ BAD: API key in client component
-'use client';
-const apiKey = process.env.ANTHROPIC_API_KEY;  // undefined!
-
-// ✅ GOOD: API key in server route
-// /api/generate/route.ts
-const apiKey = process.env.ANTHROPIC_API_KEY;  // works!
-```
-
-**Rotation Policy:**
-- Rotate API keys quarterly
-- Immediately rotate if suspected leak
-- Use Vercel's secret management for production
-
----
-
-### Future API Integrations (Planned)
-
-#### Stripe (Payment Processing)
-- Credit card payments
-- Subscription management
-- Webhook handling (payment.succeeded)
-
-#### Social Media APIs
-- **Facebook Graph API** - Post scheduling, engagement data
-- **Instagram Basic Display API** - Fetch posts, likes, comments
-- **LinkedIn API** - Professional post scheduling
-- **Twitter API** - Tweet scheduling (if affordable)
-
-#### Marketing & Analytics
-- **PostHog** - Product analytics, feature flags
-- **Segment** - Customer data platform
-- **Mailchimp** - Email marketing, user onboarding sequences
-
-#### Image & Media
-- **Unsplash API** - Stock photos for inspiration
-- **Pexels API** - Alternative stock photos
-- **Cloudinary** - Image optimization, transformations (alternative to Supabase Storage)
+### 11. Local event / news categories updated
+mode-templates.ts category list for "Local event / news" was updated to:
+["The regular", "Neighborhood rhythm", "Peak / rush", "Shared moment", "Season / weather impact"]
+Verify this is reflected in NARRATIVE_COMBINATIONS and any other lookup 
+that references the old category list.
 
 ---
 
 ## Appendices
 
-### Glossary
-
-**Cognitive Lens:** A pattern-recognition framework that guides content generation (e.g., Latent Point, Tradeoff Lock)
-
-**Mode Template:** A structured prompt defining tone, structure, and constraints for a post type (e.g., EDUCATION, OBSERVATION)
-
-**Architect:** The AI component that translates a text post into a photorealistic image prompt
-
-**Brand Discovery:** The process of extracting visual and semantic brand identity from photos and web research
-
-**RLS (Row Level Security):** Supabase's database-level access control system
-
-**Clerk:** Third-party authentication service (handles user login/signup)
-
-**Supabase RPC:** Remote Procedure Call (server-side function in PostgreSQL)
-
-**Tier:** User subscription level (Tier 1 = Free, Tier 2 = Premium)
-
-**Credit:** Unit of currency for using AI services (1 credit ≈ $0.10)
-
----
-
 ### File Structure Overview
 
 ```
-shoreline-studio/
+src/
 ├── app/
 │   ├── dashboard/
 │   │   └── page.tsx              # Main content studio
 │   ├── profile/
-│   │   └── page.tsx              # Business setup & brand discovery
+│   │   └── page.tsx              # Business setup & brand discovery (zone photo slots)
 │   ├── api/
 │   │   ├── generate/
-│   │   │   └── route.ts          # Text content generation
+│   │   │   └── route.ts          # Text generation (fallback: anthropic→openrouter→deepinfra)
 │   │   ├── generate-image/
-│   │   │   └── route.ts          # Image generation (Gemini Imagen)
+│   │   │   └── route.ts          # Image generation (polling, FLUX chain)
 │   │   ├── prepare-image-prompt/
-│   │   │   └── route.ts          # Architect (prompt optimizer)
+│   │   │   └── route.ts          # Architect (async, writes to DB)
 │   │   ├── discover-brand/
-│   │   │   └── route.ts          # Brand discovery (vision + research)
+│   │   │   └── route.ts          # Brand discovery
 │   │   ├── user/
-│   │   │   └── claim-welcome-credits/
-│   │   │       └── route.ts      # Award welcome bonus
-│   │   └── webhooks/
-│   │       └── clerk/
-│   │           └── route.ts      # Handle Clerk user.created
+│   │   │   └── claim-welcome-credits/route.ts
+│   │   └── webhooks/clerk/route.ts
 │   └── layout.tsx
 ├── components/
-│   ├── SiteHeader.tsx            # Top navigation bar
-│   ├── GenerateDashboard.tsx    # Content generation UI
-│   ├── PostActions.tsx           # Save/copy/delete buttons
-│   └── SavedImage.tsx            # Image display component
-├── lib/
-│   ├── brandDiscovery.ts         # Brand discovery logic (vision + research)
-│   ├── mode-templates.ts         # 6 post mode templates
-│   ├── cognitive-lenses.ts       # 4 lenses × 5 variants each
-│   ├── angle-selector.ts         # Lens selection logic (avoid repetition)
-│   ├── prompt-builder.ts         # Fills mode template placeholders
-│   ├── supabase.ts               # Supabase client creation
-│   └── constants.ts              # Voice options, categories, niches
-├── migrations/
-│   ├── 001_tier_system.sql       # Add tier, credits, free_discovery_used
-│   ├── 002_rpc_functions.sql     # save_post_and_deduct, etc.
-│   └── ...
-├── .env.local                    # Environment variables (dev)
-├── middleware.ts                 # Clerk authentication middleware
-├── next.config.js
-├── package.json
-└── tsconfig.json
+│   ├── GenerateDashboard.tsx     # Content generation UI (async image polling)
+│   ├── PostActions.tsx
+│   └── SavedImage.tsx
+└── lib/
+    ├── brandDiscovery.ts         # Vision (zones) + research (offerings)
+    ├── parse-business-intel.ts   # parseZones, extractOfferingNames, extractPracticesByOffering
+    ├── offering-rotation.ts      # getOfferingCatalog, selectNextOffering ← NEW
+    ├── post-history.ts           # getRecentPostHistory, getRecentOfferingsInOrder
+    ├── post-parser.ts            # parseGeneratedPost, validateOfferings ← NEW
+    ├── image-visual-mode.ts      # Maps business category → product|experience mode ← NEW
+    ├── image-mode-templates-multimodal.ts # Multimodal-native image templates (GEMINI_MULTIMODAL path) ← NEW
+    ├── image-mode-templates.ts   # Image templates for ARCHITECT/FLUX path only
+    ├── mode-templates.ts         # 5 active post mode templates (Myth-busting deprecated)
+    ├── image-brand-variables.ts  # Brand context builder for Architect ← NEW
+    ├── post-type-zone-focus.ts   # Maps post type → zone focus ← NEW
+    ├── select-zone-photo.ts      # Picks zone data for Architect ← NEW
+    ├── cognitive-lenses.ts       # 4 lenses × 5 variants unused — To delete
+    ├── angle-selector.ts         # Lens selection (avoids repetition)
+    ├── prompt-builder.ts         # buildModePrompt (fills mode templates)
+    ├── frameworks.ts             # LEGACY: PAS/BAB/AIDA + angle pools (used by buildLegacyPrompt)
+    ├── group-angle-selector.ts   # Possibly unused — To delete
+    ├── lens-groups.ts            # Possibly unused — To delete
+    ├── lens-mapping.ts           # Possibly unused — To delete
+    ├── niche-to-group-map.ts     # Possibly unused — To delete
+    ├── category-selector.ts      # selectCategory for post type
+    ├── supabase.ts               # Supabase client creation
+    └── constants.ts              # Voice options, categories, niches
 ```
 
----
-
-### Key Metrics to Track
-
-**Product Metrics:**
-- **DAU/MAU:** Daily/Monthly Active Users
-- **Posts Generated per User:** Average posts created
-- **Credit Consumption Rate:** Average credits spent per user per month
-- **Feature Usage:** Which post types are most popular? Which lenses?
-- **Retention:** % of users who return after 7/30 days
-
-**Business Metrics:**
-- **MRR (Monthly Recurring Revenue):** From Tier 2 subscriptions
-- **ARPU (Average Revenue Per User):** Total revenue / # users
-- **CAC (Customer Acquisition Cost):** Marketing spend / new users
-- **LTV (Lifetime Value):** Average revenue per user over their lifetime
-- **Churn Rate:** % of users who stop using per month
-
-**Technical Metrics:**
-- **API Latency:** Time to generate post (target: <5 seconds)
-- **Error Rate:** % of failed generations
-- **Cost per Generation:** AI API costs / # posts generated
-- **Uptime:** % of time service is available (target: 99.9%)
-
----
-
-### Testing Checklist
-
-**Pre-Launch Testing:**
-
-- [ ] **Authentication**
-  - [ ] User can sign up with email/password
-  - [ ] User can log in
-  - [ ] User can log out
-  - [ ] Webhook creates profile in Supabase
-
-- [ ] **Profile Setup**
-  - [ ] User can create first business (Tier 1)
-  - [ ] User can upload photos
-  - [ ] Brand discovery runs (vision + research)
-  - [ ] Brand identity saved correctly
-  - [ ] User redirected to dashboard
-
-- [ ] **Content Generation**
-  - [ ] All 6 post types generate correctly
-  - [ ] All 4 lenses appear over time
-  - [ ] Posts are business-specific (not generic)
-  - [ ] Voice selection affects tone
-  - [ ] Posts are ~150-200 words
-
-- [ ] **Image Generation**
-  - [ ] Architect writes good prompts
-  - [ ] Images match business aesthetic
-  - [ ] Images are 1024x1024
-  - [ ] Images saved to Supabase Storage
-
-- [ ] **Credit System**
-  - [ ] Text post costs 2 credits
-  - [ ] Image costs 3 credits
-  - [ ] Insufficient credits blocks save
-  - [ ] Credits displayed correctly in UI
-
-- [ ] **Tier System**
-  - [ ] Tier 1 users limited to 1 business
-  - [ ] Tier 1 users charged for discovery (after first)
-  - [ ] Tier 2 users can create multiple businesses
-  - [ ] Tier 2 users have free discovery
-
-- [ ] **Edge Cases**
-  - [ ] User has 0 credits (can't generate)
-  - [ ] User deletes post (it's removed)
-  - [ ] User uploads 0 photos (text-only discovery)
-  - [ ] User changes business name (can re-discover)
-
----
-
-### Contribution Guidelines (Future)
-
-**For developers joining the project:**
-
-1. **Read this document** thoroughly
-2. **Set up local environment:**
-   ```bash
-   git clone https://github.com/yourusername/shoreline-studio.git
-   cd shoreline-studio
-   npm install
-   cp .env.example .env.local
-   # Fill in API keys
-   npm run dev
-   ```
-
-3. **Follow branch naming conventions:**
-   - Feature: `feature/short-description`
-   - Bug fix: `fix/short-description`
-   - Hotfix: `hotfix/short-description`
-
-4. **Commit message format:**
-   ```
-   [Type] Brief description (50 chars max)
-   
-   Detailed explanation if needed.
-   
-   - Bullet points for changes
-   - Reference issue numbers: Fixes #123
-   ```
-   Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
-
-5. **Before submitting PR:**
-   - [ ] Code runs without errors
-   - [ ] New features tested manually
-   - [ ] No API keys in code
-   - [ ] TypeScript types are correct
-   - [ ] Console.logs removed (or made conditional)
-
----
-
-## Support & Contact
-
-**Developer Support:**
-- **Email:** dev@shorelinestudio.ca
-- **GitHub Issues:** (TBD)
-- **Slack:** (TBD - for team communication)
-
-**Documentation Updates:**
-- This document is a living reference
-- Update whenever architecture changes
-- Last updated: May 13, 2026
+**Possibly unused lib files** (not verified — need audit):
+- `frameworks.ts` — heavily used by `buildLegacyPrompt` (dead code). Once that's removed, verify if anything else imports from this file.
+- `group-angle-selector.ts`, `lens-groups.ts`, `lens-mapping.ts`, `niche-to-group-map.ts` — check if any of these are referenced in active code paths.
 
 ---
 

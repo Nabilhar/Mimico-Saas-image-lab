@@ -1008,7 +1008,7 @@ const [existingWorkSpaceUrl,     setExistingWorkSpaceUrl]     = useState<string 
                   <div>
                     <p className="text-sm font-semibold text-emerald-800">Brand identity captured from your photos</p>
                     <p className="text-[11px] text-emerald-700 mt-0.5">
-                    The AI has analyzed your entrance, customer space, and work space to extract your exact brand colors and spatial identity.
+                      The AI has analyzed your storefront, customer space, and work space to extract your exact brand colors and spatial identity.
                     </p>
                     <button
                       type="button"
@@ -1033,7 +1033,7 @@ const [existingWorkSpaceUrl,     setExistingWorkSpaceUrl]     = useState<string 
                     </div>
                   </div>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                    <PhotoSlot label="Entrance"       sublabel="Storefront, patio, reception"        icon="🚪" file={entrancePhoto}      existingUrl={existingEntranceUrl}      onChange={setEntrancePhoto} />
+                    <PhotoSlot label="Storefront / Patio" sublabel="Street-level view — skip if no outdoor presence" icon="🏪" file={entrancePhoto}      existingUrl={existingEntranceUrl}      onChange={setEntrancePhoto} />
                     <PhotoSlot label="Customer space" sublabel="Seating, waiting room, retail floor"  icon="🪑" file={customerSpacePhoto} existingUrl={existingCustomerSpaceUrl} onChange={setCustomerSpacePhoto} />
                     <PhotoSlot label="Work space"     sublabel="Kitchen, studio, treatment room"      icon="🔧" file={workSpacePhoto}     existingUrl={existingWorkSpaceUrl}     onChange={setWorkSpacePhoto} />
                   </div>
@@ -1048,7 +1048,7 @@ const [existingWorkSpaceUrl,     setExistingWorkSpaceUrl]     = useState<string 
                 /* STATE 3: First visit — neutral upload slots, no pressure */
                 <>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                    <PhotoSlot label="Entrance"       sublabel="Storefront, patio, reception"        icon="🚪" file={entrancePhoto}      existingUrl={existingEntranceUrl}      onChange={setEntrancePhoto} />
+                    <PhotoSlot label="Storefront / Patio" sublabel="Street-level view — skip if no outdoor presence" icon="🏪" file={entrancePhoto}      existingUrl={existingEntranceUrl}      onChange={setEntrancePhoto} />
                     <PhotoSlot label="Customer space" sublabel="Seating, waiting room, retail floor"  icon="🪑" file={customerSpacePhoto} existingUrl={existingCustomerSpaceUrl} onChange={setCustomerSpacePhoto} />
                     <PhotoSlot label="Work space"     sublabel="Kitchen, studio, treatment room"      icon="🔧" file={workSpacePhoto}     existingUrl={existingWorkSpaceUrl}     onChange={setWorkSpacePhoto} />
                   </div>

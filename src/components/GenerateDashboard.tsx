@@ -352,7 +352,7 @@ useEffect(() => {
   
     const pollInterval = 3000; // 3 seconds
     let attempts = 0;
-    const maxAttempts = 20; // 60 seconds total wait
+    const maxAttempts = 40; // 120 seconds total wait
     
     setIsGeneratingImage(true);
   
@@ -562,9 +562,9 @@ useEffect(() => {
               >
                 <option value="Behind the scenes">Behind the Curtain</option>
                 <option value="Tip of the Day">Today's Tip</option>
-                <option value="Community moment">Community moment</option>
-                <option value="Promotion / offer">Promotion / offer</option>
-                <option value="Local event / news">Local event / news</option>
+                <option value="Community moment">Community Moment</option>
+                <option value="Promotion / offer">Promotion</option>
+                <option value="Local event / news">Local Event</option>
                 
               </select>
             </div>
@@ -940,13 +940,13 @@ useEffect(() => {
                   {/* DYNAMIC MESSAGE BOX */}
                   <div className="space-y-2">
                     <h3 className="text-lg font-bold text-slate-800 animate-pulse">
-                      Architecting your visual...
+                      Analyzing Post content...
                     </h3>
                     <p className="text-[12px] text-slate-500 max-w-[280px] leading-relaxed font-medium">
                       {/* This is the smart message that justifies the wait */}
-                      The AI Engine is researching your neighbourhood and mapping your brand colors to the local scenery. 
+                      The AI Engine is blending the scene to your actual space. 
                       <span className="block mt-2 text-cyan-700 font-semibold">
-                        This deep-dive might take a minute, but ensures a perfect, hyper-local match.
+                        This deep-dive might take a minute, but ensures a perfect, match.
                       </span>
                     </p>
                   </div>
