@@ -846,7 +846,7 @@ useEffect(() => {
               ? postType === "Promotion / offer" ? "Add offer details to generate" : "Add event details to generate"
               : userCredits < 2 
                 ? "Join Waitlist for more Credits"
-                : "Generate Local Post (2 Credits)"}
+                : "Generate Post (2 Credits)"}
         </button>
 
 
