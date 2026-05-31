@@ -107,8 +107,8 @@ export default function Home() {
         {/* Hero Section */}
         <HeroSection />
 
-        {/* Gallery Section 
-        <GallerySection /> */}
+        {/* Gallery Section
+        <GallerySection />*/}
 
         {/* Post Types Grid section */}   
         <PostTypesGridLanding />
@@ -174,21 +174,20 @@ export default function Home() {
             <div className="mb-12">
               <h2 className="text-3xl font-bold mb-4 text-slate-900">How It Works</h2>
               <p className="text-slate-600 max-w-2xl">
-                Three steps. The first one is the only one that takes more than a minute.
+              Three steps. The first one is the only one that takes more than a minute.
               </p>
             </div>
             <div className="grid md:grid-cols-3 gap-8 mb-12">
               {/* Step 1 */}
               <div className="flex flex-col">
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-cyan-800 text-white font-bold text-lg">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-cyan-800 text-white font-bold text-lg">
                     1
                   </div>
                   <h3 className="text-xl font-semibold text-slate-900">Set Up Your Business Profile</h3>
                 </div>
                 <p className="text-slate-600 mb-3 flex-grow">
-                  Enter your business details and address. Then upload up to 3 zone photos — your storefront, customer space, and work space.
-                  Shoreline analyzes each photo for colors, materials, lighting, and layout. At the same time, it researches your business online to find your specific offerings, signature practices, neighborhood landmarks, and local context. This runs once and powers every post you generate.
+                Enter your business details and address. Then upload up to 3 zone photos — your storefront, customer space, and work space. Shoreline analyzes each photo for colors, materials, lighting, and layout. At the same time, it researches your business online to find your specific offerings, signature practices, neighborhood landmarks, and local context. This runs once and powers every post you generate.
                 </p>
                 <div className="flex flex-col gap-1 text-sm font-semibold text-cyan-800">
                   <span>✓ Zone-by-zone visual analysis</span>
@@ -199,14 +198,13 @@ export default function Home() {
               {/* Step 2 */}
               <div className="flex flex-col">
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-cyan-800 text-white font-bold text-lg">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-cyan-800 text-white font-bold text-lg">
                     2
                   </div>
                   <h3 className="text-xl font-semibold text-slate-900">Pick a Post Type — Hit Generate</h3>
                 </div>
                 <p className="text-slate-600 mb-3 flex-grow">
-                  Choose from 5 post types — a craft tip, a behind-the-scenes moment, a community observation, a local event shoutout, or a promotion. Hit Generate.
-                  Current weather, time of day, season, and your neighborhood context are pulled in automatically. Shoreline selects one of your offerings to feature and rotates through them so you never repeat yourself. If you have a promotion or local event to mention, add those details and it weaves them in naturally.
+                Choose from 5 post types — a craft tip, a behind-the-scenes moment, a community observation, a local event shoutout, or a promotion. Hit Generate. Current weather, time of day, season, and your neighborhood context are pulled in automatically. Shoreline selects one of your offerings to feature and rotates through them so you never repeat yourself. If you have a promotion or local event to mention, add those details and it weaves them in naturally.
                 </p>
                 <div className="flex flex-col gap-1 text-sm font-semibold text-cyan-800">
                   <span>✓ Real-time signals injected automatically</span>
@@ -217,14 +215,13 @@ export default function Home() {
               {/* Step 3 */}
               <div className="flex flex-col">
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-cyan-800 text-white font-bold text-lg">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-cyan-800 text-white font-bold text-lg">
                     3
                   </div>
                   <h3 className="text-xl font-semibold text-slate-900">Copy, Share — Add an Image if You Want</h3>
                 </div>
                 <p className="text-slate-600 mb-3 flex-grow">
-                  Your post is ready. Copy it, paste it to your platform, and post. That's it.
-                  Optionally, generate a matching image. Shoreline uses your actual zone photo as the reference and produces something that looks like a professional photo taken in your real space — not stock, not generic AI art.
+                Your post is ready. Copy it, paste it to your platform, and post. That's it. Optionally, generate a matching image. Shoreline uses your actual zone photo as the reference and produces something that looks like a professional photo taken in your real space — not stock, not generic AI art.
                 </p>
                 <div className="flex flex-col gap-1 text-sm font-semibold text-cyan-800">
                   <span>✓ Ready in 45 seconds</span>
@@ -242,7 +239,7 @@ export default function Home() {
                 </div>
                 <div>
                   <h4 className="text-lg font-semibold text-slate-900 mb-2">Never Miss a Posting Day</h4>
-
+                  
                   <div>
                     <div className="text-slate-600 mb-4 space-y-2">
                       <p>Set your posting schedule in Shoreline and download a calendar file (.ics). Open it once and your posting reminders are saved directly to your calendar — Google, Apple, Outlook, whatever you use.</p>
@@ -535,7 +532,7 @@ We are in the office if you want to sit down and look at the actual numbers.
               <h2 className="text-3xl font-bold mb-4 text-slate-900">Simple, Transparent Pricing</h2>
               <div className="text-slate-600 max-w-2xl space-y-2">
                 <p>No subscriptions. Buy credits, use them when you post.</p>
-                <p>Sign up now and get 25 free credits. Try your first 5 complete posts (text + image)</p>
+                <p>Sign up now and get 25 free credits. Try your first 5 complete posts (text + image).</p>
                 <p>Early adopter pricing active now — 50% off your first 6 months.</p>
               </div>
             </div>
