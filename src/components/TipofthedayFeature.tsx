@@ -4,6 +4,7 @@
  * Drop this into the landing page between GallerySection and FeaturesSection
  */
 
+import { Show, SignUpButton } from "@clerk/nextjs";
 import { CheckCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -247,12 +248,13 @@ At Riverside, we use this before scissor-over-comb work—it establishes a soft 
             >
               See All 5 Post Types
             </a>
-            <a 
-              href="#cta"
-              className="inline-flex items-center justify-center px-6 py-3 border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium rounded-md transition-colors"
-            >
-              Join the Waitlist
-            </a>
+            <Show when="signed-out">
+              <SignUpButton mode="modal">
+                <button className="inline-flex items-center justify-center px-6 py-3 bg-cyan-800 hover:bg-cyan-900 text-white font-medium rounded-md transition-colors">
+                  Try with Free Credits
+                </button>
+              </SignUpButton>
+            </Show>
           </div>
         </div>
       </div>

@@ -8,6 +8,7 @@ import { CheckCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { SiteHeader } from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
+import { Show, SignUpButton } from "@clerk/nextjs";
 
 export default function PostTypesPage() {
   return (
@@ -32,12 +33,13 @@ export default function PostTypesPage() {
                 >
                   Explore Post Types
                 </a>
-                <a 
-                  href="/#cta"
-                  className="inline-flex items-center justify-center px-6 py-3 border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium rounded-md transition-colors"
-                >
-                  Try with Free Credits
-                </a>
+                <Show when="signed-out">
+                  <SignUpButton mode="modal">
+                    <button className="inline-flex items-center justify-center px-6 py-3 border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium rounded-md transition-colors">
+                      Try with Free Credits
+                    </button>
+                  </SignUpButton>
+                </Show>
               </div>
             </div>
           </div>
@@ -509,7 +511,7 @@ We size-match at the counter before they go on the flame. Takes a minute, saves 
             <div className="bg-white rounded-lg border border-slate-200 p-8">
               <h3 className="text-xl font-semibold text-slate-900 mb-4">When to Use Tips</h3>
               <p className="text-slate-700 leading-relaxed mb-4">
-                Use Tips when you notice a technique, timing window, or observable cue that most people miss. Perfect for teaching the micro-adjustments that separate good results from great ones.
+                Use Tips to show a technique, timing window, or observable cue that most people miss. Perfect for teaching the micro-adjustments that separate good results from great ones.
               </p>
               <p className="text-slate-700 leading-relaxed">
                 Tips work best for businesses where <strong>how you do something</strong> matters as much as what you do—where small adjustments create measurable differences. If you find yourself saying "here's the trick" or "most people don't notice this," that's a tip.
@@ -754,12 +756,12 @@ Store upright. Keep it dark and cool. The serum performs exactly as designed.`}
 
             {/* When to Use */}
             <div className="bg-slate-50 rounded-lg border border-slate-200 p-8">
-              <h3 className="text-xl font-semibold text-slate-900 mb-4">When to Use Behind the Scenes</h3>
+              <h3 className="text-xl font-semibold text-slate-900 mb-4">When to Use Behind the Curtain</h3>
               <p className="text-slate-700 leading-relaxed mb-4">
-                Use Behind the Scenes when you want to show the work that happens before customers see the result. Perfect for prep work, quality checks, mid-process decisions, and operational moments that reveal craft without explaining it.
+                Use Behind the Curtain when you want to show the work that happens before customers see the result. Perfect for prep work, quality checks, mid-process decisions, and operational moments that reveal craft without explaining it.
               </p>
               <p className="text-slate-700 leading-relaxed">
-                Behind the Scenes works best for businesses where <strong>invisible work matters</strong>—where the quality of what customers receive depends on decisions and adjustments they never witness. If your work has a "before the doors open" or "between orders" phase, that's Behind the Scenes territory.
+                Behind the Curtain works best for businesses where <strong>invisible work matters</strong>—where the quality of what customers receive depends on decisions and adjustments they never witness. If your work has a "before the doors open" or "between orders" phase, that's Behind the Scenes territory.
               </p>
             </div>
           </div>
@@ -1003,7 +1005,7 @@ Sometimes two people claim both chairs at once, bags lined up like checkpoints b
             <div className="bg-white rounded-lg border border-slate-200 p-8">
               <h3 className="text-xl font-semibold text-slate-900 mb-4">When to Use Community Moment</h3>
               <p className="text-slate-700 leading-relaxed mb-4">
-                Use Community Moment when you've noticed something your customers consistently do—not a one-off, but a pattern that keeps repeating. A regular who always takes the same seat. A group that claims the same table every week. The way people use a specific part of your space that you never designed for that purpose.
+                Use Community Moment when you want to show something your customers consistently do—not a one-off, but a pattern that keeps repeating. A regular who always takes the same seat. A group that claims the same table every week. The way people use a specific part of your space that you never designed for that purpose.
               </p>
               <p className="text-slate-700 leading-relaxed">
                 If you find yourself thinking "it's funny, every time..." or "there's always someone who..."—that's Community Moment territory. The post writes itself once you've named the pattern.
@@ -1500,33 +1502,42 @@ Worth a walk if you're around.`}
             <div className="bg-white rounded-lg border border-slate-200 p-8">
               <h3 className="text-xl font-semibold text-slate-900 mb-4">When to Use Local Event</h3>
               <p className="text-slate-700 leading-relaxed mb-4">
-                Use Local Event when there's something happening in your neighborhood that relates to what you're noticing at your business. Perfect for street festivals, farmers markets, community gatherings, cultural events—anything where your customers might be interested.
+                Use Local Event when there's something happening in your neighborhood. Perfect shoutout for street festivals, farmers markets, community gatherings, cultural events—anything where your customers might be interested.
               </p>
               <p className="text-slate-700 leading-relaxed">
-                Local Event works best when there's a <strong>natural association</strong>—people asking about outdoor seating + patio season starting, more groups on Fridays + Friday night market, spring energy + spring festival. The connection should feel obvious, not forced.
+                Local Event works best when there's a <strong>natural association</strong>—people asking about outdoor seating + patio season starting, more groups on Fridays + Friday night market, spring energy + summer festival.
               </p>
             </div>
           </div>
         </section>
 
-                {/* CTA Section */}
+        {/* CTA Section */}
         <section className="bg-gradient-to-b from-slate-50 to-white py-16 md:py-24">
           <div className="mx-auto max-w-3xl px-6 sm:px-6 text-center">
             <h2 className="text-3xl font-bold mb-4 text-slate-900">
               Try All 5 Post Types with Free Credits
             </h2>
             <p className="text-lg text-slate-600 mb-8">
-              Sign up for the beta waitlist and get 25 free credits to explore every post type. 
+              Sign up to get 25 free credits to explore every post type. And join the waitlist to lock your 50% off for 6 months
               No credit card required.
             </p>
-            <a 
-              href="/#cta"
-              className="inline-flex items-center justify-center px-8 py-4 bg-cyan-800 hover:bg-cyan-900 text-white font-semibold rounded-md transition-colors text-lg"
-            >
-              Join the Waitlist
-            </a>
+            <div className="flex gap-2 items-center justify-center">
+              <Show when="signed-out">
+                <SignUpButton mode="modal">
+                  <button className="inline-flex items-center justify-center px-4 py-2 bg-cyan-800 hover:bg-cyan-900 text-white font-semibold rounded-md transition-colors text-m">
+                    Get Started
+                  </button>
+                </SignUpButton>
+              </Show>
+              <a 
+                href="/#cta"
+                className="inline-flex items-center justify-center px-4 py-2 bg-cyan-800 hover:bg-cyan-900 text-white font-semibold rounded-md transition-colors text-m"
+              >
+                Join Waitlist
+              </a>
+            </div>
             <p className="text-sm text-slate-500 mt-4">
-              First 50 signups get 50% off for 6 months
+                First 50 to join the waitlist get 50% off for 6 months
             </p>
           </div>
         </section>

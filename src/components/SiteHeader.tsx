@@ -39,7 +39,7 @@ export function SiteHeader() {
                 </SignInButton>
                 <SignUpButton mode="modal">
                   <button className="rounded-lg bg-cyan-800 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-900">
-                    Get Started
+                    Sign Up
                   </button>
                 </SignUpButton>
               </div>
@@ -62,7 +62,7 @@ export function SiteHeader() {
                 </SignInButton>
                 <SignUpButton mode="modal">
                   <button className="rounded-lg bg-cyan-800 px-3 py-2 text-sm font-semibold text-white hover:bg-cyan-900">
-                    Start
+                    Sign up
                   </button>
                 </SignUpButton>
               </div>
@@ -151,6 +151,13 @@ export function SiteHeader() {
             onClick={() => setIsMenuOpen(false)}
           >
             Contact
+          </Link>
+          <Link 
+            href="/#cta" 
+            className="block py-3 px-4 text-base font-medium text-slate-700 hover:text-cyan-800 hover:bg-slate-50 rounded-lg transition"
+            onClick={() => setIsMenuOpen(false)}
+          >
+            Waitlist
           </Link>
 
           {/* Signed-in links */}

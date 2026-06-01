@@ -483,7 +483,7 @@ We are in the office if you want to sit down and look at the actual numbers.
             <div className="mb-12">
               <h2 className="text-3xl font-bold mb-4 text-slate-900">Early Adopter Perks</h2>
               <p className="text-slate-600 max-w-2xl">
-                Join our beta launch and secure your exclusive discounts on your first year of credits.
+                Join our Waitlist for the early launch and secure your exclusive discounts on your first 6 months of credits.
               </p>
             </div>
             <div className="grid md:grid-cols-2 gap-8 max-w-3xl">
@@ -531,9 +531,7 @@ We are in the office if you want to sit down and look at the actual numbers.
             <div className="mb-12">
               <h2 className="text-3xl font-bold mb-4 text-slate-900">Simple, Transparent Pricing</h2>
               <div className="text-slate-600 max-w-2xl space-y-2">
-                <p>No subscriptions. Buy credits, use them when you post.</p>
-                <p>Get started and receive 25 free credits. Try your first 5 complete posts (text + image).</p>
-                <p>Early adopter pricing active now — 50% off your first 6 months.</p>
+                <p>No subscriptions. Buy credits, use them when you generate your posts.</p>
               </div>
             </div>
 
@@ -604,6 +602,21 @@ We are in the office if you want to sit down and look at the actual numbers.
               </div>
             </div>
 
+            {/* CTA */}
+            <div className="mt-12 flex flex-col items-center gap-5 text-center">
+              <div className="text-slate-600 max-w-2xl space-y-2">
+                <p>Sign Up to receive 25 free credits. Try your first 5 complete posts (text + image).</p>
+                <p>Early adopter pricing active now — First 50 to join the waitlist get 50% off for 6 months.</p>
+              </div>
+              <Show when="signed-out">
+                <SignUpButton mode="modal">
+                  <button className="rounded-lg bg-cyan-800 px-5 py-2.5 text-sm font-semibold text-white hover:bg-cyan-900">
+                    Get Started
+                  </button>
+                </SignUpButton>
+              </Show>
+            </div>
+
           </div>
         </section>
         
@@ -612,7 +625,7 @@ We are in the office if you want to sit down and look at the actual numbers.
       <section id="cta" className="bg-slate-50 py-16 md:py-24 border-b">
         <div className="mx-auto max-w-6xl px-6 sm:px-6">
           <div className="max-w-2xl">
-            <h2 className="text-3xl font-bold mb-4 text-slate-900">Join the Beta Waitlist</h2>
+            <h2 className="text-3xl font-bold mb-4 text-slate-900">Join the Waitlist</h2>
             <p className="text-slate-600 mb-8">
               Be among the first to access Shoreline Studio when we launch. Secure your early adopter discount and get direct access to our team for feedback and support.
             </p>
