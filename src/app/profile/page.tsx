@@ -474,7 +474,24 @@ const [existingWorkSpaceUrl,     setExistingWorkSpaceUrl]     = useState<string 
       });
       if (rpcError) throw rpcError;
 
-      // 2. Upload Photos & Save URLs to Database
+      // 2. Claim welcome credits (first save only, Canada/USA only)
+      try {
+        const claimRes = await fetch("/api/user/claim-welcome-credits", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ country }),
+        });
+        const claimData = await claimRes.json();
+        if (claimData.success) {
+          setUserCredits(claimData.new_total);
+          toast.success(`🎁 Welcome! 25 free credits added to your account.`, { duration: 5000 });
+        }
+      } catch (e) {
+        // Non-fatal — don't block the rest of the save
+        console.error("claim-welcome-credits failed:", e);
+      }
+
+      // 3. Upload Photos & Save URLs to Database
       const photoUpdates: Record<string, string> = {};
       const uploadedPhotoData: UploadedPhoto[] = [];
 
