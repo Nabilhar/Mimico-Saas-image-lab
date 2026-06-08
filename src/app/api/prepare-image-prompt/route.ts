@@ -573,6 +573,12 @@ if (IMAGE_GEN_MODE === "GEMINI_MULTIMODAL") {
     } else {
       console.log(`[GEMINI_MULTIMODAL] ✅ Using ${zoneLabel} photo for "${postType}"`);
 
+      // SENTINEL: clear stale image_prompt + image_url so the poller keeps
+      // returning WAITING until we write image_url at the end of this path.
+      await supabase.from('community_posts')
+        .update({ image_prompt: null, image_url: null })
+        .eq('id', postId);
+
       // ── 5. Build template block (hero already resolved by visual mode) ──
       const imageModeLogicMulti = getMultimodalImageTemplate(
         postType as any,
@@ -631,126 +637,130 @@ if (IMAGE_GEN_MODE === "GEMINI_MULTIMODAL") {
       const photoBase64 = Buffer.from(photoArrayBuffer).toString('base64');
       const photoMimeType = photoResponse.headers.get('content-type') || 'image/jpeg';
 
-      // 4. Call Gemini — toggle between Google API and OpenRouter
-      const IMAGE_GEN_PROVIDER: "GOOGLE_API" | "OPENROUTER" =
-      (process.env.IMAGE_GEN_PROVIDER as any) || "GOOGLE_API";
+      // 4. Call Gemini image model
+      // Env: IMAGE_GEN_ENGINE_MODE = TOGGLE | FALLBACK  (default: FALLBACK)
+      //      IMAGE_GEN_PROVIDER    = GOOGLE_API | OPENROUTER  (TOGGLE mode only)
+      const IMAGE_GEN_ENGINE_MODE = process.env.IMAGE_GEN_ENGINE_MODE || "FALLBACK";
+      const IMAGE_GEN_PROVIDER_PREF =
+        (process.env.IMAGE_GEN_PROVIDER as "GOOGLE_API" | "OPENROUTER") || "GOOGLE_API";
 
       let generatedImageBase64: string | null = null;
       let generatedMimeType = 'image/png';
       let geminiTextPrompt = '';
+      let usedImageProvider = "";
 
-      if (IMAGE_GEN_PROVIDER === "GOOGLE_API") {
-      console.log("[GEMINI_MULTIMODAL] Provider: Google API");
+      // ── Provider A: Google API ──────────────────────────────────────────
+      const tryGoogleAPI = async () => {
+        console.log("[GEMINI_MULTIMODAL] Trying Google API...");
+        const geminiImageModel = genAI.getGenerativeModel({
+          model: "gemini-3.1-flash-image-preview",
+          generationConfig: { responseModalities: ["IMAGE", "TEXT"] } as any,
+        }, { apiVersion: 'v1beta' });
 
-      const geminiImageModel = genAI.getGenerativeModel({
-        model: "gemini-2.5-flash-image",
-        generationConfig: {
-          responseModalities: ["IMAGE", "TEXT"],
-        } as any,
-      }, { apiVersion: 'v1beta' });
+        const result = await geminiImageModel.generateContent([
+          { inlineData: { data: photoBase64, mimeType: photoMimeType } },
+          { text: multimodalPrompt },
+        ]);
 
-      const imageResult = await geminiImageModel.generateContent([
-        {
-          inlineData: {
-            data: photoBase64,
-            mimeType: photoMimeType,
+        const parts = result.response.candidates?.[0]?.content?.parts || [];
+        let b64: string | null = null;
+        let mime = 'image/png';
+        let text = '';
+        for (const part of parts) {
+          if ((part as any).inlineData?.data) {
+            b64  = (part as any).inlineData.data;
+            mime = (part as any).inlineData.mimeType || 'image/png';
+          }
+          if ((part as any).text?.trim()) text = (part as any).text.trim();
+        }
+        if (!b64) throw new Error("Google API returned no image data — model may have returned text only");
+        return { b64, mime, text };
+      };
+
+      // ── Provider B: OpenRouter ──────────────────────────────────────────
+      const tryOpenRouter = async () => {
+        console.log("[GEMINI_MULTIMODAL] Trying OpenRouter...");
+        const orResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+            "HTTP-Referer": "https://shorlinestudio.ca",
+            "X-OpenRouter-Title": "Shoreline Multimodal",
           },
-        },
-        { text: multimodalPrompt },
-      ]);
-
-      const parts = imageResult.response.candidates?.[0]?.content?.parts || [];
-
-      for (const part of parts) {
-        if ((part as any).inlineData?.data) {
-          generatedImageBase64 = (part as any).inlineData.data;
-          generatedMimeType   = (part as any).inlineData.mimeType || 'image/png';
-        }
-        if ((part as any).text?.trim()) {
-          geminiTextPrompt = (part as any).text.trim();
-        }
-      }
-
-      } else if (IMAGE_GEN_PROVIDER === "OPENROUTER") {
-      console.log("[GEMINI_MULTIMODAL] Provider: OpenRouter");
-
-      const orResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
-          "HTTP-Referer": "https://shorlinestudio.ca",
-          "X-OpenRouter-Title": "Shoreline Multimodal",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-3.1-flash-image-preview",
-          modalities: ["image", "text"],
-          messages: [
-            {
+          body: JSON.stringify({
+            model: "google/gemini-3.1-flash-image-preview",
+            modalities: ["image", "text"],
+            messages: [{
               role: "user",
               content: [
-                {
-                  type: "text",
-                  text: multimodalPrompt,
-                },
-                {
-                  type: "image_url",
-                  image_url: {
-                    url: photoUrl, // ← direct Supabase URL, no base64 needed
-                  },
-                },
+                { type: "text", text: multimodalPrompt },
+                { type: "image_url", image_url: { url: photoUrl } },
               ],
-            },
-          ],
-        }),
-      });
-      
-      // Log raw response to understand what OpenRouter actually returns
-      console.log("[OPENROUTER] Response status:", orResponse.status);
-      
-      const orRaw = await orResponse.text();
+            }],
+          }),
+        });
 
-      if (orRaw.startsWith("<!DOCTYPE") || orRaw.startsWith("<html")) {
-        throw new Error("OpenRouter returned HTML error page — check model ID or API key");
-      }
+        console.log("[OPENROUTER] Response status:", orResponse.status);
+        const orRaw = await orResponse.text();
+        if (orRaw.startsWith("<!DOCTYPE") || orRaw.startsWith("<html")) {
+          throw new Error("OpenRouter returned HTML — check model ID or API key");
+        }
+        const orData = JSON.parse(orRaw);
+        if (orData.error) throw new Error(`OpenRouter error: ${orData.error.message}`);
 
-      const orData = JSON.parse(orRaw);
-
-      if (orData.error) {
-        throw new Error(`OpenRouter error: ${orData.error.message}`);
-      }
-
-      // Extract text and image from OpenRouter response content array
-      const message = orData.choices?.[0]?.message;
-
-      // Text comes from message.content
-      if (typeof message?.content === "string" && message.content.trim()) {
-        geminiTextPrompt = message.content.trim();
-      }
-
-      // Image comes from message.images[] (not message.content)
-      const images = message?.images;
-      if (Array.isArray(images) && images.length > 0) {
-        const dataUri = images[0]?.image_url?.url;
-        if (dataUri) {
-          const matches = dataUri.match(/^data:([^;]+);base64,(.+)$/);
-          if (matches) {
-            generatedMimeType    = matches[1];
-            generatedImageBase64 = matches[2];
+        const message = orData.choices?.[0]?.message;
+        let b64: string | null = null;
+        let mime = 'image/png';
+        let text = '';
+        if (typeof message?.content === "string" && message.content.trim()) {
+          text = message.content.trim();
+        }
+        const images = message?.images;
+        if (Array.isArray(images) && images.length > 0) {
+          const dataUri = images[0]?.image_url?.url;
+          if (dataUri) {
+            const matches = dataUri.match(/^data:([^;]+);base64,(.+)$/);
+            if (matches) { mime = matches[1]; b64 = matches[2]; }
           }
+        }
+        console.log("[OPENROUTER] text:", text.slice(0, 80), "| image:", b64 ? "yes" : "no");
+        if (!b64) throw new Error("OpenRouter returned no image data");
+        return { b64, mime, text };
+      };
+
+      // ── Router ──────────────────────────────────────────────────────────
+      if (IMAGE_GEN_ENGINE_MODE === "TOGGLE") {
+        console.log(`--- [GEMINI_MULTIMODAL] MODE: TOGGLE [Using ${IMAGE_GEN_PROVIDER_PREF}] ---`);
+        const r = IMAGE_GEN_PROVIDER_PREF === "OPENROUTER"
+          ? await tryOpenRouter()
+          : await tryGoogleAPI();
+        generatedImageBase64 = r.b64;
+        generatedMimeType    = r.mime;
+        geminiTextPrompt     = r.text;
+        usedImageProvider    = IMAGE_GEN_PROVIDER_PREF;
+      } else {
+        // FALLBACK: Google → OpenRouter
+        console.log("--- [GEMINI_MULTIMODAL] MODE: FALLBACK (google → openrouter) ---");
+        try {
+          const r = await tryGoogleAPI();
+          generatedImageBase64 = r.b64;
+          generatedMimeType    = r.mime;
+          geminiTextPrompt     = r.text;
+          usedImageProvider    = "GOOGLE_API";
+          console.log("--- [GEMINI_MULTIMODAL] FALLBACK SUCCESS: google ---");
+        } catch (googleErr) {
+          console.warn("[GEMINI_MULTIMODAL] Google API failed, trying OpenRouter:", (googleErr as Error).message);
+          const r = await tryOpenRouter();
+          generatedImageBase64 = r.b64;
+          generatedMimeType    = r.mime;
+          geminiTextPrompt     = r.text;
+          usedImageProvider    = "OPENROUTER";
+          console.log("--- [GEMINI_MULTIMODAL] FALLBACK SUCCESS: openrouter ---");
         }
       }
 
-      console.log("[OPENROUTER] Text received:", geminiTextPrompt.slice(0, 80));
-      console.log("[OPENROUTER] Image received:", generatedImageBase64 ? "yes" : "no");
-      }
-
-      // 5. Validate we got an image
-      if (!generatedImageBase64) {
-      throw new Error(`${IMAGE_GEN_PROVIDER} returned no image data — check model supports image output`);
-      }
-
-      console.log(`[GEMINI_MULTIMODAL] Text extracted (${IMAGE_GEN_PROVIDER}): "${geminiTextPrompt.slice(0, 80)}..."`);
+      console.log(`[GEMINI_MULTIMODAL] Image generated via ${usedImageProvider}: "${geminiTextPrompt.slice(0, 80)}..."`);
 
       // 6. Upload generated image to Supabase post-images bucket
       const imageBuffer = Buffer.from(generatedImageBase64, 'base64');
@@ -769,21 +779,20 @@ if (IMAGE_GEN_MODE === "GEMINI_MULTIMODAL") {
 
       const imageUrl = urlData.publicUrl;
 
-      // 7. Save Gemini's text to image_prompt (for history + debugging)
-      const { error: promptError } = await supabase.rpc('update_post_image_prompt', {
-        post_id: postId,
-        new_prompt: geminiTextPrompt || `Gemini multimodal — ${zoneLabel}`,
-      });
-      if (promptError) throw promptError;
-
-      // 8. Save image URL directly to community_posts.image_url
-      // generate-image/route will detect this and return it without running FLUX
+      // 7. Save image_url FIRST — poller detects this and returns immediately,
+      //    preventing the FLUX chain from firing while we're still saving.
       const { error: imageUrlError } = await supabase
         .from('community_posts')
         .update({ image_url: imageUrl })
         .eq('id', postId);
-
       if (imageUrlError) throw imageUrlError;
+
+      // 8. Save Gemini's text description to image_prompt (for history + debug)
+      const { error: promptError } = await supabase.rpc('update_post_image_prompt', {
+        post_id: postId,
+        new_prompt: geminiTextPrompt || `Gemini multimodal — ${zoneLabel} via ${usedImageProvider}`,
+      });
+      if (promptError) throw promptError;
 
       console.log(`✅ [GEMINI_MULTIMODAL] Prompt + image saved for Post ${postId}`);
       return NextResponse.json({

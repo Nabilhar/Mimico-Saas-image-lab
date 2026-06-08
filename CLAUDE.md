@@ -178,9 +178,9 @@ USER
 | Purpose | Primary | Fallbacks |
 |---------|---------|-----------|
 | Text generation | Claude Haiku 4.5 (Anthropic direct) | OpenRouter → DeepInfra (gpt-oss-120b) |
-| Vision analysis | Gemini 2.5 Flash | — |
+| Vision analysis | Gemini 2.5 Flash (Google API) | DeepInfra (google/gemini-2.5-flash, OpenAI-compat) |
 | Brand research | Gemma 4 31B + Google Search | Haiku + web_search (via DISCOVERY_RESEARCH_PROVIDER) |
-| Image generation (multimodal) | gemini-3.1-flash-image-preview (OpenRouter) | gemini-2.5-flash-image (Google API) |
+| Image generation (multimodal) | gemini-3.1-flash-image-preview (Google API direct) | gemini-3.1-flash-image-preview (OpenRouter) |
 | Image generation (FLUX chain) | DeepInfra FLUX-2-pro | OpenRouter FLUX.2 Pro → HuggingFace FLUX.1-schnell → Cloudflare SDXL → Pollinations |
 
 ---
@@ -222,13 +222,15 @@ STEP 1 — fire-and-forget (prepare-image-prompt):
   → selectZonePhoto() → fetch Supabase URL of zone photo
 
   PATH A — GEMINI_MULTIMODAL (IMAGE_GENERATION_MODE=GEMINI_MULTIMODAL, default in prod):
+    → SENTINEL: clear image_prompt + image_url to null (poller returns WAITING during generation)
     → fetch zone photo → convert to base64
     → build multimodal prompt (post content + brand context + zone description)
-    → send photo + prompt to gemini-3.1-flash-image-preview (OpenRouter or Google API)
+    → IMAGE_GEN_ENGINE_MODE=FALLBACK: try Google API first, then OpenRouter (same model)
+    → model: gemini-3.1-flash-image-preview
     → upload result to Supabase post-images bucket
-    → write image_url directly to community_posts
-    → write Gemini text description to image_prompt
-    → polling route sees image_url already set → returns immediately
+    → write image_url FIRST to community_posts (poller detects this and returns immediately)
+    → write Gemini text description to image_prompt SECOND
+    → polling route sees image_url already set → returns immediately, FLUX chain never fires
 
   PATH B — ARCHITECT (fallback when no zone photo, or IMAGE_GENERATION_MODE=ARCHITECT):
     → buildBrandVariables() → structured brand context
@@ -254,9 +256,13 @@ Triggered from profile page on save (with photos and/or "Re-run" checkbox):
 
 Two parallel paths (Promise.allSettled):
 
-PATH A — Vision (Gemini 2.5 Flash):
+PATH A — Vision (VISION_ENGINE_MODE=FALLBACK: Google API → DeepInfra):
   → Photos matched to zones by label (entrance / customer_space / work_space)
-  → Interleaved with zone headers → sent to Gemini
+  → Interleaved with zone headers → sent to Gemini 2.5 Flash
+  → Primary: Google AI SDK (google/gemini-2.5-flash)
+  → Fallback: DeepInfra OpenAI-compatible API (google/gemini-2.5-flash)
+  → Both paths use identical buildVisionPrompt() — same output schema
+  → <think> blocks and trailing content stripped before JSON parse (extractJson helper)
   → Returns per zone: layout (spatial_arrangement, focal_feature, materials, lighting, activity_zone)
                       colors (dominant, supporting, accent, materials_palette)
   → Returns global: color_theme (primary, secondary, accent, description)
@@ -458,15 +464,24 @@ AI_ENGINE_MODE=FALLBACK                # TOGGLE | FALLBACK
 AI_PROVIDER=anthropic                  # Used in TOGGLE mode only
 
 IMAGE_GENERATION_MODE=GEMINI_MULTIMODAL  # GEMINI_MULTIMODAL | ARCHITECT
-IMAGE_GEN_PROVIDER=OPENROUTER            # OPENROUTER | GOOGLE_API (within multimodal path)
-IMAGE_ENGINE_MODE=FALLBACK               # TOGGLE | FALLBACK (for FLUX chain on Architect path)
+
+# Multimodal path provider engine (GEMINI_MULTIMODAL)
+IMAGE_GEN_ENGINE_MODE=FALLBACK           # TOGGLE | FALLBACK (google → openrouter)
+IMAGE_GEN_PROVIDER=GOOGLE_API            # GOOGLE_API | OPENROUTER (TOGGLE mode only)
+
+# Architect path FLUX chain (generate-image route)
+IMAGE_ENGINE_MODE=FALLBACK               # TOGGLE | FALLBACK
 IMAGE_PROVIDER=huggingface               # Used in TOGGLE mode only
 
-# Note: ARCHITECT_MODE is hardcoded in prepare-image-prompt/route.ts line 39
+# Note: ARCHITECT_MODE is hardcoded in prepare-image-prompt/route.ts line 40
 # const ARCHITECT_MODE = "GEMMA" — not read from env
 
-# Brand Discovery
-DISCOVERY_RESEARCH_PROVIDER=gemma      # "gemma" | "haiku"
+# Vision analysis (brand discovery photos)
+VISION_ENGINE_MODE=FALLBACK              # TOGGLE | FALLBACK (google → deepinfra)
+VISION_PROVIDER=google                   # google | deepinfra (TOGGLE mode only)
+
+# Brand Discovery text research
+DISCOVERY_RESEARCH_PROVIDER=gemma        # "gemma" | "haiku"
 
 # Dev tools
 NEXT_PUBLIC_MOCK_AI=false              # "true" skips AI calls for testing
@@ -585,4 +600,31 @@ SELECT * FROM businesses WHERE user_id = 'clerk-user-id' AND is_active = true;
 
 ---
 
+## Error Handling & Resilience (added June 2026)
+
+### Vision (brandDiscovery.ts)
+- `analyzePhotosWithGemini` is now a router: TOGGLE | FALLBACK engine mode
+- Fallback: Google API → DeepInfra (same Gemini 2.5 Flash model)
+- `extractJson()` helper strips `<think>` blocks + uses balanced-brace extraction (immune to trailing content)
+- Both providers share `buildVisionPrompt()` — identical prompt, different API call
+
+### Research / Text Search (brandDiscovery.ts)
+- `runResearchProvider` retries once automatically in production (`NEXT_PUBLIC_APP_ENV=production`)
+- No provider fallback added (gemma/haiku remain a toggle) — retry handles transient failures
+
+### discover-brand route
+- Text search failure no longer kills vision — error is captured, vision runs, error returned after
+- Credits never deducted on text search failure
+
+### prepare-image-prompt route (GEMINI_MULTIMODAL path)
+- **Sentinel**: clears `image_prompt` + `image_url` to null at start — poller stays in WAITING state
+- **Save order**: `image_url` saved FIRST, then `image_prompt` — prevents FLUX chain race condition
+- **Provider engine**: TOGGLE | FALLBACK (Google API → OpenRouter, both gemini-3.1-flash-image-preview)
+
+### dev server (Windows)
+- `package.json` dev script uses `--hostname 0.0.0.0` to fix IPv6 binding issue on Windows
+
+---
+
 *Last synced from DEVELOPER_REFERENCE.md and USER_EXPERIENCE_GUIDE.md — May 28, 2026*
+*Resilience changes added June 2026*

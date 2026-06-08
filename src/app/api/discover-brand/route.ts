@@ -105,6 +105,7 @@ export async function POST(req: Request) {
     // STEP 5: Run Text Discovery (if approved)
     // ─────────────────────────────────────────────────────────────────
     let textDiscoverySuccess = false;
+    let textDiscoveryError: Error | null = null;
 
     if (shouldTriggerTextDiscovery) {
       if (hasNeverAnalyzed) {
@@ -153,8 +154,6 @@ export async function POST(req: Request) {
 
             if (deductError) {
               console.error(`❌ [Discovery API] Credit deduction failed:`, deductError);
-              // Discovery succeeded but credit deduction failed - log this critical error
-              // Consider implementing a retry queue or manual reconciliation
             } else {
               const result = typeof deductResult === 'string' ? JSON.parse(deductResult) : deductResult;
               console.log(`💳 [Discovery API] Credits deducted. New balance: ${result.balance}`);
@@ -163,12 +162,10 @@ export async function POST(req: Request) {
         }
 
       } catch (textError) {
-        console.error(`❌ [Discovery API] PATH 1 failed:`, textError);
-        // Don't deduct credits if discovery failed
-        return NextResponse.json({ 
-          error: "Text discovery failed", 
-          details: textError instanceof Error ? textError.message : String(textError)
-        }, { status: 500 });
+        // Capture error but DO NOT return — vision must still run
+        textDiscoveryError = textError instanceof Error ? textError : new Error(String(textError));
+        console.error(`❌ [Discovery API] PATH 1 failed (vision will still run):`, textDiscoveryError.message);
+        // Credits not deducted — discovery did not succeed
       }
     } else {
       console.log(`⏭️  [Discovery API] PATH 1: Text research skipped (user did not request or no changes)`);
@@ -231,6 +228,15 @@ export async function POST(req: Request) {
       }
     } else {
       console.log(`⏭️  [Discovery API] PATH 2: Vision analysis skipped (no photos)`);
+    }
+
+    // If text discovery failed, return error now (after vision has had its chance to run)
+    if (textDiscoveryError) {
+      console.error(`❌ [Discovery API] Returning text discovery failure after vision completed`);
+      return NextResponse.json({
+        error: "Text discovery failed",
+        details: textDiscoveryError.message
+      }, { status: 500 });
     }
 
     // ─────────────────────────────────────────────────────────────────

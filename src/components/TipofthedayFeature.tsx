@@ -132,7 +132,7 @@ At our clinic, we see this pattern every spring as patients resume outdoor activ
 
             {/* Second Example */}
             <div className="mt-6 mb-3">
-              <span className="text-sm font-medium text-slate-500">Example: Riverside Barbershop</span>
+              <span className="text-sm font-medium text-slate-500">Example: Riverside Shawarma</span>
             </div>
 
             <Card className="border-slate-200 shadow-sm overflow-hidden">
@@ -141,7 +141,7 @@ At our clinic, we see this pattern every spring as patients resume outdoor activ
                   Q
                 </div>
                 <div className="flex flex-col flex-1 min-w-0">
-                  <span className="font-bold text-slate-900 text-sm leading-tight">Riverside Barbershop</span>
+                  <span className="font-bold text-slate-900 text-sm leading-tight">Riverside Shawarma</span>
                   <div className="flex items-center justify-between gap-2 mt-1">
                     <span className="text-[10px] text-slate-500 font-medium truncate">Riverside, Toronto</span>
                     <span className="shrink-0 text-[10px] font-black text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded uppercase tracking-widest">
@@ -153,26 +153,24 @@ At our clinic, we see this pattern every spring as patients resume outdoor activ
 
               <CardContent className="px-4 pb-3 pt-0">
                 <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">
-{`When blending between clipper guards, place your longer guard flat against the scalp, then tilt it 45 degrees at the line where you want the transition to begin.
+{`When you're threading shish tawook onto the skewer, grab chicken breasts that are all the same size and thickness. Uniform pieces cook at the same rate—the thin edge and thick end both hit that golden char at the exact same moment. Uneven breasts mean you're either pulling thin pieces off early or waiting for thick ones to catch up, and by then the thin ones are dry.
 
-The tilted guard removes less hair at that boundary, preventing the hard line that occurs when guards meet skin at full contact. This creates a natural diffusion zone.
-
-At Riverside, we use this before scissor-over-comb work—it establishes a soft gradient that your scissors can refine. Your fade guide appears without the client seeing distinct clipper steps.`}
+We size-match at the counter before they go on the flame. Takes a minute, saves the whole plate.`}
                 </p>
               </CardContent>
 
               <div className="w-full aspect-square bg-slate-100 border-y border-slate-100">
-                <img 
-                  src="/Barber-clipper-angle.jpeg"
-                  alt="Clipper guard angle demonstration" 
-                  className="w-full h-full object-cover"
+                <img  
+                    src="/chicken-same-size.png"
+                    alt="Chicken same size cooked" 
+                    className="w-full h-full object-cover"
                 />
               </div>
 
               <div className="px-4 py-3 bg-white border-t border-slate-100">
                 <div className="flex items-center justify-between text-xs text-slate-500">
                   <span>5 credits • Tip of the Day mode</span>
-                  <span className="font-medium text-cyan-800">#BarbershopTip #Riverside #FadeTechnique</span>
+                  <span className="font-medium text-cyan-800">#ShawarmaLife #Riverside #ShishTawook</span>
                 </div>
               </div>
             </Card>
@@ -206,7 +204,7 @@ At Riverside, we use this before scissor-over-comb work—it establishes a soft 
               </ul>
             </div>
 
-            {/* Shoreline Myth-busting */}
+            {/* Shoreline Today's Tip */}
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-2 h-2 rounded-full bg-cyan-800"></div>

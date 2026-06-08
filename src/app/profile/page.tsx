@@ -915,7 +915,7 @@ const [existingWorkSpaceUrl,     setExistingWorkSpaceUrl]     = useState<string 
                   />
                   <div className="flex-1">
                     <label htmlFor="runTextDiscovery" className="text-sm font-semibold text-purple-900 cursor-pointer flex items-center gap-2">
-                      <span>🔍 Re-run Brand Discovery</span>
+                      <span>🔍 Run Brand Discovery</span>
                       {getDiscoveryCost() === 0 ? (
                         <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
                           FREE

@@ -52,6 +52,34 @@ async function urlToGenerativePart(url: string, mimeType: string) {
   }
 }
 // ---------------------------------------------------------------------------
+// JSON EXTRACTOR — Balanced-brace extraction, immune to trailing content
+// ---------------------------------------------------------------------------
+// Greedy regex (\{[\s\S]*\}) fails when the model appends explanation text or
+// markdown fences after the closing brace — JSON.parse sees extra characters.
+// This walks the string and stops at the exact closing brace of the outer object.
+
+function extractJson(text: string): string | null {
+  // Strip <think>...</think> blocks (DeepInfra/Gemini reasoning traces)
+  // These appear before the real answer and contain a different JSON shape
+  let cleaned = text.replace(/<think>[\s\S]*?<\/think>/g, "");
+
+  // Strip markdown code fences
+  cleaned = cleaned.replace(/^```(?:json)?\s*/m, "").replace(/\s*```\s*$/m, "");
+
+  const start = cleaned.indexOf("{");
+  if (start === -1) return null;
+  let depth = 0;
+  for (let i = start; i < cleaned.length; i++) {
+    if (cleaned[i] === "{") depth++;
+    else if (cleaned[i] === "}") {
+      depth--;
+      if (depth === 0) return cleaned.slice(start, i + 1);
+    }
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
 // CITATION STRIPPER — Removes <cite> tags that Haiku's web search tool adds
 // ---------------------------------------------------------------------------
 // This is the KEY FIX for the citation bleed issue.
@@ -177,6 +205,9 @@ export function parseBusinessIntel(raw: any) {
 
 // ---------------------------------------------------------------------------
 // PATH A: Gemini Vision Analysis
+// Router → analyzeWithGoogle (primary) or analyzeWithDeepInfra (fallback)
+// Env: VISION_ENGINE_MODE = TOGGLE | FALLBACK  (default: FALLBACK)
+//      VISION_PROVIDER    = google | deepinfra  (used in TOGGLE mode only)
 // ---------------------------------------------------------------------------
 
 export async function analyzePhotosWithGemini(
@@ -184,11 +215,44 @@ export async function analyzePhotosWithGemini(
   businessName: string,
   fullAddress: string
 ): Promise<any> {
-  console.log(`[Gemini Vision] Analyzing ${photos.length} uploaded photos for ${businessName}...`);
+  const engineMode = process.env.VISION_ENGINE_MODE || "FALLBACK";
+
+  if (engineMode === "TOGGLE") {
+    const provider = process.env.VISION_PROVIDER || "google";
+    console.log(`--- [VISION] MODE: TOGGLE [Using ${provider}] ---`);
+    return provider === "deepinfra"
+      ? analyzeWithDeepInfra(photos, businessName, fullAddress)
+      : analyzeWithGoogle(photos, businessName, fullAddress);
+  }
+
+  // FALLBACK: try Google first, then DeepInfra
+  console.log("--- [VISION] MODE: FALLBACK CHAIN (google → deepinfra) ---");
+  try {
+    const result = await analyzeWithGoogle(photos, businessName, fullAddress);
+    console.log("--- [VISION] FALLBACK SUCCESS: google ---");
+    return result;
+  } catch (err) {
+    console.warn("[VISION] google failed, trying deepinfra:", (err as Error).message);
+    const result = await analyzeWithDeepInfra(photos, businessName, fullAddress);
+    console.log("--- [VISION] FALLBACK SUCCESS: deepinfra ---");
+    return result;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// PATH A1: Google API (primary)
+// ---------------------------------------------------------------------------
+
+async function analyzeWithGoogle(
+  photos: UploadedPhoto[],
+  businessName: string,
+  fullAddress: string
+): Promise<any> {
+  console.log(`[Vision/Google] Analyzing ${photos.length} photos for ${businessName}...`);
 
   // Vision only — no search tool
   const model = genAI.getGenerativeModel(
-    { model: "models/gemini-2.5-flash",  // removed tools
+    { model: "models/gemini-2.5-flash",
       generationConfig: {
         responseMimeType: "application/json",
       },
@@ -227,16 +291,145 @@ export async function analyzePhotosWithGemini(
 
   const photoContext = photoContextLines.join(", ");
 
-    const textPrompt = `
+  const textPrompt = buildVisionPrompt(businessName, fullAddress, photoContext);
+
+  const result = await model.generateContent([...interleavedParts, { text: textPrompt }]);
+  const responseText = result.response.text();
+
+  console.log("\n========== VISION/GOOGLE RAW RESPONSE ==========");
+  console.log(responseText);
+  console.log("================================================\n");
+
+  const jsonStr = extractJson(responseText);
+  if (!jsonStr) {
+    throw new Error(`[Vision/Google] No JSON in response. Raw: ${responseText.slice(0, 300)}`);
+  }
+
+  let parsed: any;
+  try {
+    parsed = JSON.parse(jsonStr);
+  } catch (parseErr) {
+    console.error(`[Vision/Google] JSON parse failed. Raw:`, jsonStr.slice(0, 500));
+    throw new Error(`[Vision/Google] Invalid JSON: ${(parseErr as Error).message}`);
+  }
+  return parsed;
+}
+
+// ---------------------------------------------------------------------------
+// PATH A2: DeepInfra (fallback) — OpenAI-compatible API, google/gemini-2.5-flash
+// ---------------------------------------------------------------------------
+
+async function analyzeWithDeepInfra(
+  photos: UploadedPhoto[],
+  businessName: string,
+  fullAddress: string
+): Promise<any> {
+  console.log(`[Vision/DeepInfra] Analyzing ${photos.length} photos for ${businessName}...`);
+
+  const ZONE_ORDER = ["entrance", "customer_space", "work_space"] as const;
+  const photosByZone: Record<string, UploadedPhoto | null> = {
+    entrance: null,
+    customer_space: null,
+    work_space: null,
+  };
+
+  for (const photo of photos) {
+    if (photo.label in photosByZone) {
+      photosByZone[photo.label] = photo;
+    }
+  }
+
+  // Build content parts array: interleave zone headers + base64 images
+  const contentParts: any[] = [];
+  const photoContextLines: string[] = [];
+
+  for (const zone of ZONE_ORDER) {
+    const photo = photosByZone[zone];
+    const zoneUpper = zone.toUpperCase();
+    if (photo) {
+      contentParts.push({ type: "text", text: `\n[PHOTO FOR ZONE: ${zoneUpper}]\n` });
+      const { inlineData } = await urlToGenerativePart(photo.url, photo.mimeType);
+      contentParts.push({
+        type: "image_url",
+        image_url: { url: `data:${inlineData.mimeType};base64,${inlineData.data}` },
+      });
+      photoContextLines.push(`${zoneUpper}: provided`);
+    } else {
+      photoContextLines.push(`${zoneUpper}: NOT provided`);
+    }
+  }
+
+  const photoContext = photoContextLines.join(", ");
+
+  // Append the full text prompt as the last part — same prompt as Google path
+  // (reuse buildVisionPrompt so both paths stay in sync)
+  contentParts.push({ type: "text", text: buildVisionPrompt(businessName, fullAddress, photoContext) });
+
+  const response = await fetch("https://api.deepinfra.com/v1/openai/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${process.env.DEEPINFRA_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        {
+          role: "user",
+          content: contentParts,
+        },
+      ],
+      temperature: 0.2,
+      max_tokens: 4096,
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`[Vision/DeepInfra] HTTP ${response.status}: ${errText.slice(0, 300)}`);
+  }
+
+  const data = await response.json();
+  const responseText = data.choices?.[0]?.message?.content;
+
+  if (!responseText) {
+    throw new Error(`[Vision/DeepInfra] Empty response. Full data: ${JSON.stringify(data).slice(0, 300)}`);
+  }
+
+  console.log("\n========== VISION/DEEPINFRA RAW RESPONSE ==========");
+  console.log(responseText);
+  console.log("====================================================\n");
+
+  const jsonStr = extractJson(responseText);
+  if (!jsonStr) {
+    throw new Error(`[Vision/DeepInfra] No JSON in response. Raw: ${responseText.slice(0, 300)}`);
+  }
+
+  let parsed: any;
+  try {
+    parsed = JSON.parse(jsonStr);
+  } catch (parseErr) {
+    console.error(`[Vision/DeepInfra] JSON parse failed. Raw:`, jsonStr.slice(0, 500));
+    throw new Error(`[Vision/DeepInfra] Invalid JSON: ${(parseErr as Error).message}`);
+  }
+  return parsed;
+}
+
+// ---------------------------------------------------------------------------
+// SHARED: Vision prompt — used by both Google and DeepInfra paths
+// ---------------------------------------------------------------------------
+
+function buildVisionPrompt(businessName: string, fullAddress: string, photoContext: string): string {
+  return `
     You are a professional brand photographer and visual analyst.
     Your only job is to extract visual identity information from these
     photos with the precision of an art director on a set walk.
-    
+
     [CONTEXT]:
     Business: "${businessName}"
     Address: "${fullAddress}"
     Photos provided: ${photoContext}
-    
+
     Each image in this request is preceded by a header indicating its zone:
       [PHOTO FOR ZONE: ENTRANCE]       — storefront, patio, reception, signage
       [PHOTO FOR ZONE: CUSTOMER_SPACE] — where the customer experience happens
@@ -246,68 +439,68 @@ export async function analyzePhotosWithGemini(
     image — see "Photos provided" in [CONTEXT]. For zones without an
     image, return "Not visible in photos" for every field. Never fill
     gaps using other zones.
-    
+
     [YOUR TASK]:
     1. Analyze each visible zone independently using the same method.
     2. Synthesize a global brand palette across all visible zones.
     3. Read only what is visible. Never guess. Never invent.
        Do not search the web.
-    
+
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     PER-ZONE METHOD — apply identically to all three zones
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    
+
     For each zone, extract two blocks: LAYOUT and COLORS.
-    
+
     LAYOUT — describe the physical space:
-    
+
       spatial_arrangement:
         How the zone is organized. Position and relationship of major elements.
         "Counter along left wall, 8 stools, seating area opposite"
         "Open patio with 4 metal tables, recessed entrance from sidewalk"
         "Linear prep line along back wall, two stations facing pass"
-    
+
       focal_feature:
         The single most distinctive element — the thing the eye lands on first.
         "Exposed brick wall with framed black-and-white photos"
         "Hand-lettered vintage signage above the door"
         "Wood-fired oven dominating the back wall"
-    
+
       materials_finishes:
         What surfaces are made of. Specific to texture, not just material category.
         "Reclaimed oak tables, leather banquettes, polished concrete floor"
         "Smooth stucco facade, dark powder-coated metal door, terracotta planters"
         "Stainless steel work surfaces, white subway tile splashback"
-    
+
       lighting_mood:
         Light quality, temperature, source, abundance.
         "Warm pendant lights low over each table, dim ambient, intimate"
         "Awning-shaded natural light, glare-reduced at counter"
         "Bright fluorescent task lighting, no natural light visible"
-    
+
       activity_zone:
         What happens in this zone — observed from the photo only.
         "Customer arrival, patio dining, foot traffic visible"
         "Customer seating, conversation, table service"
         "Active prep, line cooking, plating at pass"
-    
+
     COLORS — describe the palette of this zone:
-    
+
       Use precise color language — paint-professional, not generic.
       Not "blue" — "deep navy with slight grey undertone, cool"
       Not "brown" — "warm walnut, medium saturation, matte finish"
       Not "white" — "warm off-white, slightly cream, neutral"
-    
+
       dominant:
         The color that fills the most surface area in this zone.
-    
+
       supporting:
         The second most present color — the one that backs up the dominant.
-    
+
       accent:
         The punch color. The highlight. May appear in small surface area
         but draws the eye.
-    
+
       materials_palette:
         Texture-aware color descriptions of the key surfaces in this zone.
         Each surface gets a precise color + finish description.
@@ -315,31 +508,31 @@ export async function analyzePhotosWithGemini(
          Counter base: rich walnut brown, matte.
          Walls: warm off-white, matte.
          Floor: warm beige ceramic tile with subtle variation."
-    
+
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     GLOBAL COLOR THEME — synthesize across all visible zones
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    
+
     After analyzing all zones, identify the brand palette that emerges
     across them. This is the through-line that ties every image of this
     business together — including detail shots that have no spatial context.
-    
+
       primary:
         The color that appears most consistently across visible zones.
-    
+
       secondary:
         The color that supports the primary across zones.
-    
+
       accent:
         The shared highlight or punch color that appears in multiple zones.
-    
+
       description:
         One sentence describing the palette mood —
         warm/cool, minimal/rich, industrial/organic, bold/restrained.
-    
+
     If only one zone has photos, synthesize from that zone alone.
     If no zones have photos, return "Not visible in photos" for all fields.
-    
+
     [RULES]:
     - Read only what is visible in the photos.
     - Use precise color language — not generic names.
@@ -347,11 +540,11 @@ export async function analyzePhotosWithGemini(
       field in that zone. Never invent. Never borrow from other zones.
     - Never infer from business name, category, or address.
     - Never search the web.
-    
+
     [OUTPUT]:
     Return ONLY a valid JSON object. No preamble. No markdown. No explanation.
     Start with { and end with }.
-    
+
     {
       "color_theme": {
         "primary": "precise color description — hue, tone, temperature",
@@ -408,32 +601,6 @@ export async function analyzePhotosWithGemini(
       }
     }
     `;
-
-  const result = await model.generateContent([...interleavedParts, { text: textPrompt }]);
-  const responseText = result.response.text();
-
-  console.log("\n========== GEMINI RAW TEXT RESPONSE ==========");
-  console.log(responseText);
-  console.log("=============================================\n");
-
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error(`[Gemini Text] No JSON in response. Raw: ${responseText.slice(0, 300)}`);
-  }
-  
-  console.log("\n========== GEMINI RAW EXTRACTED JSON ==========");
-  console.log(jsonMatch);
-  console.log("=============================================\n");
-
-  let parsed: any;
-  try {
-    parsed = JSON.parse(jsonMatch[0]);
-  } catch (parseErr) {
-    // Log the exact failure point for debugging
-    console.error(`[Gemini Text] JSON parse failed. Raw extract:`, jsonMatch[0].slice(0, 500));
-    throw new Error(`[Gemini Text] Invalid JSON returned by model: ${(parseErr as Error).message}`);
-  }
-  return parsed;
 }
 
 // ---------------------------------------------------------------------------
@@ -449,27 +616,33 @@ async function runResearchProvider(
   category: string,
   niche: string
 ): Promise<any> {
-
   const provider = process.env.DISCOVERY_RESEARCH_PROVIDER || "gemma";
+  const isProduction = process.env.NEXT_PUBLIC_APP_ENV === "production";
+
   console.log(`--- [DISCOVERY] Research provider: ${provider} ---`);
 
-  if (provider === "haiku") {
-    return await researchWithHaiku(
-      businessName, 
-      fullAddressString, 
-      category, 
-      niche
-    );
+  const attempt = async () => {
+    if (provider === "haiku") {
+      return researchWithHaiku(businessName, fullAddressString, category, niche);
+    }
+    if (provider === "gemma") {
+      return researchWithGemma(businessName, fullAddressString);
+    }
+    throw new Error(`Unsupported research provider: ${provider}`);
+  };
+
+  // In production: one automatic retry before failing (handles transient errors)
+  if (isProduction) {
+    try {
+      return await attempt();
+    } catch (err) {
+      console.warn(`[RESEARCH] Attempt 1 failed, retrying in 2s:`, (err as Error).message);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      return await attempt();
+    }
   }
 
-  if (provider === "gemma") {
-    return await researchWithGemma(
-      businessName, 
-      fullAddressString
-    );
-  }
-
-  throw new Error(`Unsupported research provider: ${provider}`);
+  return attempt();
 }
 
 // ---------------------------------------------------------------------------
@@ -1125,41 +1298,41 @@ async function saveDiscoveryData(
   // Determine brand source
   const ct   = merged.color_theme;
   const zones = merged.zones;
-  
+
   const brandSource = (() => {
     if (!visionSucceeded) return "text_search";
-  
+
     const colorBlind = !ct?.primary
       || typeof ct.primary !== "string"
       || ct.primary.trim().toLowerCase().startsWith("not visible");
-  
+
     const visibleZones = zones
       ? Object.values(zones).filter((z: any) =>
           z?.layout?.spatial_arrangement
           && !String(z.layout.spatial_arrangement).toLowerCase().startsWith("not visible")
         ).length
       : 0;
-  
-    // Color blank AND fewer than 2 visible zones → fall back to research-only
+
+    // Color blank AND fewer than 2 visible zones => fall back to research-only
     return (colorBlind && visibleZones < 2) ? "text_search" : "photos";
   })();
 
   const updatePayload: any = {
-    // Semantic fields — owned by research
+    // Semantic fields -- owned by research
     business_description: phys,
 
-    // Contact info — new field
+    // Contact info -- new field
     contact_info: merged.contact || null,
 
-    // Visual fields — owned by vision (or research fallback)
+    // Visual fields -- owned by vision (or research fallback)
     color_theme: merged.color_theme || {
       primary:     "neutral",
       secondary:   "neutral",
       accent:      "neutral",
       description: "natural tones",
     },
-  
-    // Zones — new column
+
+    // Zones -- new column
     zones: merged.zones || null,
 
     // Metadata
@@ -1212,7 +1385,7 @@ export async function discoverAndSaveBrandIdentity(
   console.log(`--- [DISCOVERY] STARTED: ${businessName} ---`);
   console.log(`--- [DISCOVERY] Research provider: ${process.env.DISCOVERY_RESEARCH_PROVIDER || "haiku"} ---`);
 
-  const fullAddressString = `${address.street}, ${address.city}, 
+  const fullAddressString = `${address.street}, ${address.city},
     ${address.province_state}, ${address.country} ${address.postalCode}`;
 
   // Run vision and research in parallel
@@ -1223,9 +1396,9 @@ export async function discoverAndSaveBrandIdentity(
     runResearchProvider(businessName, fullAddressString, category, niche)
   ]);
 
-  const visionData = visionResult.status === "fulfilled" 
+  const visionData = visionResult.status === "fulfilled"
     ? visionResult.value : null;
-  const researchData = researchResult.status === "fulfilled" 
+  const researchData = researchResult.status === "fulfilled"
     ? researchResult.value : null;
 
   if (visionResult.status === "rejected") {
@@ -1233,7 +1406,7 @@ export async function discoverAndSaveBrandIdentity(
   }
   if (researchResult.status === "rejected") {
     console.error("[DISCOVERY] Research path failed:", researchResult.reason);
-    throw new Error("Research path failed — cannot continue without business identity.");
+    throw new Error("Research path failed -- cannot continue without business identity.");
   }
 
   // Merge and save

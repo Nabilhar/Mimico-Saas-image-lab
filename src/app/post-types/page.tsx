@@ -871,7 +871,7 @@ Store upright. Keep it dark and cool. The serum performs exactly as designed.`}
               {/* Right Column: Example Posts */}
               <div>
                 <div className="mb-3">
-                  <span className="text-sm font-medium text-slate-500">Example: Junction Coffee</span>
+                  <span className="text-sm font-medium text-slate-500">Example: Junction Pizzeria</span>
                 </div>
                 
                 {/* Example Post Card */}
@@ -881,7 +881,7 @@ Store upright. Keep it dark and cool. The serum performs exactly as designed.`}
                       J
                     </div>
                     <div className="flex flex-col flex-1 min-w-0">
-                      <span className="font-bold text-slate-900 text-sm leading-tight">Junction Coffee</span>
+                      <span className="font-bold text-slate-900 text-sm leading-tight">Junction Pizzeria</span>
                       <div className="flex items-center justify-between gap-2 mt-1">
                         <span className="text-[10px] text-slate-500 font-medium truncate">The Junction, Toronto</span>
                         <span className="shrink-0 text-[10px] font-black text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded uppercase tracking-widest">
@@ -893,18 +893,16 @@ Store upright. Keep it dark and cool. The serum performs exactly as designed.`}
 
                   <CardContent className="px-4 pb-3 pt-0">
                     <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">
-{`7:30 AM. The door opens and cold air rushes across the floor tiles. A woman unwraps her scarf at the counter, her glasses fogging white. The espresso machine hisses, releasing steam that spreads across the front window where frost patterns still cling to the corners.
+{`There's a rhythm to the counter during lunch. By 12:30, the five stools fill up with the same faces—people in work shirts, construction vests, the occasional delivery driver. They order, eat standing at the high top, shoulders angled toward the window and the street beyond. Forks in one hand, napkin in the other.
 
-Outside, grey-blue light sits flat on Dundas Street. Inside, the halogen pendants cast yellow circles on the bar top.
-
-Someone's gloves drip onto the reclaimed wood table. The grinder starts its sharp whirr. A regular stamps snow off his boots—three quick thumps on the mat—then pulls the door closed behind him, muffling the street.`}
+I've started noticing none of them sit. Even when seats open up behind them, they stay planted at the counter, facing out. Last Tuesday someone pulled up a stool to join a regular, and within two minutes they were both turned back toward Lake Shore, eating without talking much. Eyes on the road.`}
                     </p>
                   </CardContent>
 
                   <div className="w-full aspect-square bg-slate-100 border-y border-slate-100">
                     <img 
-                      src="/coffee-shop-frosted.jpeg"
-                      alt="Morning coffee shop with frosted windows" 
+                      src="/pizza-construction-workers.png"
+                      alt="Construction workers eating pizza at the counter" 
                       className="w-full h-full object-cover"
                     />
                   </div>
@@ -912,7 +910,7 @@ Someone's gloves drip onto the reclaimed wood table. The grinder starts its shar
                   <div className="px-4 py-3 bg-white border-t border-slate-100">
                     <div className="flex items-center justify-between text-xs text-slate-500">
                       <span>5 credits • Community Moment mode</span>
-                      <span className="font-medium text-cyan-800">#JunctionCoffee #TorontoMorning #TheJunction</span>
+                      <span className="font-medium text-cyan-800">#JunctionPizzeria #lunchcounter #TheJunction</span>
                     </div>
                   </div>
                 </Card>
