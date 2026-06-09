@@ -1115,54 +1115,8 @@ Sometimes two people claim both chairs at once, bags lined up like checkpoints b
 
               {/* Right Column: Example Posts */}
               <div>
-                <div className="mb-3">
-                  <span className="text-sm font-medium text-slate-500">Example: Junction Coffee</span>
-                </div>
-                
-                {/* Example Post Card */}
-                <Card className="border-slate-200 shadow-sm overflow-hidden">
-                  <div className="p-4 flex items-center gap-3 bg-white">
-                    <div className="w-10 h-10 rounded-full bg-cyan-800 flex items-center justify-center text-white font-bold text-lg shrink-0">
-                      J
-                    </div>
-                    <div className="flex flex-col flex-1 min-w-0">
-                      <span className="font-bold text-slate-900 text-sm leading-tight">Junction Coffee</span>
-                      <div className="flex items-center justify-between gap-2 mt-1">
-                        <span className="text-[10px] text-slate-500 font-medium truncate">The Junction, Toronto</span>
-                        <span className="shrink-0 text-[10px] font-black text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded uppercase tracking-widest">
-                          Generated in 18s
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <CardContent className="px-4 pb-3 pt-0">
-                    <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">
-{`Right now it's 2:30 on a Wednesday and the shop is humming quietly. Our barista just pulled a beautiful shot, and there are fresh lemon scones cooling on the rack from this morning's bake. Everything's ready to go—we're just not slammed like we are at 8 AM or after school pickup.
-
-So we're running a weekday special from 2-4 PM: any pastry plus any drink for $8. That's the same butter croissant and cappuccino that would normally run you $11.
-
-Kitchen's hot, espresso machine's dialed in, and we've got the space to actually chat while we make your order. Swing by if your afternoon needs a reset.`}
-                    </p>
-                  </CardContent>
-
-                  <div className="w-full aspect-square bg-slate-100 border-y border-slate-100">
-                    <div className="w-full h-full flex items-center justify-center text-slate-400">
-                      <span className="text-sm">AI-generated image: Afternoon coffee and pastries</span>
-                    </div>
-                  </div>
-
-                  <div className="px-4 py-3 bg-white border-t border-slate-100">
-                    <div className="flex items-center justify-between text-xs text-slate-500">
-                      <span>5 credits • Promotion mode</span>
-                      <span className="font-medium text-cyan-800">#JunctionCoffee #AfternoonSpecial #TheJunction</span>
-                    </div>
-                  </div>
-                </Card>
-
-                {/* Second Example */}
                 <div className="mt-6 mb-3">
-                  <span className="text-sm font-medium text-slate-500">Example: Paramount Shawarma</span>
+                  <span className="text-sm font-medium text-slate-500">Example: Annex Shawarma</span>
                 </div>
 
                 <Card className="border-slate-200 shadow-sm overflow-hidden">
@@ -1408,51 +1362,6 @@ Might swing by ourselves for some produce.`}
                     <div className="flex items-center justify-between text-xs text-slate-500">
                       <span>5 credits • Local Event mode</span>
                       <span className="font-medium text-cyan-800">#JunctionPizza #WestEndMarket #TheJunction</span>
-                    </div>
-                  </div>
-                </Card>
-
-                {/* Second Example */}
-                <div className="mt-6 mb-3">
-                  <span className="text-sm font-medium text-slate-500">Example: Chinatown Ramen</span>
-                </div>
-
-                <Card className="border-slate-200 shadow-sm overflow-hidden">
-                  <div className="p-4 flex items-center gap-3 bg-white">
-                    <div className="w-10 h-10 rounded-full bg-cyan-800 flex items-center justify-center text-white font-bold text-lg shrink-0">
-                      C
-                    </div>
-                    <div className="flex flex-col flex-1 min-w-0">
-                      <span className="font-bold text-slate-900 text-sm leading-tight">Chinatown Ramen</span>
-                      <div className="flex items-center justify-between gap-2 mt-1">
-                        <span className="text-[10px] text-slate-500 font-medium truncate">Chinatown, Toronto</span>
-                        <span className="shrink-0 text-[10px] font-black text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded uppercase tracking-widest">
-                          Generated in 18s
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <CardContent className="px-4 pb-3 pt-0">
-                    <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">
-{`Fridays have been picking up. More groups coming in after 7 PM, asking if we're open late. The energy shifts—people aren't rushing through lunch, they're settling in for the evening. Tables fill slower but stay longer.
-
-The Chinatown Night Market starts this Friday on Spadina, runs through September. Food stalls, vendors, live music along the street. We're open regular hours—kitchen runs until 10 PM if you want to stop by before or after.
-
-Worth a walk if you're around.`}
-                    </p>
-                  </CardContent>
-
-                  <div className="w-full aspect-square bg-slate-100 border-y border-slate-100">
-                    <div className="w-full h-full flex items-center justify-center text-slate-400">
-                      <span className="text-sm">AI-generated image: Evening street festival with food vendors</span>
-                    </div>
-                  </div>
-
-                  <div className="px-4 py-3 bg-white border-t border-slate-100">
-                    <div className="flex items-center justify-between text-xs text-slate-500">
-                      <span>5 credits • Local Event mode</span>
-                      <span className="font-medium text-cyan-800">#ChinatownRamen #NightMarket #Chinatown</span>
                     </div>
                   </div>
                 </Card>
